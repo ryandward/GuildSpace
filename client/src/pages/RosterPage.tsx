@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
-import ClassMosaic from '../components/roster/RosterFilters';
+import { ClassChart, StatusChart, LevelChart } from '../components/roster/RosterFilters';
 import MemberList from '../components/roster/RosterTable';
 import type { RosterMember } from '../components/roster/RosterRow';
 
@@ -44,20 +44,49 @@ export default function RosterPage() {
     fetchRoster();
   }, [token]);
 
-  // Compute level breakdown per class (how many are 60 vs total)
-  const levelBreakdown = useMemo(() => {
-    if (!data) return {};
-    const breakdown: Record<string, { maxLevel: number; total: number }> = {};
-    for (const m of data.members) {
-      for (const c of m.characters) {
-        if (!breakdown[c.class]) breakdown[c.class] = { maxLevel: 0, total: 0 };
-        breakdown[c.class].total++;
-        if (c.level >= 60) breakdown[c.class].maxLevel++;
-      }
-    }
-    return breakdown;
+  // All characters flat — for computing stats
+  const allChars = useMemo(() => {
+    if (!data) return [];
+    return data.members.flatMap(m => m.characters);
   }, [data]);
 
+  // Filtered characters (respects class filter)
+  const filteredChars = useMemo(() => {
+    if (!classFilter) return allChars;
+    return allChars.filter(c => c.class === classFilter);
+  }, [allChars, classFilter]);
+
+  // Level breakdown per class: how many at 60 vs total
+  const levelBreakdown = useMemo(() => {
+    const breakdown: Record<string, { max: number; total: number }> = {};
+    for (const c of allChars) {
+      if (!breakdown[c.class]) breakdown[c.class] = { max: 0, total: 0 };
+      breakdown[c.class].total++;
+      if (c.level >= 60) breakdown[c.class].max++;
+    }
+    return breakdown;
+  }, [allChars]);
+
+  // Level distribution (responds to class filter)
+  const levelDist = useMemo(() => {
+    let level60 = 0, sub60 = 0;
+    for (const c of filteredChars) {
+      if (c.level >= 60) level60++;
+      else sub60++;
+    }
+    return { level60, sub60 };
+  }, [filteredChars]);
+
+  // Status counts (responds to class filter)
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of filteredChars) {
+      counts[c.status] = (counts[c.status] || 0) + 1;
+    }
+    return counts;
+  }, [filteredChars]);
+
+  // Filtered and sorted members
   const filtered = useMemo(() => {
     if (!data) return [];
     let members = data.members;
@@ -76,7 +105,6 @@ export default function RosterPage() {
       );
     }
 
-    // Sort by featured character name
     return [...members].sort((a, b) => {
       const fa = classFilter
         ? a.characters.find(c => c.class === classFilter) || a.characters[0]
@@ -98,55 +126,44 @@ export default function RosterPage() {
 
           {!loading && data && (
             <>
-              {/* The mosaic IS the page */}
-              <ClassMosaic
-                classCounts={data.summary.classCounts}
-                levelBreakdown={levelBreakdown}
-                classFilter={classFilter}
-                onClassFilterChange={setClassFilter}
-              />
-
-              {/* Search + context — only visible when drilling in */}
-              {classFilter && (
-                <div className="roster-drilldown">
-                  <div className="drilldown-header">
-                    <span className="drilldown-title">{classFilter}</span>
-                    <span className="drilldown-count">{filtered.length} member{filtered.length !== 1 ? 's' : ''}</span>
-                    <input
-                      className="drilldown-search"
-                      type="text"
-                      placeholder="Find..."
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                    />
-                  </div>
-                  <MemberList members={filtered} classFilter={classFilter} />
-                  {filtered.length === 0 && (
-                    <div className="roster-empty">No one matches.</div>
-                  )}
+              {/* Dashboard: charts that drive the data */}
+              <div className="roster-dashboard">
+                <div className="roster-dash-main">
+                  <ClassChart
+                    classCounts={data.summary.classCounts}
+                    levelBreakdown={levelBreakdown}
+                    classFilter={classFilter}
+                    onClassFilterChange={setClassFilter}
+                  />
                 </div>
-              )}
-
-              {/* When no class selected, show full roster with search */}
-              {!classFilter && (
-                <div className="roster-drilldown">
-                  <div className="drilldown-header">
-                    <span className="drilldown-title">All Members</span>
-                    <span className="drilldown-count">{data.summary.totalMembers}</span>
-                    <input
-                      className="drilldown-search"
-                      type="text"
-                      placeholder="Find someone..."
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                    />
-                  </div>
-                  <MemberList members={filtered} classFilter={classFilter} />
-                  {filtered.length === 0 && (
-                    <div className="roster-empty">No one matches.</div>
-                  )}
+                <div className="roster-dash-side">
+                  <LevelChart levelDist={levelDist} />
+                  <StatusChart statusCounts={statusCounts} total={filteredChars.length} />
                 </div>
-              )}
+              </div>
+
+              {/* Member list below */}
+              <div className="roster-members-section">
+                <div className="roster-members-header">
+                  <span className="roster-members-title">
+                    {classFilter || 'All Members'}
+                  </span>
+                  <span className="roster-members-count">
+                    {filtered.length}
+                  </span>
+                  <input
+                    className="roster-members-search"
+                    type="text"
+                    placeholder="Search..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                </div>
+                <MemberList members={filtered} classFilter={classFilter} />
+                {filtered.length === 0 && (
+                  <div className="roster-empty">No results.</div>
+                )}
+              </div>
             </>
           )}
         </div>
