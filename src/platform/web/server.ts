@@ -136,7 +136,7 @@ export function createWebServer(opts: WebServerOptions) {
   app.use(express.json());
   app.use(express.static(path.join(process.cwd(), 'src', 'platform', 'web', 'public')));
 
-  // ─── Auth (simple token-based for now) ──────────────────────────────
+  // ─── Auth (Discord OAuth2) ───────────────────────────────────────
 
   function getUser(req: express.Request): InteractionUser | null {
     const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token as string;
@@ -144,15 +144,76 @@ export function createWebServer(opts: WebServerOptions) {
     return sessions.get(token) ?? null;
   }
 
-  // Simple login — creates a session
-  app.post('/api/auth/login', (req, res) => {
-    const { username, password } = req.body;
-    // TODO: real auth. For now, any username/password creates a session.
-    const userId = username; // use as-is so Discord IDs work
-    const token = `tok_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const user: InteractionUser = { id: userId, username, displayName: username };
-    sessions.set(token, user);
-    res.json({ token, user });
+  // Redirect to Discord's OAuth page
+  app.get('/api/auth/discord', (_req, res) => {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || '');
+    const scope = encodeURIComponent('identify');
+    const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+    res.redirect(url);
+  });
+
+  // Discord redirects back here with a code
+  app.get('/api/auth/discord/callback', async (req, res) => {
+    const code = req.query.code as string;
+    if (!code) {
+      res.status(400).send('Missing code');
+      return;
+    }
+
+    try {
+      // Exchange code for access token
+      const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: process.env.DISCORD_CLIENT_ID || '',
+          client_secret: process.env.DISCORD_CLIENT_SECRET || '',
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: process.env.DISCORD_REDIRECT_URI || '',
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        console.error('Discord token exchange failed:', await tokenRes.text());
+        res.status(500).send('Discord auth failed');
+        return;
+      }
+
+      const tokenData = await tokenRes.json() as { access_token: string };
+
+      // Get user info from Discord
+      const userRes = await fetch('https://discord.com/api/users/@me', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+
+      if (!userRes.ok) {
+        res.status(500).send('Failed to get Discord user');
+        return;
+      }
+
+      const discordUser = await userRes.json() as {
+        id: string;
+        username: string;
+        global_name: string | null;
+      };
+
+      // Create session
+      const sessionToken = `tok_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const user: InteractionUser = {
+        id: discordUser.id,
+        username: discordUser.username,
+        displayName: discordUser.global_name || discordUser.username,
+      };
+      sessions.set(sessionToken, user);
+
+      // Redirect to app with token
+      res.redirect(`/?token=${sessionToken}`);
+    } catch (err) {
+      console.error('OAuth error:', err);
+      res.status(500).send('Auth failed');
+    }
   });
 
   // ─── Command Registry ──────────────────────────────────────────────
