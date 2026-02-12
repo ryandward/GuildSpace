@@ -76,7 +76,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     });
 
     if (!toon) {
-      throw new Error(`:x: ${name} does not exist.`);
+      throw new Error(`:x: ${name} doesn't exist. Use /toons to see your characters.`);
     }
     else {
       if (status === 'Main') {

@@ -95,7 +95,7 @@ function createReplySender(io: SocketServer, socketId: string, interactionId: st
   let replied = false;
   let deferred = false;
 
-  const send = (event: string, data: any) => {
+  const send = (event: string, data: object) => {
     io.to(socketId).emit(event, { interactionId, ...data });
   };
 
@@ -189,8 +189,8 @@ export function createWebServer(opts: WebServerOptions) {
       username: gsUser?.displayName || discordId,
       displayName: gsUser?.displayName || discordId,
     };
-    (user as any).needsSetup = !gsUser;
-    (user as any).discordUsername = gsUser?.discordUsername || discordId;
+    user.needsSetup = !gsUser;
+    user.discordUsername = gsUser?.discordUsername || discordId;
 
     // Re-cache
     sessions.set(token, user);
@@ -267,8 +267,8 @@ export function createWebServer(opts: WebServerOptions) {
       sessions.set(sessionToken, user);
 
       // Store Discord username in session for later
-      (user as any).discordUsername = discordUser.username;
-      (user as any).needsSetup = !existing;
+      user.discordUsername = discordUser.username;
+      user.needsSetup = !existing;
 
       // Redirect to app with token
       res.redirect(`/?token=${sessionToken}`);
@@ -286,7 +286,7 @@ export function createWebServer(opts: WebServerOptions) {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      needsSetup: (user as any).needsSetup || false,
+      needsSetup: user.needsSetup || false,
     });
   });
 
@@ -317,7 +317,7 @@ export function createWebServer(opts: WebServerOptions) {
     if (!gsUser) {
       gsUser = new GuildSpaceUser();
       gsUser.discordId = user.id;
-      gsUser.discordUsername = (user as any).discordUsername || user.username;
+      gsUser.discordUsername = user.discordUsername || user.username;
     }
     gsUser.displayName = name;
     await AppDataSource.manager.save(gsUser);
@@ -325,7 +325,7 @@ export function createWebServer(opts: WebServerOptions) {
     // Update session
     user.username = name;
     user.displayName = name;
-    (user as any).needsSetup = false;
+    user.needsSetup = false;
 
     res.json({ ok: true, displayName: name });
   });
@@ -576,7 +576,7 @@ export function createWebServer(opts: WebServerOptions) {
   }
 
   // Expose for use by adapted commands
-  (app as any).__awaitComponent = awaitComponent;
+  // awaitComponent is exposed via the return value
 
   // ─── Start ─────────────────────────────────────────────────────────
 

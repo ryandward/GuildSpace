@@ -40,7 +40,7 @@ export class ButtonBuilder {
       'Primary': 'Primary', 'Secondary': 'Secondary', 'Success': 'Success',
       'Danger': 'Danger', 'Link': 'Link',
     };
-    this.btn.style = styleMap[style as any] ?? 'Primary';
+    this.btn.style = styleMap[String(style)] ?? 'Primary';
     return this;
   }
   setDisabled(disabled: boolean): this { this.btn.disabled = disabled; return this; }
@@ -69,7 +69,7 @@ export class StringSelectMenuBuilder {
  * In discord.js it's generic: ActionRowBuilder<ButtonBuilder> etc.
  * Here it just collects components.
  */
-export class ActionRowBuilder<T extends { build(): any } = any> {
+export class ActionRowBuilder<T extends { build(): unknown } = { build(): unknown }> {
   private components: T[] = [];
 
   addComponents(...components: T[]): this {
@@ -78,7 +78,7 @@ export class ActionRowBuilder<T extends { build(): any } = any> {
   }
 
   toJSON(): ActionRow {
-    return this.components.map((c: any) => c.build ? c.build() : c);
+    return this.components.map(c => c.build()) as ActionRow;
   }
 }
 
@@ -113,8 +113,7 @@ export class ModalBuilder {
   setTitle(title: string): this { this.modal.title = title; return this; }
   addComponents(...rows: ActionRowBuilder<TextInputBuilder>[]): this {
     for (const row of rows) {
-      const fields = row.toJSON() as any;
-      // Each row contains one TextInputBuilder
+      const fields = row.toJSON() as unknown as ModalField[];
       for (const field of fields) {
         this.modal.fields.push(field);
       }

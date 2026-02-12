@@ -17,13 +17,13 @@ export async function levelMustBeValid(Level: number) {
 
 export async function toonMustExist(Name: string) {
   const toon = await AppDataSource.manager.findOne(Census, { where: { Name } });
-  if (!toon) throw new Error(`:x: ${Name} does not exist, please complete all fields.`);
+  if (!toon) throw new Error(`:x: ${Name} doesn't exist. Use /main, /alt, or /bot to declare them.`);
   return toon;
 }
 
 export async function toonMustNotExist(Name: string) {
   const toon = await AppDataSource.manager.findOne(Census, { where: { Name } });
-  if (toon) throw new Error(`:x: ${Name} already exists.`);
+  if (toon) throw new Error(`:x: ${Name} already exists. Use /change to update them.`);
   return toon;
 }
 
@@ -31,13 +31,13 @@ export async function classMustExist(CharacterClass: string) {
   const classEntered = await AppDataSource.manager.findOne(ClassDefinitions, {
     where: { CharacterClass },
   });
-  if (!classEntered) throw new Error(`:x: ${CharacterClass} is not a valid class.`);
+  if (!classEntered) throw new Error(`:x: "${CharacterClass}" isn't a valid class. Use autocomplete to pick one.`);
   return classEntered;
 }
 
 export async function userMustExist(UserId: string) {
   const user = await AppDataSource.manager.findOne(Dkp, { where: { DiscordId: UserId } });
-  if (!user) throw new Error(`:x: ${UserId} is not in the DKP database.`);
+  if (!user) throw new Error(`:x: You're not registered yet. Use /main to declare your first character.`);
   return user;
 }
 
@@ -144,6 +144,20 @@ export async function declare(
     .catch(error => {
       return `Error declaring ${Name}: ${error}`;
     });
+}
+
+export async function insertUser(DiscordId: string): Promise<string | null> {
+  const user = await AppDataSource.manager.findOne(Dkp, { where: { DiscordId } });
+
+  if (!user) {
+    const newUser = new Dkp();
+    newUser.DiscordId = DiscordId;
+    newUser.EarnedDkp = 5;
+    newUser.SpentDkp = 0;
+    await AppDataSource.manager.save(newUser);
+    return `Welcome to the guild!`;
+  }
+  return null;
 }
 
 export function formatField(field: string[]): string {

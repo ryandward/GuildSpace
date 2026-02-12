@@ -37,7 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const toonsData = await returnAllActiveToonsByDiscordId(userId);
 
     if (toonsData.length === 0) {
-      throw new Error(':x: No toons found for this user.');
+      throw new Error(':x: No toons found. They may need to use /main to get started.');
     }
 
     const statusOrder = ['Main', 'Alt', 'Bot', 'Dropped'];

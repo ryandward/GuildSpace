@@ -282,6 +282,8 @@ export interface InteractionUser {
   id: string;
   username: string;
   displayName?: string;
+  needsSetup?: boolean;
+  discordUsername?: string;
 }
 
 export interface InteractionOptions {

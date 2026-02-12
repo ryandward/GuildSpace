@@ -62,7 +62,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       DiscordId = interaction.user.id as string;
 
       if (!DiscordId) {
-        throw new Error('No Discord ID found for this user.');
+        throw new Error('Could not find that player. Try searching by character name.');
       }
 
       userDkp = await AppDataSource.manager.findOne(Dkp, { where: { DiscordId } });
@@ -75,16 +75,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       const toonsData = await returnAllActiveToonsByName(options.get('name')?.value as string);
       DiscordId = toonsData[0].DiscordId;
       if (!DiscordId) {
-        throw new Error('No Discord ID found for this user.');
+        throw new Error('Could not find that player. Try searching by character name.');
       }
       userDkp = await AppDataSource.manager.findOne(Dkp, { where: { DiscordId } });
     }
     if (!userDkp) {
-      throw new Error(`No DKP found for this <@${DiscordId}>.`);
+      throw new Error(`You're not registered yet. Use /main to declare your first character.`);
     }
 
     if (!DiscordId) {
-      throw new Error('No Discord ID found for this user.');
+      throw new Error('Could not find that player. Try searching by character name.');
     }
 
     const embed = new EmbedBuilder()
