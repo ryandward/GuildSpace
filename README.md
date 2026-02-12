@@ -1,6 +1,11 @@
-# GuildSpace
+<p align="center">
+  <img src="assets/logo.svg" alt="GuildSpace" width="120">
+</p>
 
-**A place for guilds.**
+<h1 align="center">GuildSpace</h1>
+<p align="center"><strong>A place for guilds.</strong></p>
+
+---
 
 MySpace was a place for friends. GuildSpace is a place for guilds.
 

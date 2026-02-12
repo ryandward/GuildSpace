@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" width="200" height="220">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7289da"/>
+      <stop offset="100%" stop-color="#4e5d94"/>
+    </linearGradient>
+    <linearGradient id="towerGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c8cad8"/>
+      <stop offset="100%" stop-color="#8888a0"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield -->
+  <path d="M100 10 L180 50 L180 130 Q180 185 100 210 Q20 185 20 130 L20 50 Z" 
+        fill="url(#shieldGrad)" stroke="#5b6eae" stroke-width="3"/>
+  <!-- Inner shield border -->
+  <path d="M100 24 L168 58 L168 128 Q168 176 100 198 Q32 176 32 128 L32 58 Z" 
+        fill="none" stroke="#8ea1e1" stroke-width="1" opacity="0.4"/>
+  <!-- Tower base -->
+  <rect x="75" y="85" width="50" height="90" rx="2" fill="url(#towerGrad)"/>
+  <!-- Tower top / battlement -->
+  <rect x="68" y="75" width="64" height="14" rx="1" fill="url(#towerGrad)"/>
+  <!-- Crenellations -->
+  <rect x="68" y="65" width="10" height="14" rx="1" fill="url(#towerGrad)"/>
+  <rect x="86" y="65" width="10" height="14" rx="1" fill="url(#towerGrad)"/>
+  <rect x="104" y="65" width="10" height="14" rx="1" fill="url(#towerGrad)"/>
+  <rect x="122" y="65" width="10" height="14" rx="1" fill="url(#towerGrad)"/>
+  <!-- Door -->
+  <path d="M90 175 L90 145 Q100 130 110 145 L110 175 Z" fill="#4e5d94"/>
+  <!-- Windows -->
+  <rect x="84" y="98" width="10" height="14" rx="2" fill="#4e5d94"/>
+  <rect x="106" y="98" width="10" height="14" rx="2" fill="#4e5d94"/>
+  <rect x="84" y="120" width="10" height="14" rx="2" fill="#4e5d94"/>
+  <rect x="106" y="120" width="10" height="14" rx="2" fill="#4e5d94"/>
+  <!-- Flag pole -->
+  <line x1="100" y1="35" x2="100" y2="65" stroke="#c8cad8" stroke-width="2"/>
+  <!-- Flag -->
+  <path d="M100 35 L125 42 L100 50 Z" fill="#f0c040"/>
+</svg>
