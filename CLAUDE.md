@@ -15,6 +15,20 @@ No test framework or linter is configured. The project uses ESM (`"type": "modul
 
 Requires a `.env` file (see `.env.example`) with PostgreSQL credentials (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `POSTGRES_DB`), `PORT`, and Discord OAuth vars (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`). Hosted on Railway.
 
+## Lineage
+
+GuildSpace is being ported from a Discord bot: `~/Git/Project-1999-Typescript-Discord` (remote: https://github.com/ryandward/Project-1999-Typescript-Discord). The Discord bot is still running in production and **shares the same Railway Postgres database**.
+
+We are "building down" — starting from a working Discord bot with real data and real users, and converting commands one at a time to run on the web platform. The shim (`src/platform/shim.ts`) reimplements the discord.js API surface so that commands can be ported with minimal changes.
+
+**To port a new command:**
+1. Copy the command file from the Discord bot source into `src/commands_web/<category>/`.
+2. Swap the import from `'discord.js'` to `'../../platform/shim.js'` (adjust relative path as needed).
+3. Fix any Discord-specific APIs that don't exist in the shim yet (`guild.members`, `guild.roles`, `interaction.channel`, etc.) — either extend the shim or work around them.
+4. Commands are auto-discovered from `commands_web/` subfolders at startup; no registration step needed.
+
+Shared business logic (database helpers, validators) stays in `src/commands/` and is imported by both the Discord bot and web commands.
+
 ## Architecture
 
 GuildSpace is a web-based guild management platform for EverQuest guilds, replacing a Discord bot with an Express + Socket.IO server. It manages character census, DKP (Dragon Kill Points), raid attendance, and guild bank.
@@ -52,6 +66,53 @@ TypeORM entities mapping to PostgreSQL tables/views. Key entities: `Census`, `Dk
 ### Frontend
 
 `src/platform/web/public/index.html` — monolithic vanilla JS single-page app. Communicates via Socket.IO and renders command responses (embeds, buttons, modals, select menus) plus a real-time chat panel.
+
+## Command Port Status
+
+The Discord bot has 30 commands. 12 have been ported to GuildSpace.
+
+### Ported
+- **Census (9):** main, alt, bot, claim, change, ding, drop, toons, whois
+- **DKP (2):** dkp, attendance (most complex — modal + /who log parsing)
+- **Utility (1):** ping
+
+### Not Yet Ported
+
+**Census (3):**
+- `assign` — officer: create & assign character to any user (ManageGuild)
+- `reassign` — officer: update existing character owner/status/class/level (ManageGuild)
+- `promote` — elevate Probationary → Member (Discord roles + channel post)
+
+**Bank (4):**
+- `expense` — record guild bank platinum withdrawal (ManageGuild)
+- `income` — record guild bank platinum deposit (ManageGuild)
+- `plat` — view/adjust guild platinum balance
+- `find` — search bank items with request button (buttons, select menu, collector, channel notification)
+
+**Utility (11):**
+- `account` — view/update shared account credentials (officer gated)
+- `add` / `remove` — self-assign/remove roles (Discord role system)
+- `browse` — browse shared bot characters + login (select menu, button collector)
+- `create_role` / `roles` — manage self-assignable roles (Discord role creation)
+- `delete_shared_toon` — remove shared toon entry (officer gated)
+- `help` — list all commands
+- `listaccounts` — DM officer with all shared accounts (needs rethinking for web)
+- `login` — retrieve shared account credentials (role hierarchy gating)
+- `note` — add/clear notes on shared character (officer gated)
+- `permissions` — show Discord permission flags (Discord-specific, may not need porting)
+
+### Shim Gaps
+
+These Discord APIs are used by unported commands but not yet implemented in `src/platform/shim.ts`:
+- **`guild.members` / `guild.roles`** — needed by promote, assign, add, remove, create_role, roles
+- **Role hierarchy checks** — needed by login, account, browse
+- **Channel-specific posting** (bank-request channel, general channel) — needed by find, promote
+- **DM sending** — needed by listaccounts
+- **MessageComponent collectors** (button/select with timeout) — needed by find, browse
+
+### API Surface
+
+Currently there are **no data-access REST endpoints** — all data flows through command execution over WebSocket. The Discord bot has zero REST endpoints either. To open GuildSpace up for third-party API consumers, dedicated endpoints (e.g. `GET /api/census`, `GET /api/dkp/:user`, `GET /api/bank/search`) would need to be built separate from the command system.
 
 ## Conventions
 
