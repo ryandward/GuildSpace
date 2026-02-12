@@ -1,19 +1,24 @@
-import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import MessageList from '../components/MessageList';
 import CommandInput from '../components/CommandInput';
 import Modal from '../components/Modal';
+import UserMenu from '../components/UserMenu';
 
 export default function AppShell() {
-  const { user } = useAuth();
-  const { modal } = useSocket();
+  const { modal, connected, showHelp } = useSocket();
 
   return (
     <div className="app-shell">
       <header>
         <h1>GuildSpace</h1>
-        <span className="user-info">Logged in as {user?.displayName || user?.username}</span>
+        <div className="header-actions">
+          <button className="help-btn" onClick={showHelp} title="Show available commands">[?]</button>
+          <UserMenu />
+        </div>
       </header>
+      {!connected && (
+        <div className="connection-banner">Reconnecting...</div>
+      )}
       <MessageList />
       <CommandInput />
       {modal && <Modal />}

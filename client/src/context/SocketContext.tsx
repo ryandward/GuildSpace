@@ -98,6 +98,7 @@ interface SocketContextValue {
   submitModal: (modalId: string, fields: Record<string, string>) => void;
   sendComponentInteraction: (parentInteractionId: string, customId: string, values?: string[]) => void;
   fetchAutocomplete: (cmdName: string, optionName: string, value: string) => Promise<{ name: string; value: string }[]>;
+  showHelp: () => void;
 }
 
 const SocketContext = createContext<SocketContextValue | null>(null);
@@ -260,6 +261,15 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  function showHelp() {
+    const lines = commands.map(c => `  /${c.name} — ${c.description}`).join('\n');
+    setMessages(prev => [...prev, {
+      type: 'system',
+      content: `Available commands:\n${lines}`,
+      id: nextId(),
+    }]);
+  }
+
   async function fetchAutocomplete(cmdName: string, optionName: string, value: string) {
     try {
       const res = await fetch(`/api/commands/${cmdName}/autocomplete`, {
@@ -292,6 +302,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       submitModal: submitModalFn,
       sendComponentInteraction,
       fetchAutocomplete,
+      showHelp,
     }}>
       {children}
     </SocketContext.Provider>

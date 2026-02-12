@@ -4,6 +4,7 @@ export interface User {
   id: string;
   username: string;
   displayName: string;
+  discordUsername?: string;
   needsSetup?: boolean;
 }
 
@@ -112,9 +113,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.token]);
 
   const logout = useCallback(() => {
+    const tkn = state.token;
+    if (tkn) {
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tkn}` },
+      }).catch(() => {});
+    }
     localStorage.removeItem('gs_token');
     setState({ token: null, user: null, loading: false, needsSetup: false });
-  }, []);
+  }, [state.token]);
 
   return (
     <AuthContext.Provider value={{ ...state, submitName, logout }}>

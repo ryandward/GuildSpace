@@ -158,6 +158,7 @@ export function createWebServer(opts: WebServerOptions) {
   // ─── Auth (Discord OAuth2) ───────────────────────────────────────
 
   const TOKEN_SECRET = process.env.DISCORD_CLIENT_SECRET || 'fallback-secret';
+  const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   function createSignedToken(discordId: string): string {
     const payload = `${discordId}.${Date.now()}`;
@@ -171,6 +172,7 @@ export function createWebServer(opts: WebServerOptions) {
     const [discordId, timestamp] = parts;
     const expectedSig = crypto.createHmac('sha256', TOKEN_SECRET).update(`${discordId}.${timestamp}`).digest('hex').slice(0, 16);
     if (parts[2] !== expectedSig) return null;
+    if (Date.now() - Number(timestamp) > TOKEN_TTL_MS) return null;
     return discordId;
   }
 
@@ -292,6 +294,7 @@ export function createWebServer(opts: WebServerOptions) {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
+      discordUsername: user.discordUsername,
       needsSetup: user.needsSetup || false,
     });
   });
@@ -334,6 +337,13 @@ export function createWebServer(opts: WebServerOptions) {
     user.needsSetup = false;
 
     res.json({ ok: true, displayName: name });
+  });
+
+  // Logout — remove session from server
+  app.post('/api/auth/logout', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (token) sessions.delete(token);
+    res.json({ ok: true });
   });
 
   // ─── Command Registry ──────────────────────────────────────────────
