@@ -1,38 +1,37 @@
 # GuildSpace
 
-MySpace for gaming guilds.
+**A place for guilds.**
 
-## What is this
+MySpace was a place for friends. GuildSpace is a place for guilds.
 
-GuildSpace is a home for gaming communities on the web. Guilds get their own pages. Members get profiles. Your roster, your DKP, your guild history, your loot tables... they all live somewhere permanent that you can actually link people to. Not buried in a chat scroll.
+Your guild gets a home on the web. Member profiles, rosters, DKP standings, bank inventories, raid history. It's all there when people show up, like a website. Because it is one.
 
-## Why
+## Why not just use Discord?
 
-Somewhere along the way, "community platform" started meaning "chat app that sells your attention." Your guild's entire history lives in a corporate chatroom you don't control, behind terms of service that change whenever they want, and now behind facial recognition gates.
+Discord is a chat app. Your guild's entire history lives in a corporate chatroom you don't control, behind terms of service that change whenever they want, scrolling into oblivion.
 
-The internet used to be a place where you could just build something for your friends. GuildSpace is trying to get back to that.
+GuildSpace is not a chat app. Nobody needs to be online at the same time. You check the roster, look up someone's toons, see who made the last raid. It's a bulletin board, not a group chat.
 
-## How this actually works
+## Why this is cheap to run
 
-GuildSpace is not a chat app. Nobody needs to be online at the same time. You post on your guild's board, update your profile, check the DKP standings, browse the bank inventory. It's all there when people show up, like a website. Because it is one.
+Real-time messaging is expensive. Expensive platforms need revenue. Revenue means ads, data harvesting, or paywalls. That's the treadmill every chat platform ends up on.
 
-Real-time messaging is expensive to run. Expensive platforms need revenue. Revenue means ads, data harvesting, or paywalls. That's the treadmill every chat platform ends up on.
+An asynchronous guild platform costs almost nothing compared to pushing millions of live messages. When your costs are low, you don't need to monetize your users.
 
-A guild forum with profiles costs almost nothing to serve compared to a chat app pushing millions of live messages. When your costs are low, you don't need to monetize your users.
+**Advertising and monetization are banned on GuildSpace.** Not "we don't do it yet." Banned. There are no ads. There is no premium tier. Users are not the product.
 
-So: **advertising and monetization are banned on GuildSpace.** Not "we don't do it yet" or "we promise not to." Banned. There are no ads. There is no premium tier. Users are not the product.
-
-And because there are no DMs and no adult content, there's nothing here for lawmakers to panic about. No predator vectors to regulate. No age-gated content requiring biometric verification. Just guild pages and character profiles. The way it should be.
+No DMs. No adult content. No predator vectors. No age-gated content requiring biometric verification. Just guild pages and character profiles.
 
 ## Status
 
-Early development. Come build with us.
+Early development. Ex Astra is the first guild on the platform.
 
 ## Stack
 
 - **Server**: Express + Socket.IO (TypeScript)
 - **Database**: PostgreSQL (via TypeORM)
-- **Frontend**: Web
+- **Auth**: Discord OAuth2
+- **Hosting**: Railway
 
 ## License
 
