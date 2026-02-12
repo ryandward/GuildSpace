@@ -13,6 +13,7 @@
  */
 import express from 'express';
 import crypto from 'crypto';
+import { existsSync } from 'fs';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import path from 'path';
@@ -147,7 +148,12 @@ export function createWebServer(opts: WebServerOptions) {
   const io = new SocketServer(server, { cors: { origin: '*' } });
 
   app.use(express.json());
-  app.use(express.static(path.join(process.cwd(), 'src', 'platform', 'web', 'public')));
+
+  // Serve Vite-built client in production, fall back to legacy public/
+  const clientDist = path.join(process.cwd(), 'client', 'dist');
+  const legacyPublic = path.join(process.cwd(), 'src', 'platform', 'web', 'public');
+  const staticDir = existsSync(clientDist) ? clientDist : legacyPublic;
+  app.use(express.static(staticDir));
 
   // ─── Auth (Discord OAuth2) ───────────────────────────────────────
 
@@ -577,6 +583,12 @@ export function createWebServer(opts: WebServerOptions) {
 
   // Expose for use by adapted commands
   // awaitComponent is exposed via the return value
+
+  // ─── SPA Fallback ───────────────────────────────────────────────────
+  // Serve index.html for all non-API routes (client-side routing)
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
 
   // ─── Start ─────────────────────────────────────────────────────────
 

@@ -5,7 +5,8 @@
   "main": "src/index_web.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:client && tsc",
+    "build:client": "cd client && npm install && npm run build",
     "start": "node dist/index_web.js"
   },
   "author": "Ryan D. Ward (ryandward@github)",
