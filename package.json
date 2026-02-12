@@ -1,0 +1,26 @@
+{
+  "name": "guildspace",
+  "version": "0.1.0",
+  "description": "GuildSpace — self-hosted guild platform",
+  "main": "src/index_web.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index_web.js"
+  },
+  "author": "Ryan D. Ward (ryandward@github)",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "lodash": "^4.17.21",
+    "pg": "^8.11.5",
+    "socket.io": "^4.8.3",
+    "typeorm": "^0.3.11"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/lodash": "^4.14.202",
+    "typescript": "^5.5.2"
+  }
+}
