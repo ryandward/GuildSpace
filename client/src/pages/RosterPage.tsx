@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
 import RosterFilters from '../components/roster/RosterFilters';
-import RosterTable from '../components/roster/RosterTable';
+import RosterGrid from '../components/roster/RosterTable';
 import type { RosterMember } from '../components/roster/RosterRow';
 
 interface RosterData {
@@ -23,6 +23,7 @@ export default function RosterPage() {
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
 
   async function fetchRoster() {
     setLoading(true);
@@ -87,72 +88,67 @@ export default function RosterPage() {
       );
     }
 
-    return members;
+    // Sort alphabetically by featured character name
+    return [...members].sort((a, b) => {
+      const fa = classFilter
+        ? a.characters.find(c => c.class === classFilter) || a.characters[0]
+        : a.characters.find(c => c.status === 'Main') || a.characters[0];
+      const fb = classFilter
+        ? b.characters.find(c => c.class === classFilter) || b.characters[0]
+        : b.characters.find(c => c.status === 'Main') || b.characters[0];
+      return (fa?.name || '').localeCompare(fb?.name || '');
+    });
   }, [data, search, classFilter, statusFilter]);
-
-  const classCount = classFilter
-    ? data?.summary.classCounts[classFilter] ?? 0
-    : 0;
 
   return (
     <div className="app-shell">
       <AppHeader />
       <div className="roster-page">
         <div className="roster-content">
-          {/* Dashboard summary */}
-          <div className="roster-dashboard">
-            <div className="roster-stat-card">
-              <div className="roster-stat-value">{data ? filtered.length : '--'}</div>
-              <div className="roster-stat-label">
-                {filtered.length !== (data?.summary.totalMembers ?? 0) ? (
-                  <>Shown <span className="roster-stat-of">of {data?.summary.totalMembers}</span></>
-                ) : 'Members'}
-              </div>
+          {/* Guild headline */}
+          <div className="roster-headline">
+            <div className="roster-headline-text">
+              <h2>Guild Roster</h2>
+              {data && (
+                <p>{data.summary.totalMembers} members, {data.summary.totalCharacters} characters across Norrath</p>
+              )}
             </div>
-            <div className="roster-stat-card">
-              <div className="roster-stat-value accent">
-                {data ? (classFilter ? classCount : data.summary.totalCharacters) : '--'}
-              </div>
-              <div className="roster-stat-label">
-                {classFilter ? classFilter + 's' : 'Characters'}
-              </div>
-            </div>
-            <div className="roster-stat-card">
-              <div className="roster-stat-value dkp">
-                {data ? Math.round(data.members.reduce((s, m) => s + m.earnedDkp - m.spentDkp, 0) / (data.members.length || 1)) : '--'}
-              </div>
-              <div className="roster-stat-label">Avg Net DKP</div>
-            </div>
-            <button
-              className="roster-refresh-btn"
-              onClick={fetchRoster}
-              disabled={loading}
-              title="Refresh roster"
-            >
-              {loading ? '...' : '\u21BB'}
-            </button>
+            {!loading && (
+              <button className="roster-reload" onClick={fetchRoster} title="Refresh">&#x21bb;</button>
+            )}
           </div>
+
+          {/* Class composition bar — visual + interactive */}
+          {data && (
+            <RosterFilters
+              search={search}
+              onSearchChange={setSearch}
+              classFilter={classFilter}
+              onClassFilterChange={cls => { setClassFilter(cls); setSelectedMember(null); }}
+              statusFilter={statusFilter}
+              onStatusFilterChange={s => { setStatusFilter(s); setSelectedMember(null); }}
+              availableClasses={availableClasses}
+              availableStatuses={availableStatuses}
+              classCounts={data.summary.classCounts}
+              totalCharacters={data.summary.totalCharacters}
+            />
+          )}
 
           {error && <div className="roster-error">{error}</div>}
 
-          {!loading && data && (
-            <>
-              <RosterFilters
-                search={search}
-                onSearchChange={setSearch}
-                classFilter={classFilter}
-                onClassFilterChange={setClassFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                availableClasses={availableClasses}
-                availableStatuses={availableStatuses}
-                classCounts={data.summary.classCounts}
-              />
-              <RosterTable members={filtered} classFilter={classFilter} />
-              {filtered.length === 0 && (
-                <div className="roster-empty">No members match your filters.</div>
-              )}
-            </>
+          {loading && <div className="roster-loading">Loading roster...</div>}
+
+          {!loading && data && filtered.length > 0 && (
+            <RosterGrid
+              members={filtered}
+              classFilter={classFilter}
+              selectedMember={selectedMember}
+              onSelectMember={id => setSelectedMember(id === selectedMember ? null : id)}
+            />
+          )}
+
+          {!loading && data && filtered.length === 0 && (
+            <div className="roster-empty">No one here matches that.</div>
           )}
         </div>
       </div>

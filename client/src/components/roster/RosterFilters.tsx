@@ -8,6 +8,7 @@ interface RosterFiltersProps {
   availableClasses: string[];
   availableStatuses: string[];
   classCounts: Record<string, number>;
+  totalCharacters: number;
 }
 
 function classToPip(className: string): string {
@@ -24,41 +25,54 @@ export default function RosterFilters({
   availableClasses,
   availableStatuses,
   classCounts,
+  totalCharacters,
 }: RosterFiltersProps) {
   return (
     <div className="roster-filters">
-      <div className="roster-filter-row">
+      {/* Class composition bar — a visual representation of guild makeup */}
+      <div className="class-bar">
+        {availableClasses.map(cls => {
+          const count = classCounts[cls] || 0;
+          const pct = totalCharacters > 0 ? (count / totalCharacters) * 100 : 0;
+          return (
+            <button
+              key={cls}
+              className={`class-bar-segment ${classToPip(cls)}${classFilter === cls ? ' active' : ''}${classFilter && classFilter !== cls ? ' dimmed' : ''}`}
+              style={{ flex: pct }}
+              onClick={() => onClassFilterChange(classFilter === cls ? null : cls)}
+              title={`${cls}: ${count}`}
+            />
+          );
+        })}
+      </div>
+
+      {classFilter && (
+        <div className="class-bar-label">
+          <span className={`class-bar-label-pip ${classToPip(classFilter)}`} />
+          {classFilter} <span className="class-bar-label-count">({classCounts[classFilter] || 0})</span>
+          <button className="class-bar-clear" onClick={() => onClassFilterChange(null)}>clear</button>
+        </div>
+      )}
+
+      <div className="roster-toolbar">
         <input
           className="roster-search"
           type="text"
-          placeholder="Search names..."
+          placeholder="Find someone..."
           value={search}
           onChange={e => onSearchChange(e.target.value)}
         />
-        <div className="roster-filter-pills">
+        <div className="roster-status-pills">
           {availableStatuses.map(status => (
             <button
               key={status}
-              className={`filter-pill status-pill${statusFilter === status ? ' active' : ''}`}
+              className={`status-pill${statusFilter === status ? ' active' : ''}`}
               onClick={() => onStatusFilterChange(statusFilter === status ? null : status)}
             >
               {status}
             </button>
           ))}
         </div>
-      </div>
-      <div className="roster-filter-pills class-pills">
-        {availableClasses.map(cls => (
-          <button
-            key={cls}
-            className={`filter-pill class-pill${classFilter === cls ? ' active' : ''}`}
-            onClick={() => onClassFilterChange(classFilter === cls ? null : cls)}
-          >
-            <span className={`filter-pip ${classToPip(cls)}`} />
-            {cls}
-            <span className="filter-count">{classCounts[cls] || 0}</span>
-          </button>
-        ))}
       </div>
     </div>
   );
