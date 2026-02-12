@@ -1,23 +1,15 @@
 import RosterRow, { type RosterMember } from './RosterRow';
 
-interface RosterGridProps {
+interface Props {
   members: RosterMember[];
   classFilter?: string | null;
-  selectedMember: string | null;
-  onSelectMember: (id: string) => void;
 }
 
-export default function RosterGrid({ members, classFilter, selectedMember, onSelectMember }: RosterGridProps) {
+export default function MemberList({ members, classFilter }: Props) {
   return (
-    <div className="roster-grid">
+    <div className="member-list">
       {members.map(m => (
-        <RosterRow
-          key={m.discordId}
-          member={m}
-          classFilter={classFilter}
-          selected={selectedMember === m.discordId}
-          onSelect={() => onSelectMember(m.discordId)}
-        />
+        <RosterRow key={m.discordId} member={m} classFilter={classFilter} />
       ))}
     </div>
   );

@@ -728,45 +728,12 @@ header h1 { font-size: 16px; color: var(--accent); }
 .roster-content {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 32px 28px 64px;
+  padding: 24px 24px 64px;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
-
-/* --- Roster Headline --- */
-.roster-headline {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.roster-headline h2 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-
-.roster-headline p {
-  font-size: 13px;
-  color: var(--text-dim);
-  margin-top: 4px;
-}
-
-.roster-reload {
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px;
-  opacity: 0.5;
-  transition: opacity 0.15s;
-}
-.roster-reload:hover { opacity: 1; }
 
 .roster-loading {
   color: var(--text-dim);
@@ -784,228 +751,211 @@ header h1 { font-size: 16px; color: var(--accent); }
   color: var(--text-dim);
   font-size: 13px;
   text-align: center;
-  padding: 48px 0;
+  padding: 32px 0;
 }
 
-/* --- Class Composition Bar --- */
-.class-bar {
+/* --- Class Mosaic --- */
+.class-mosaic {
   display: flex;
-  height: 8px;
-  border-radius: 4px;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-height: 120px;
+}
+
+.mosaic-block {
+  min-width: 60px;
+  min-height: 56px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+  font-family: inherit;
+  transition: opacity 0.2s, border-color 0.2s, transform 0.15s;
+  position: relative;
   overflow: hidden;
-  gap: 2px;
-  cursor: pointer;
 }
 
-.class-bar-segment {
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  min-width: 4px;
-  transition: opacity 0.2s, transform 0.2s;
-}
-.class-bar-segment:hover { transform: scaleY(1.8); }
-.class-bar-segment.active { transform: scaleY(2.2); }
-.class-bar-segment.dimmed { opacity: 0.2; }
+.mosaic-block:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-1px); }
+.mosaic-block.active { border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
+.mosaic-block.dimmed { opacity: 0.15; }
 
-.class-bar-label {
+.mosaic-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0,0,0,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.mosaic-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(0,0,0,0.5);
+  line-height: 1;
+}
+
+.mosaic-levels {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text);
+  gap: 6px;
 }
 
-.class-bar-label-pip {
-  width: 4px;
-  height: 14px;
+.mosaic-level-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mosaic-level-fill {
+  display: block;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
   border-radius: 2px;
 }
 
-.class-bar-label-count {
-  color: var(--text-dim);
-  font-size: 11px;
+.mosaic-level-label {
+  font-size: 9px;
+  color: rgba(0,0,0,0.5);
+  white-space: nowrap;
 }
 
-.class-bar-clear {
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  padding: 0;
-  margin-left: 4px;
-  opacity: 0.6;
-}
-.class-bar-clear:hover { opacity: 1; color: var(--text); }
-
-/* --- Roster Filters --- */
-.roster-filters {
+/* --- Drilldown --- */
+.roster-drilldown {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  animation: fadeIn 0.2s ease;
 }
 
-.roster-toolbar {
+.drilldown-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
 }
 
-.roster-search {
+.drilldown-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.drilldown-count {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.drilldown-search {
+  margin-left: auto;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
   font-family: inherit;
-  font-size: 13px;
-  padding: 7px 14px;
-  border-radius: 6px;
-  width: 220px;
-  transition: border-color 0.15s;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  width: 180px;
 }
-.roster-search:focus { outline: none; border-color: var(--accent); }
-.roster-search::placeholder { color: var(--text-dim); }
+.drilldown-search:focus { outline: none; border-color: var(--accent); }
+.drilldown-search::placeholder { color: var(--text-dim); }
 
-.roster-status-pills {
-  display: flex;
-  gap: 4px;
-}
-
-.status-pill {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 4px 10px;
-  cursor: pointer;
-  border-radius: 3px;
-  transition: all 0.15s;
-}
-.status-pill:hover { color: var(--text); border-color: var(--text-dim); }
-.status-pill.active { color: var(--accent); border-color: var(--accent-dim); }
-
-/* --- Roster Grid --- */
-.roster-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-}
-
-/* --- Member Tile --- */
-.roster-tile {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-  overflow: hidden;
-}
-.roster-tile:hover { border-color: #3a3a5a; }
-.roster-tile.selected {
-  border-color: var(--accent-dim);
-  grid-column: 1 / -1;
-}
-
-/* Tile face — the collapsed view */
-.roster-tile-face {
-  padding: 18px 16px 14px;
+/* --- Member List --- */
+.member-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: 8px;
 }
 
-.roster-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+/* --- Member Profile --- */
+.member-profile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.member-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 16px;
+}
+
+.member-identity {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 14px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.member-player {
+  font-size: 11px;
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.member-dkp {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   flex-shrink: 0;
 }
 
-.roster-tile-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-.roster-tile-class {
-  font-size: 11px;
-  color: var(--text-dim);
-}
-
-/* Tile detail — expanded view */
-.roster-tile-detail {
-  border-top: 1px solid var(--border);
-  padding: 14px 16px 16px;
-  animation: fadeIn 0.15s ease;
-}
-
-.roster-tile-player {
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-bottom: 6px;
-}
-
-.roster-tile-dkp {
-  font-size: 12px;
-  color: var(--text-dim);
-  margin-bottom: 14px;
-}
-
-.dkp-net {
+.member-dkp-value {
+  font-size: 14px;
   font-weight: 700;
   color: var(--yellow);
-  font-size: 14px;
 }
 
-.dkp-breakdown {
-  display: block;
-  font-size: 11px;
-  opacity: 0.6;
-  margin-top: 2px;
+.member-dkp-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.5;
 }
 
-.roster-tile-chars {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.member-chars {
+  border-top: 1px solid var(--border);
 }
 
-.roster-tile-char {
+.member-char {
   display: flex;
   align-items: center;
-  padding: 7px 8px;
-  gap: 10px;
-  border-radius: 5px;
+  padding: 8px 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
 }
-.roster-tile-char:hover { background: var(--surface2); }
+.member-char:last-child { border-bottom: none; }
+.member-char:hover { background: var(--surface2); }
+.member-char.highlighted { background: rgba(108, 92, 231, 0.06); }
 
 /* --- Mobile --- */
 @media (max-width: 600px) {
-  .roster-content { padding: 20px 14px 40px; gap: 18px; }
-  .roster-headline h2 { font-size: 17px; }
-  .roster-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-  .roster-tile-face { padding: 14px 12px 12px; }
-  .roster-avatar { width: 40px; height: 40px; font-size: 17px; }
-  .roster-toolbar { flex-direction: column; align-items: stretch; }
-  .roster-search { width: 100%; }
+  .roster-content { padding: 16px 12px 40px; }
+  .class-mosaic { min-height: 80px; }
+  .mosaic-block { min-width: 48px; min-height: 44px; padding: 8px; }
+  .mosaic-name { font-size: 9px; }
+  .mosaic-count { font-size: 18px; }
+  .mosaic-levels { display: none; }
+  .drilldown-header { flex-wrap: wrap; }
+  .drilldown-search { width: 100%; margin-left: 0; }
+  .member-header { padding: 10px 12px; }
+  .member-char { padding: 8px 12px; }
   .header-nav { gap: 0; }
   .nav-link { padding: 4px 6px; font-size: 12px; }
 }
