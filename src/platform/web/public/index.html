@@ -351,33 +351,43 @@ const $help = $('#command-help');
 async function checkAuth() {
   const params = new URLSearchParams(window.location.search);
   const urlToken = params.get('token');
-  if (!urlToken) return;
 
-  // Clean the URL
-  window.history.replaceState({}, '', '/');
-  token = urlToken;
+  if (urlToken) {
+    // Fresh OAuth redirect — save token
+    localStorage.setItem('gs_token', urlToken);
+    window.history.replaceState({}, '', '/');
+    token = urlToken;
+  } else {
+    // Try saved token
+    token = localStorage.getItem('gs_token');
+    if (!token) return;
+  }
 
   try {
     const res = await fetch('/api/auth/me', {
       headers: { 'Authorization': `Bearer ${token}` },
     });
-    if (!res.ok) { token = null; return; }
+    if (!res.ok) {
+      // Token expired or invalid
+      localStorage.removeItem('gs_token');
+      token = null;
+      return;
+    }
 
     const me = await res.json();
 
     if (me.needsSetup) {
-      // Show name setup screen
       $('#login-screen').style.display = 'none';
       $('#setup-screen').style.display = 'flex';
       $('#setup-name').focus();
       return;
     }
 
-    // Already set up, go to app
     user = me;
     enterApp();
   } catch (err) {
     console.error('Auth failed:', err);
+    localStorage.removeItem('gs_token');
     token = null;
   }
 }

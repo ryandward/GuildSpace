@@ -12,6 +12,7 @@
  * @module
  */
 import express from 'express';
+import crypto from 'crypto';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import path from 'path';
@@ -150,10 +151,50 @@ export function createWebServer(opts: WebServerOptions) {
 
   // ─── Auth (Discord OAuth2) ───────────────────────────────────────
 
-  function getUser(req: express.Request): InteractionUser | null {
+  const TOKEN_SECRET = process.env.DISCORD_CLIENT_SECRET || 'fallback-secret';
+
+  function createSignedToken(discordId: string): string {
+    const payload = `${discordId}.${Date.now()}`;
+    const sig = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('hex').slice(0, 16);
+    return `${payload}.${sig}`;
+  }
+
+  function verifyToken(token: string): string | null {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const [discordId, timestamp] = parts;
+    const expectedSig = crypto.createHmac('sha256', TOKEN_SECRET).update(`${discordId}.${timestamp}`).digest('hex').slice(0, 16);
+    if (parts[2] !== expectedSig) return null;
+    return discordId;
+  }
+
+  async function getUser(req: express.Request): Promise<InteractionUser | null> {
     const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token as string;
     if (!token) return null;
-    return sessions.get(token) ?? null;
+
+    // Check in-memory session first
+    const cached = sessions.get(token);
+    if (cached) return cached;
+
+    // Try to reconstruct from signed token + database
+    const discordId = verifyToken(token);
+    if (!discordId) return null;
+
+    const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, {
+      where: { discordId },
+    });
+
+    const user: InteractionUser = {
+      id: discordId,
+      username: gsUser?.displayName || discordId,
+      displayName: gsUser?.displayName || discordId,
+    };
+    (user as any).needsSetup = !gsUser;
+    (user as any).discordUsername = gsUser?.discordUsername || discordId;
+
+    // Re-cache
+    sessions.set(token, user);
+    return user;
   }
 
   // Redirect to Discord's OAuth page
@@ -217,7 +258,7 @@ export function createWebServer(opts: WebServerOptions) {
       });
 
       // Create session
-      const sessionToken = `tok_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const sessionToken = createSignedToken(discordUser.id);
       const user: InteractionUser = {
         id: discordUser.id,
         username: existing?.displayName || discordUser.username,
@@ -238,8 +279,8 @@ export function createWebServer(opts: WebServerOptions) {
   });
 
   // Check if user needs to set up their name
-  app.get('/api/auth/me', (req, res) => {
-    const user = getUser(req);
+  app.get('/api/auth/me', async (req, res) => {
+    const user = await getUser(req);
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({
       id: user.id,
@@ -251,7 +292,7 @@ export function createWebServer(opts: WebServerOptions) {
 
   // Set GuildSpace display name
   app.post('/api/auth/set-name', async (req, res) => {
-    const user = getUser(req);
+    const user = await getUser(req);
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
     const { displayName } = req.body;
@@ -299,7 +340,7 @@ export function createWebServer(opts: WebServerOptions) {
   // ─── Autocomplete ──────────────────────────────────────────────────
 
   app.post('/api/commands/:name/autocomplete', async (req, res) => {
-    const user = getUser(req);
+    const user = await getUser(req);
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
     const command = commands.get(req.params.name);
@@ -339,7 +380,24 @@ export function createWebServer(opts: WebServerOptions) {
     let sessionUser: InteractionUser | null = null;
 
     socket.on('auth', async (data: { token: string }) => {
-      const user = sessions.get(data.token);
+      let user = sessions.get(data.token);
+
+      // Try to reconstruct from signed token
+      if (!user) {
+        const discordId = verifyToken(data.token);
+        if (discordId) {
+          const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, {
+            where: { discordId },
+          });
+          user = {
+            id: discordId,
+            username: gsUser?.displayName || discordId,
+            displayName: gsUser?.displayName || discordId,
+          };
+          sessions.set(data.token, user);
+        }
+      }
+
       if (user) {
         sessionUser = user;
         socket.join('channel:general');
