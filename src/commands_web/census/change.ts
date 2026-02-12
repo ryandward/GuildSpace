@@ -1,9 +1,6 @@
 /**
  * `/change` command — changes a character's status (Main, Alt, Bot).
  *
- * Enforces business rules: promoting to `"Main"` demotes existing mains to
- * `"Alt"`, and demoting from `"Main"` is blocked if it's the user's only main.
- *
  * @module
  */
 import {
@@ -82,44 +79,25 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     if (!toon) {
       throw new Error(`:x: ${name} doesn't exist. Use /toons to see your characters.`);
     }
-    else {
-      if (status === 'Main') {
-        const currentMains = await AppDataSource.manager.find(ActiveToons, {
-          where: { DiscordId: discordId, Status: 'Main' },
-        });
-        for (const main of currentMains) {
-          await AppDataSource.manager.update(
-            ActiveToons,
-            { DiscordId: discordId, Name: main.Name },
-            { Status: 'Alt' },
-          );
-        }
-      }
-      else {
-        const currentMains = await AppDataSource.manager.find(ActiveToons, {
-          where: { DiscordId: discordId, Status: 'Main' },
-        });
-        if (currentMains.length <= 1 && toon.Status === 'Main') {
-          throw new Error(
-            `:x: Cannot change \`${name}\` to \`${status}\` without another \`Main\`.`,
-          );
-        }
-      }
-      await AppDataSource.manager.update(
-        ActiveToons,
-        { DiscordId: discordId, Name: name },
-        { Status: status },
-      );
-      await interaction.reply(
-        `:white_check_mark: \`${name}\`'s status has been changed to \`${status}\`.`,
-      );
-      if (status === 'Bot') {
-        await interaction.followUp({
-          content: ':warning: Disclaimer: Toons declared as bots can be claimed by other members.',
-          flags: MessageFlags.Ephemeral,
-        });
+
+    // Can't demote the user's last Main
+    if (toon.Status === 'Main' && status !== 'Main') {
+      const mainCount = await AppDataSource.manager.count(ActiveToons, {
+        where: { DiscordId: discordId, Status: 'Main' },
+      });
+      if (mainCount <= 1) {
+        throw new Error(`:x: Cannot change \`${name}\` to ${status} — it's your only Main.`);
       }
     }
+
+    await AppDataSource.manager.update(
+      ActiveToons,
+      { DiscordId: discordId, Name: name },
+      { Status: status },
+    );
+    await interaction.reply(
+      `:white_check_mark: \`${name}\`'s status has been changed to \`${status}\`.`,
+    );
   }
   catch (error) {
     if (error instanceof Error) {

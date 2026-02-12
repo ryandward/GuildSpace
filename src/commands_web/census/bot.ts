@@ -1,22 +1,13 @@
 /**
- * `/bot` command — registers a bot (shared/utility) character.
- *
- * Creates a `Census` record with status `"Bot"`. Bot characters can
- * be claimed by other members via the `/claim` command. A warning disclaimer
- * is shown to the declarer.
- *
- * Uses the shared `declareData` factory for its slash command definition.
+ * `/bot` command — registers or updates a character as Bot.
  *
  * @module
  */
 import { ChatInputCommandInteraction, MessageFlags } from '../../platform/shim.js';
 import _ from 'lodash';
 import {
-  classMustExist,
-  declare,
+  declareOrUpdate,
   declareData,
-  levelMustBeValid,
-  toonMustNotExist,
   userMustExist,
 } from '../../commands/census/census_functions.js';
 
@@ -31,11 +22,8 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
 
   try {
     await userMustExist(discordId);
-    await levelMustBeValid(level);
-    await toonMustNotExist(name);
-    await classMustExist(characterClass);
-    const newToonResult = await declare(discordId, 'Bot', name, level, characterClass);
-    await interaction.reply(newToonResult);
+    const result = await declareOrUpdate(discordId, 'Bot', name, level, characterClass);
+    await interaction.reply(result.message);
     return interaction.followUp({
       content: ':warning: Disclaimer: Toons declared as bots can be claimed by other members.',
       flags: MessageFlags.Ephemeral,

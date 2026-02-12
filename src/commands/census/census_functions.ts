@@ -146,6 +146,69 @@ export async function declare(
     });
 }
 
+/**
+ * Create a toon if new, or update it if the user already owns it.
+ * Throws if the toon belongs to someone else.
+ * Validates level and class.
+ * Prevents demoting the user's last Main.
+ */
+export async function declareOrUpdate(
+  UserId: string,
+  Status: string,
+  Name: string,
+  Level: number,
+  CharacterClass: string,
+): Promise<{ message: string; isUpdate: boolean; previousStatus?: string }> {
+  await levelMustBeValid(Level);
+  await classMustExist(CharacterClass);
+
+  const existing = await AppDataSource.manager.findOne(Census, { where: { Name } });
+
+  if (existing) {
+    if (existing.DiscordId !== UserId) {
+      throw new Error(`:x: ${Name} belongs to another player.`);
+    }
+
+    const previousStatus = existing.Status;
+
+    // Can't demote the user's last Main
+    if (previousStatus === 'Main' && Status !== 'Main') {
+      const mainCount = await AppDataSource.manager.count(ActiveToons, {
+        where: { DiscordId: UserId, Status: 'Main' },
+      });
+      if (mainCount <= 1) {
+        throw new Error(`:x: Cannot change \`${Name}\` to ${Status} — it's your only Main.`);
+      }
+    }
+
+    await AppDataSource.manager.update(
+      Census,
+      { Name, DiscordId: UserId },
+      { Status, Level, CharacterClass, Time: new Date() },
+    );
+
+    return {
+      message: `✅ ${Name} updated to level ${Level} ${Status} ${CharacterClass}!`,
+      isUpdate: true,
+      previousStatus,
+    };
+  }
+
+  const newToon = new Census();
+  newToon.DiscordId = UserId;
+  newToon.Status = Status;
+  newToon.Name = Name;
+  newToon.Level = Level;
+  newToon.CharacterClass = CharacterClass;
+  newToon.Time = new Date();
+  await AppDataSource.manager.save(newToon);
+
+  return {
+    message: `✅ ${Name} is now a level ${Level} ${Status} ${CharacterClass}!`,
+    isUpdate: false,
+  };
+}
+
 export async function insertUser(DiscordId: string): Promise<string | null> {
   const user = await AppDataSource.manager.findOne(Dkp, { where: { DiscordId } });
 

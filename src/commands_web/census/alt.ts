@@ -1,21 +1,13 @@
 /**
- * `/alt` command — registers an alternate character for an existing member.
- *
- * Validates the user already exists in `Dkp` (must have a main first),
- * then creates a new `Census` record with status `"Alt"`.
- *
- * Uses the shared `declareData` factory for its slash command definition.
+ * `/alt` command — registers or updates a character as Alt.
  *
  * @module
  */
 import { ChatInputCommandInteraction, MessageFlags } from '../../platform/shim.js';
 import _ from 'lodash';
 import {
-  classMustExist,
-  declare,
+  declareOrUpdate,
   declareData,
-  levelMustBeValid,
-  toonMustNotExist,
   userMustExist,
 } from '../../commands/census/census_functions.js';
 
@@ -30,11 +22,8 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
 
   try {
     await userMustExist(discordId);
-    await levelMustBeValid(level);
-    await toonMustNotExist(name);
-    await classMustExist(characterClass);
-    const newToonResult = await declare(discordId, 'Alt', name, level, characterClass);
-    return interaction.reply(newToonResult);
+    const result = await declareOrUpdate(discordId, 'Alt', name, level, characterClass);
+    return interaction.reply(result.message);
   }
   catch (error) {
     if (error instanceof Error) {

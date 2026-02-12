@@ -1,23 +1,14 @@
 /**
- * `/main` command — registers a player's primary character.
- *
- * Creates a new `Census` record with status `"Main"`, inserts the user
- * into the `Dkp` table if they're new (via `insertUser`), and
- * assigns the "Probationary Member" role to first-time declarers.
- *
- * Uses the shared `declareData` factory for its slash command definition.
+ * `/main` command — registers or updates a character as Main.
  *
  * @module
  */
 import { ChatInputCommandInteraction, MessageFlags } from '../../platform/shim.js';
 import _ from 'lodash';
 import {
-  classMustExist,
-  declare,
+  declareOrUpdate,
   declareData,
   insertUser,
-  levelMustBeValid,
-  toonMustNotExist,
 } from '../../commands/census/census_functions.js';
 
 export const data = await declareData('main');
@@ -30,17 +21,12 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
   const level = options.get('level')?.value as number;
 
   try {
-    let response: string;
-    await toonMustNotExist(name);
-    await levelMustBeValid(level);
-    await classMustExist(characterClass);
     const newUserResult = await insertUser(discordId);
-    const newToonResult = await declare(discordId, 'Main', name, level, characterClass);
+    const result = await declareOrUpdate(discordId, 'Main', name, level, characterClass);
+
+    let response = result.message;
     if (newUserResult) {
-      response = newToonResult + '\n' + newUserResult;
-    }
-    else {
-      response = newToonResult;
+      response += '\n' + newUserResult;
     }
     return interaction.reply(response);
   }
