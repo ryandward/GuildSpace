@@ -135,90 +135,104 @@
     .embed-field-name { font-weight: bold; font-size: 12px; color: var(--text-dim); margin-bottom: 2px; }
     .embed-field-value { font-size: 13px; white-space: pre-wrap; }
 
-    /* ─── Census Cards ─────────────────────────────── */
-    .census-panel { max-width: 600px; }
-    .census-status-group { margin-bottom: 16px; }
-    .census-status-group:last-child { margin-bottom: 0; }
-    .census-status-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-      margin-bottom: 8px;
+    /* ─── Profile Panel ───────────────────────────── */
+    .profile-panel {
+      max-width: 600px;
+      animation: fadeIn 0.25s ease;
     }
-    .census-cards { display: flex; flex-wrap: wrap; gap: 8px; }
-    .census-card {
-      background: var(--surface2);
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .profile-header {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 14px;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 10px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      min-width: 180px;
-      flex: 1 1 180px;
-      max-width: 280px;
+      gap: 16px;
     }
-    .census-card-level {
-      font-size: 20px;
-      font-weight: 800;
-      color: var(--accent);
-      line-height: 1;
-      min-width: 30px;
-      text-align: center;
+    .profile-avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--surface2); border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; color: var(--accent); flex-shrink: 0;
     }
-    .census-card-info { flex: 1; }
-    .census-card-name {
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--text);
-      line-height: 1.2;
+    .profile-name { font-size: 18px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .profile-subtitle { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .stats-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px; flex: 1; text-align: center;
     }
-    .census-card-class {
-      font-size: 12px;
-      color: var(--text-dim);
+    .stat-value { font-size: 26px; font-weight: 700; font-family: inherit; color: #fff; line-height: 1; }
+    .stat-value.dkp { color: #f0c040; }
+    .stat-value.chars { color: var(--accent); }
+    .stat-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim); margin-top: 4px;
     }
-    .census-card[data-class="Cleric"] { border-left: 3px solid #f0c040; }
-    .census-card[data-class="Warrior"] { border-left: 3px solid #c79c6e; }
-    .census-card[data-class="Wizard"] { border-left: 3px solid #69ccf0; }
-    .census-card[data-class="Magician"] { border-left: 3px solid #69ccf0; }
-    .census-card[data-class="Enchanter"] { border-left: 3px solid #b490d0; }
-    .census-card[data-class="Necromancer"] { border-left: 3px solid #a330c9; }
-    .census-card[data-class="Shadow Knight"] { border-left: 3px solid #a330c9; }
-    .census-card[data-class="Rogue"] { border-left: 3px solid #fff569; }
-    .census-card[data-class="Ranger"] { border-left: 3px solid #abd473; }
-    .census-card[data-class="Druid"] { border-left: 3px solid #ff7d0a; }
-    .census-card[data-class="Monk"] { border-left: 3px solid #00ff96; }
-    .census-card[data-class="Bard"] { border-left: 3px solid #e6005c; }
-    .census-card[data-class="Paladin"] { border-left: 3px solid #f58cba; }
-    .census-card[data-class="Shaman"] { border-left: 3px solid #0070de; }
-    .census-card[data-class="Warlock"] { border-left: 3px solid #9482c9; }
+    .char-section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; margin-bottom: 10px; overflow: hidden;
+    }
+    .char-section:last-child { margin-bottom: 0; }
+    .char-section-header {
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-dim);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .char-section-header .count {
+      background: var(--surface2); font-size: 10px; padding: 1px 6px;
+      border-radius: 10px; font-weight: 600;
+    }
+    .char-row {
+      display: flex; align-items: center; padding: 10px 16px;
+      border-bottom: 1px solid var(--border); gap: 12px;
+    }
+    .char-row:last-child { border-bottom: none; }
+    .char-pip { width: 3px; height: 28px; border-radius: 2px; flex-shrink: 0; }
+    .char-level {
+      font-size: 16px; font-weight: 700; color: var(--text-dim);
+      min-width: 28px; text-align: center;
+    }
+    .char-name { font-size: 14px; font-weight: 600; color: #fff; line-height: 1.2; }
+    .char-class { font-size: 12px; color: var(--text-dim); }
+    .char-info { flex: 1; }
+    .char-badge {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.04em; padding: 2px 7px; border-radius: 4px;
+      background: var(--surface2); color: var(--text-dim);
+    }
+    .char-badge.main { background: rgba(112,137,218,0.15); color: var(--accent); }
+    .char-badge.alt { background: rgba(67,181,129,0.15); color: #43b581; }
+    .char-badge.bot { background: rgba(240,192,64,0.12); color: #f0c040; }
 
-    /* ─── DKP Stat Cards ───────────────────────────── */
-    .dkp-panel { display: flex; gap: 12px; flex-wrap: wrap; max-width: 400px; }
-    .dkp-stat {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 18px;
-      flex: 1;
-      min-width: 120px;
-      text-align: center;
-    }
-    .dkp-stat-value {
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--accent);
-      line-height: 1;
-    }
-    .dkp-stat-label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-dim);
-      margin-top: 4px;
+    .pip-cleric { background: #f0c040; }
+    .pip-warrior { background: #c79c6e; }
+    .pip-wizard, .pip-magician { background: #69ccf0; }
+    .pip-enchanter { background: #b490d0; }
+    .pip-necromancer, .pip-shadow-knight { background: #a330c9; }
+    .pip-rogue { background: #fff569; }
+    .pip-ranger { background: #abd473; }
+    .pip-druid { background: #ff7d0a; }
+    .pip-monk { background: #00ff96; }
+    .pip-bard { background: #e6005c; }
+    .pip-paladin { background: #f58cba; }
+    .pip-shaman { background: #0070de; }
+    .pip-warlock { background: #9482c9; }
+
+    @media (max-width: 480px) {
+      .profile-header { padding: 14px; gap: 12px; }
+      .profile-avatar { width: 40px; height: 40px; font-size: 16px; }
+      .profile-name { font-size: 16px; }
+      .stats-row { gap: 6px; }
+      .stat-card { padding: 10px 8px; }
+      .stat-value { font-size: 20px; }
+      .char-row { padding: 8px 12px; }
     }
 
     /* ─── Components (Buttons, Selects) ──────────────── */
@@ -744,53 +758,63 @@ function isDkpEmbed(fields) {
   return fields.length <= 3 && fields.every(f => f.inline !== false && !isNaN(Number(f.value)));
 }
 
+function classToPip(className) {
+  return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
+}
+
 function renderCensusPanel(embed) {
   const panel = document.createElement('div');
-  panel.className = 'census-panel';
+  panel.className = 'profile-panel';
 
-  if (embed.title) {
-    const title = document.createElement('div');
-    title.className = 'embed-title';
-    title.textContent = renderEmoji(embed.title);
-    panel.appendChild(title);
-  }
+  // Parse description for user info
+  const desc = renderDiscordMarkdown(embed.description || '');
 
-  if (embed.description) {
-    const desc = document.createElement('div');
-    desc.className = 'embed-description';
-    desc.textContent = renderEmoji(renderDiscordMarkdown(embed.description));
-    panel.appendChild(desc);
-  }
-
+  // Count total characters
   const fields = embed.fields;
+  let totalChars = 0;
+  const groups = [];
   for (let i = 0; i < fields.length; i += 4) {
-    const header = fields[i];
     const names = fields[i+1]?.value?.split('\n') || [];
     const classes = fields[i+2]?.value?.split('\n') || [];
     const levels = fields[i+3]?.value?.split('\n') || [];
+    totalChars += names.length;
+    groups.push({ status: fields[i].name, names, classes, levels });
+  }
 
-    const group = document.createElement('div');
-    group.className = 'census-status-group';
+  // Header
+  const initial = desc.charAt(0).toUpperCase() || '?';
+  panel.innerHTML = `
+    <div class="profile-header">
+      <div class="profile-avatar">${initial}</div>
+      <div style="flex:1">
+        <div class="profile-name">${escapeHtml(desc.split('\n')[0])}</div>
+        <div class="profile-subtitle">${escapeHtml(desc.split('\n').slice(1).join(' · ') || '')}</div>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value chars">${totalChars}</div><div class="stat-label">Characters</div></div>
+    </div>
+  `;
 
-    const label = document.createElement('div');
-    label.className = 'census-status-label';
-    label.textContent = header.name;
-    group.appendChild(label);
+  // Character sections
+  for (const g of groups) {
+    const section = document.createElement('div');
+    section.className = 'char-section';
 
-    const cards = document.createElement('div');
-    cards.className = 'census-cards';
-
-    for (let j = 0; j < names.length; j++) {
-      const className = (classes[j] || '').trim();
-      const card = document.createElement('div');
-      card.className = 'census-card';
-      card.setAttribute('data-class', className);
-      card.innerHTML = `<div class="census-card-level">${escapeHtml(levels[j] || '')}</div><div class="census-card-info"><div class="census-card-name">${escapeHtml(names[j] || '')}</div><div class="census-card-class">${escapeHtml(className)}</div></div>`;
-      cards.appendChild(card);
+    const statusLower = g.status.toLowerCase();
+    let rows = '';
+    for (let j = 0; j < g.names.length; j++) {
+      const cn = (g.classes[j] || '').trim();
+      rows += `<div class="char-row">
+        <div class="char-pip ${classToPip(cn)}"></div>
+        <div class="char-level">${escapeHtml(g.levels[j] || '')}</div>
+        <div class="char-info"><div class="char-name">${escapeHtml(g.names[j] || '')}</div><div class="char-class">${escapeHtml(cn)}</div></div>
+        <div class="char-badge ${statusLower}">${escapeHtml(g.status)}</div>
+      </div>`;
     }
 
-    group.appendChild(cards);
-    panel.appendChild(group);
+    section.innerHTML = `<div class="char-section-header">${escapeHtml(g.status)} <span class="count">${g.names.length}</span></div>${rows}`;
+    panel.appendChild(section);
   }
 
   return panel;
@@ -798,32 +822,28 @@ function renderCensusPanel(embed) {
 
 function renderDkpPanel(embed) {
   const panel = document.createElement('div');
+  panel.className = 'profile-panel';
 
-  if (embed.title) {
-    const title = document.createElement('div');
-    title.className = 'embed-title';
-    title.textContent = renderEmoji(embed.title);
-    panel.appendChild(title);
-  }
+  const desc = renderDiscordMarkdown(embed.description || '');
+  const initial = desc.charAt(0).toUpperCase() || '?';
 
-  if (embed.description) {
-    const desc = document.createElement('div');
-    desc.className = 'embed-description';
-    desc.textContent = renderEmoji(renderDiscordMarkdown(embed.description));
-    panel.appendChild(desc);
-  }
-
-  const stats = document.createElement('div');
-  stats.className = 'dkp-panel';
-
+  let statsHtml = '';
   for (const field of embed.fields) {
-    const stat = document.createElement('div');
-    stat.className = 'dkp-stat';
-    stat.innerHTML = `<div class="dkp-stat-value">${escapeHtml(field.value)}</div><div class="dkp-stat-label">${escapeHtml(renderEmoji(field.name))}</div>`;
-    stats.appendChild(stat);
+    const label = renderEmoji(field.name).replace(/[^\w\s]/g, '').trim();
+    statsHtml += `<div class="stat-card"><div class="stat-value dkp">${escapeHtml(field.value)}</div><div class="stat-label">${escapeHtml(label)}</div></div>`;
   }
 
-  panel.appendChild(stats);
+  panel.innerHTML = `
+    <div class="profile-header">
+      <div class="profile-avatar">${initial}</div>
+      <div style="flex:1">
+        <div class="profile-name">${escapeHtml(renderEmoji(embed.title || ''))}</div>
+        <div class="profile-subtitle">${escapeHtml(desc)}</div>
+      </div>
+    </div>
+    <div class="stats-row">${statsHtml}</div>
+  `;
+
   return panel;
 }
 
