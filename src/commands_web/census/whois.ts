@@ -10,7 +10,7 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from '../../platform/shim.js';
-// WAS: } from 'discord.js';
+// WAS: } from '../../platform/shim.js';
 import _ from 'lodash';
 import { ActiveToons } from '../../entities/ActiveToons.js';
 import { formatField, returnAllActiveToonsByDiscordId } from '../../commands/census/census_functions.js';

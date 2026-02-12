@@ -1,8 +1,10 @@
 /**
- * `/ding` command — increments or sets a character's level.
+ * `/drop` command — soft-deletes a character by setting its status to `"Dropped"`.
  *
- * CONVERTED: discord.js → platform shim
- * DIFF: 1 line changed (import)
+ * The record remains in the `Census` table but is excluded from the
+ * `ActiveToons` view. Autocomplete only shows the invoker's own characters.
+ *
+ * @module
  */
 import {
   AutocompleteInteraction,
@@ -10,16 +12,14 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from '../../platform/shim.js';
-// WAS: } from '../../platform/shim.js';
 import _ from 'lodash';
 import { FindManyOptions, ILike } from 'typeorm';
 import { AppDataSource } from '../../app_data.js';
 import { ActiveToons } from '../../entities/ActiveToons.js';
-import { levelMustBeValid, toonMustExist } from '../../commands/census/census_functions.js';
 
 export const data = new SlashCommandBuilder()
-  .setName('ding')
-  .setDescription('Increment or set the level of a character')
+  .setName('drop')
+  .setDescription('Drop a character from the census')
   .addStringOption(option =>
     option
       .setName('name')
@@ -27,27 +27,19 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
       .setAutocomplete(true)
       .setMaxLength(24),
-  )
-  .addIntegerOption(option =>
-    option
-      .setName('level')
-      .setDescription('The new level of the character (optional)')
-      .setRequired(false)
-      .setMinValue(1)
-      .setMaxValue(60),
   );
 
 export async function autocomplete(interaction: AutocompleteInteraction) {
   try {
     const focusedOption = interaction.options.getFocused(true);
-    if (!focusedOption || typeof focusedOption === 'string') return;
-    const userId = interaction.user.id;
+    if (!focusedOption) return;
+    const discordId = interaction.user.id;
 
     if (focusedOption.name === 'name') {
       const choices: FindManyOptions = {
         where: {
           Name: ILike(`%${focusedOption.value}%`),
-          DiscordId: userId,
+          DiscordId: discordId,
         },
         take: 10,
       };
@@ -64,27 +56,23 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
   try {
     const { options } = interaction;
     const name = _.capitalize(options.get('name')?.value as string);
-    const level = options.get('level')?.value as number;
-    const userId = interaction.user.id;
-    const toon = await toonMustExist(name);
-    const newLevel = level ? level : Number(toon.Level) + 1;
+    const discordId = interaction.user.id;
 
-    await levelMustBeValid(newLevel);
-    const updateResult = await AppDataSource.manager.update(
-      ActiveToons,
-      { DiscordId: userId, Name: name },
-      { Level: newLevel },
-    );
+    const toon = AppDataSource.manager.findOne(ActiveToons, {
+      where: { DiscordId: discordId, Name: name },
+    });
 
-    if (updateResult.affected === 0) {
-      throw new Error(
-        `:x: No record was updated for \`${name}\`. Make sure you own this character or ask an officer for help.`,
-      );
+    if (!toon) {
+      throw new Error(`:x: ${name} does not exist.`);
     }
-
-    return interaction.reply(
-      `${level ? ':arrow_double_up:' : ':arrow_up:'} \`${name}\`'s level has been ${level ? 'set to' : 'incremented to'} \`${newLevel}\`!`,
-    );
+    else {
+      await AppDataSource.manager.update(
+        ActiveToons,
+        { DiscordId: discordId, Name: name },
+        { Status: 'Dropped' },
+      );
+      return interaction.reply(`:white_check_mark: ${name} has been dropped.`);
+    }
   }
   catch (error) {
     if (error instanceof Error) {

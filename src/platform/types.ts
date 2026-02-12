@@ -51,8 +51,9 @@ export class PlatformEmbed implements Embed {
     this.color = color;
     return this;
   }
-  addFields(...fields: EmbedField[]): this {
-    this.fields.push(...fields);
+  addFields(...fields: (EmbedField | EmbedField[])[]): this {
+    const flat = fields.flat();
+    this.fields.push(...flat);
     return this;
   }
   setTimestamp(): this {
@@ -285,10 +286,15 @@ export interface InteractionUser {
 
 export interface InteractionOptions {
   get(name: string): ResolvedOption | null;
+  getString(name: string, required: true): string;
   getString(name: string, required?: boolean): string | null;
+  getInteger(name: string, required: true): number;
   getInteger(name: string, required?: boolean): number | null;
+  getBoolean(name: string, required: true): boolean;
   getBoolean(name: string, required?: boolean): boolean | null;
   /** For autocomplete: returns the currently focused option's partial value */
+  getFocused(full: true): { name: string; value: string };
+  getFocused(full?: false): string;
   getFocused(full?: boolean): string | { name: string; value: string };
 }
 
@@ -334,7 +340,7 @@ export interface CommandInteraction {
   deferReply(): Promise<void>;
   deleteReply(): Promise<void>;
   followUp(options: ReplyOptions | string): Promise<void>;
-  showModal(modal: ModalDefinition): Promise<void>;
+  showModal(modal: ModalDefinition | { toJSON(): ModalDefinition; build(): ModalDefinition }): Promise<void>;
 }
 
 /**

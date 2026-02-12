@@ -8,6 +8,7 @@ import { ActiveToons } from '../../entities/ActiveToons.js';
 import { Census } from '../../entities/Census.js';
 import { ClassDefinitions } from '../../entities/ClassDefinitions.js';
 import { Dkp } from '../../entities/Dkp.js';
+import { SlashCommandBuilder } from '../../platform/shim.js';
 
 export async function levelMustBeValid(Level: number) {
   if (Level < 1 || Level > 60) throw new Error(':x: Level must be between 1 and 60.');
@@ -74,6 +75,75 @@ export async function returnAllActiveToonsByName(partialName: string) {
   const toon = await AppDataSource.manager.findOne(ActiveToons, targetToon);
   if (!toon) return [];
   return await returnAllActiveToonsByDiscordId(toon.DiscordId);
+}
+
+export async function validCharacterClasses() {
+  const records = await AppDataSource.manager
+    .createQueryBuilder(ClassDefinitions, 'c')
+    .select('c.CharacterClass')
+    .where('c.CharacterClass = c.ClassName')
+    .orderBy('c.CharacterClass')
+    .getMany();
+
+  return records.map(record => ({
+    name: record.CharacterClass,
+    value: record.CharacterClass,
+  }));
+}
+
+export async function declareData(status: string) {
+  const classNames = await validCharacterClasses();
+
+  return new SlashCommandBuilder()
+    .setName(status)
+    .setDescription(`Declare character as "${status}"`)
+    .addStringOption(option =>
+      option
+        .setName('name')
+        .setDescription('The name of the character')
+        .setRequired(true)
+        .setMaxLength(24),
+    )
+    .addNumberOption(option =>
+      option
+        .setName('level')
+        .setDescription('The level of the character')
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(60),
+    )
+    .addStringOption(option =>
+      option
+        .setName('class')
+        .setDescription('The class of the character')
+        .setRequired(true)
+        .addChoices(...classNames),
+    );
+}
+
+export async function declare(
+  UserId: string,
+  Status: string,
+  Name: string,
+  Level: number,
+  CharacterClass: string,
+): Promise<string> {
+  const newToon = new Census();
+  newToon.DiscordId = UserId;
+  newToon.Status = Status;
+  newToon.Name = Name;
+  newToon.Level = Level;
+  newToon.CharacterClass = CharacterClass;
+  newToon.Time = new Date();
+
+  return AppDataSource.manager
+    .save(newToon)
+    .then(() => {
+      return `✅ ${Name} is now a level ${Level} ${Status} ${CharacterClass}!`;
+    })
+    .catch(error => {
+      return `Error declaring ${Name}: ${error}`;
+    });
 }
 
 export function formatField(field: string[]): string {

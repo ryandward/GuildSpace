@@ -18,6 +18,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { AppDataSource } from '../../app_data.js';
 import { GuildSpaceUser } from '../../entities/GuildSpaceUser.js';
+import { ChatMessage } from '../../entities/ChatMessage.js';
 import type {
   PlatformCommand,
   CommandInteraction,
@@ -57,21 +58,29 @@ class WebInteractionOptions implements InteractionOptions {
     return this.opts.get(name) ?? null;
   }
 
+  getString(name: string, required: true): string;
+  getString(name: string, required?: boolean): string | null;
   getString(name: string, _required?: boolean): string | null {
     const opt = this.opts.get(name);
     return opt ? String(opt.value) : null;
   }
 
+  getInteger(name: string, required: true): number;
+  getInteger(name: string, required?: boolean): number | null;
   getInteger(name: string, _required?: boolean): number | null {
     const opt = this.opts.get(name);
     return opt ? Number(opt.value) : null;
   }
 
+  getBoolean(name: string, required: true): boolean;
+  getBoolean(name: string, required?: boolean): boolean | null;
   getBoolean(name: string, _required?: boolean): boolean | null {
     const opt = this.opts.get(name);
     return opt ? Boolean(opt.value) : null;
   }
 
+  getFocused(full: true): { name: string; value: string };
+  getFocused(full?: false): string;
   getFocused(full?: boolean): string | { name: string; value: string } {
     if (!this.focused) return '';
     return full ? this.focused : this.focused.value;
@@ -110,8 +119,9 @@ function createReplySender(io: SocketServer, socketId: string, interactionId: st
       const payload = typeof options === 'string' ? { content: options } : options;
       send('followUp', payload);
     },
-    async showModal(modal: ModalDefinition) {
-      send('showModal', modal);
+    async showModal(modal: ModalDefinition | { toJSON(): ModalDefinition }) {
+      const resolved = 'toJSON' in modal && typeof modal.toJSON === 'function' ? modal.toJSON() : modal as ModalDefinition;
+      send('showModal', resolved);
     },
     get isReplied() { return replied; },
     get isDeferred() { return deferred; },
@@ -328,11 +338,24 @@ export function createWebServer(opts: WebServerOptions) {
   io.on('connection', (socket) => {
     let sessionUser: InteractionUser | null = null;
 
-    socket.on('auth', (data: { token: string }) => {
+    socket.on('auth', async (data: { token: string }) => {
       const user = sessions.get(data.token);
       if (user) {
         sessionUser = user;
+        socket.join('channel:general');
         socket.emit('authOk', user);
+
+        // Send recent chat history
+        try {
+          const history = await AppDataSource.manager.find(ChatMessage, {
+            where: { channel: 'general' },
+            order: { createdAt: 'ASC' },
+            take: 100,
+          });
+          socket.emit('chatHistory', history);
+        } catch (err) {
+          console.error('Failed to load chat history:', err);
+        }
       } else {
         socket.emit('authError', { error: 'Invalid token' });
       }
@@ -442,6 +465,29 @@ export function createWebServer(opts: WebServerOptions) {
         clearTimeout(collector.timer);
         pendingCollectors.delete(data.parentInteractionId);
         collector.resolve(componentInteraction);
+      }
+    });
+
+    // ─── Chat Messages ──────────────────────────────────────────────
+
+    socket.on('chatMessage', async (data: { content: string; channel?: string }) => {
+      if (!sessionUser) return;
+      const content = data.content?.trim();
+      if (!content) return;
+
+      const channel = data.channel || 'general';
+
+      const msg = new ChatMessage();
+      msg.channel = channel;
+      msg.userId = sessionUser.id;
+      msg.displayName = sessionUser.displayName || sessionUser.username;
+      msg.content = content;
+
+      try {
+        const saved = await AppDataSource.manager.save(msg);
+        io.to(`channel:${channel}`).emit('newMessage', saved);
+      } catch (err) {
+        console.error('Failed to save chat message:', err);
       }
     });
 
