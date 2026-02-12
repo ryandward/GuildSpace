@@ -726,13 +726,13 @@ header h1 { font-size: 16px; color: var(--accent); }
 }
 
 .roster-content {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 20px 24px 64px;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 0;
 }
 
 .roster-loading {
@@ -751,325 +751,350 @@ header h1 { font-size: 16px; color: var(--accent); }
   padding: 32px 0;
 }
 
-/* --- Dashboard Layout --- */
-.roster-dashboard {
-  display: flex;
-  gap: 16px;
+/* --- Treemap ─────────────────────────────────────────────── */
+
+.treemap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  border: 1px solid var(--border);
 }
 
-.roster-dash-main { flex: 3; min-width: 0; }
-.roster-dash-side {
-  flex: 1;
-  min-width: 200px;
+.treemap-cell {
+  position: absolute;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-/* --- Class Chart (horizontal bar chart) --- */
-.class-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.class-chart-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-  background: none;
-  border: none;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--cell-color) 18%, var(--surface));
+  border: 1px solid var(--bg);
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.15s;
-}
-.class-chart-row:hover { opacity: 1 !important; }
-.class-chart-row.dimmed { opacity: 0.25; }
-.class-chart-row.active { opacity: 1; }
-
-.class-chart-label {
-  width: 90px;
-  font-size: 11px;
-  color: var(--text-dim);
-  text-align: right;
-  flex-shrink: 0;
-}
-.class-chart-row.active .class-chart-label { color: var(--text); font-weight: 700; }
-
-.class-chart-track {
-  flex: 1;
-  height: 20px;
-  background: var(--surface);
-  border-radius: 3px;
   overflow: hidden;
+  transition: opacity 0.2s, filter 0.2s;
 }
 
-.class-chart-bar {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  min-width: 2px;
-  transition: width 0.3s ease;
+.treemap-cell:hover {
+  background: color-mix(in srgb, var(--cell-color) 32%, var(--surface));
 }
 
-.class-chart-count {
-  width: 24px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
-  text-align: right;
-  flex-shrink: 0;
+.treemap-cell.active {
+  background: color-mix(in srgb, var(--cell-color) 38%, var(--surface));
+  box-shadow: inset 0 0 40px color-mix(in srgb, var(--cell-color) 12%, transparent);
+  z-index: 1;
+  border-color: var(--cell-color);
 }
 
-.class-chart-max {
-  width: 50px;
+.treemap-cell.dimmed {
+  opacity: 0.2;
+  filter: grayscale(0.6);
+}
+.treemap-cell.dimmed:hover {
+  opacity: 0.5;
+  filter: grayscale(0.3);
+}
+
+.treemap-label {
   font-size: 10px;
-  color: var(--text-dim);
-  opacity: 0.6;
-  flex-shrink: 0;
-}
-
-/* --- Level Chart --- */
-.level-chart {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px 16px;
-}
-
-.level-chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 8px;
-}
-
-.level-chart-title {
-  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-dim);
-}
-
-.level-chart-pct {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--green);
+  color: color-mix(in srgb, var(--cell-color) 80%, white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1;
 }
 
-.level-chart-track {
-  height: 6px;
-  background: var(--surface2);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 8px;
+.treemap-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--cell-color);
+  line-height: 1;
+  margin-top: 2px;
 }
 
-.level-chart-fill {
-  display: block;
-  height: 100%;
-  background: var(--green);
-  border-radius: 3px;
-  transition: width 0.3s ease;
+.treemap-meta {
+  font-size: 9px;
+  color: var(--text-dim);
+  line-height: 1;
+  margin-top: 3px;
 }
 
-.level-chart-counts {
+.treemap-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* --- Readout Strip ───────────────────────────────────────── */
+
+.roster-readouts {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.readout {
+  flex: 1;
+  padding: 10px 16px;
+  border-right: 1px solid var(--border);
+}
+.readout:last-child { border-right: none; }
+
+.readout-header {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.readout-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: var(--text-dim);
 }
 
-/* --- Status Chart --- */
-.status-chart {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px 16px;
-}
-
-.status-chart-bar {
-  display: flex;
-  height: 6px;
-  border-radius: 3px;
-  overflow: hidden;
-  gap: 2px;
-  margin-bottom: 10px;
-}
-
-.status-chart-segment {
-  border-radius: 3px;
-  transition: flex 0.3s ease;
-}
-
-.status-main { background: var(--accent); }
-.status-alt { background: #43b581; }
-.status-bot { background: #f0c040; }
-.status-probationary { background: var(--text-dim); }
-
-.status-chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-}
-
-.status-chart-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--text-dim);
-}
-
-.status-dot-sm {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-dot-sm.status-main { background: var(--accent); }
-.status-dot-sm.status-alt { background: #43b581; }
-.status-dot-sm.status-bot { background: #f0c040; }
-.status-dot-sm.status-probationary { background: var(--text-dim); }
-
-.status-chart-num {
+.readout-value {
+  font-size: 14px;
   font-weight: 700;
   color: var(--text);
 }
 
-/* --- Members Section --- */
+.readout-green { color: var(--green); }
+
+.readout-bar {
+  display: flex;
+  height: 3px;
+  background: var(--surface2);
+  gap: 1px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+
+.readout-fill-green {
+  height: 100%;
+  background: var(--green);
+  transition: width 0.3s;
+}
+
+.readout-seg { transition: flex 0.3s; }
+.readout-seg.status-main { background: var(--accent); }
+.readout-seg.status-alt { background: #43b581; }
+.readout-seg.status-bot { background: #f0c040; }
+.readout-seg.status-probationary { background: var(--text-dim); }
+
+.readout-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.readout-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.readout-dot {
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+}
+.readout-dot.status-main { background: var(--accent); }
+.readout-dot.status-alt { background: #43b581; }
+.readout-dot.status-bot { background: #f0c040; }
+.readout-dot.status-probationary { background: var(--text-dim); }
+
+/* --- Members Section ─────────────────────────────────────── */
+
 .roster-members-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .roster-members-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  padding-bottom: 8px;
+  padding: 10px 0 8px;
   border-bottom: 1px solid var(--border);
 }
 
 .roster-members-title {
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
 }
 
 .roster-members-count {
   font-size: 12px;
-  color: var(--text-dim);
+  font-weight: 700;
+  color: var(--text);
 }
 
 .roster-members-search {
   margin-left: auto;
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--border);
+  border-radius: 0;
   color: var(--text);
   font-family: inherit;
-  font-size: 12px;
-  padding: 5px 12px;
-  border-radius: 4px;
-  width: 180px;
+  font-size: 11px;
+  padding: 3px 8px;
+  width: 140px;
 }
-.roster-members-search:focus { outline: none; border-color: var(--accent); }
-.roster-members-search::placeholder { color: var(--text-dim); }
+.roster-members-search:focus { outline: none; border-color: var(--text-dim); }
+.roster-members-search::placeholder { color: var(--text-dim); opacity: 0.4; }
 
-/* --- Member List --- */
+/* --- Member List ─────────────────────────────────────────── */
+
 .member-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
-/* --- Member Profile --- */
-.member-profile {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
+.roster-member {
+  border-bottom: 1px solid var(--border);
 }
 
-.member-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 12px 16px;
-  gap: 16px;
+.roster-member-primary {
+  display: grid;
+  grid-template-columns: 3px 1fr 80px 28px 100px 54px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  transition: background 0.1s;
+}
+.roster-member:hover .roster-member-primary { background: var(--surface); }
+
+.roster-member-pip {
+  width: 3px;
+  align-self: stretch;
 }
 
-.member-identity {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-
-.member-name {
-  font-size: 14px;
+.roster-member-name {
+  font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.member-player {
-  font-size: 11px;
+.roster-member-class {
+  font-size: 10px;
   color: var(--text-dim);
-  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.member-dkp {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  flex-shrink: 0;
+.roster-member-level {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: center;
 }
 
-.member-dkp-value {
-  font-size: 14px;
+.roster-member-player {
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roster-member-dkp {
+  font-size: 11px;
   font-weight: 700;
   color: var(--yellow);
+  text-align: right;
 }
 
-.member-dkp-label {
-  font-size: 10px;
+.roster-member-alts {
+  padding-left: 16px;
+}
+
+.roster-member-alt {
+  display: grid;
+  grid-template-columns: 2px 1fr 60px 28px auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  transition: background 0.1s;
+}
+.roster-member-alt:hover { background: var(--surface); }
+.roster-member-alt.highlighted { background: rgba(108, 92, 231, 0.06); }
+
+.roster-alt-pip {
+  width: 2px;
+  height: 12px;
+}
+
+.roster-alt-name {
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roster-alt-class {
+  font-size: 9px;
   color: var(--text-dim);
   opacity: 0.5;
 }
 
-.member-chars {
-  border-top: 1px solid var(--border);
+.roster-alt-level {
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.5;
+  text-align: center;
 }
 
-.member-char {
-  display: flex;
-  align-items: center;
-  padding: 8px 16px;
-  gap: 12px;
-  border-bottom: 1px solid var(--border);
-  transition: background 0.1s;
+.roster-alt-badge {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
 }
-.member-char:last-child { border-bottom: none; }
-.member-char:hover { background: var(--surface2); }
-.member-char.highlighted { background: rgba(108, 92, 231, 0.06); }
+.roster-alt-badge.main { color: var(--accent); }
+.roster-alt-badge.alt { color: #43b581; }
+.roster-alt-badge.bot { color: #f0c040; }
 
-/* --- Mobile --- */
+/* --- Mobile ──────────────────────────────────────────────── */
+
 @media (max-width: 700px) {
-  .roster-content { padding: 14px 12px 40px; }
-  .roster-dashboard { flex-direction: column; gap: 12px; }
-  .roster-dash-side { min-width: 0; flex-direction: row; gap: 8px; }
-  .roster-dash-side > * { flex: 1; }
-  .class-chart-label { width: 70px; font-size: 10px; }
-  .class-chart-max { display: none; }
+  .roster-content { padding: 10px 8px 40px; }
+  .treemap { aspect-ratio: 3 / 2; }
+  .treemap-count { font-size: 20px; }
+  .treemap-label { font-size: 8px; }
+  .roster-readouts { flex-direction: column; }
+  .readout { border-right: none; border-bottom: 1px solid var(--border); }
+  .readout:last-child { border-bottom: none; }
+  .roster-member-primary {
+    grid-template-columns: 3px 1fr 28px 48px;
+  }
+  .roster-member-class,
+  .roster-member-player { display: none; }
   .roster-members-header { flex-wrap: wrap; }
   .roster-members-search { width: 100%; margin-left: 0; }
-  .member-header { padding: 10px 12px; }
-  .member-char { padding: 8px 12px; }
   .header-nav { gap: 0; }
   .nav-link { padding: 4px 6px; font-size: 12px; }
 }

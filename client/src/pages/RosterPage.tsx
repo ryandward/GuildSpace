@@ -44,19 +44,16 @@ export default function RosterPage() {
     fetchRoster();
   }, [token]);
 
-  // All characters flat — for computing stats
   const allChars = useMemo(() => {
     if (!data) return [];
     return data.members.flatMap(m => m.characters);
   }, [data]);
 
-  // Filtered characters (respects class filter)
   const filteredChars = useMemo(() => {
     if (!classFilter) return allChars;
     return allChars.filter(c => c.class === classFilter);
   }, [allChars, classFilter]);
 
-  // Level breakdown per class: how many at 60 vs total
   const levelBreakdown = useMemo(() => {
     const breakdown: Record<string, { max: number; total: number }> = {};
     for (const c of allChars) {
@@ -67,7 +64,6 @@ export default function RosterPage() {
     return breakdown;
   }, [allChars]);
 
-  // Level distribution (responds to class filter)
   const levelDist = useMemo(() => {
     let level60 = 0, sub60 = 0;
     for (const c of filteredChars) {
@@ -77,7 +73,6 @@ export default function RosterPage() {
     return { level60, sub60 };
   }, [filteredChars]);
 
-  // Status counts (responds to class filter)
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const c of filteredChars) {
@@ -86,7 +81,6 @@ export default function RosterPage() {
     return counts;
   }, [filteredChars]);
 
-  // Filtered and sorted members
   const filtered = useMemo(() => {
     if (!data) return [];
     let members = data.members;
@@ -126,35 +120,28 @@ export default function RosterPage() {
 
           {!loading && data && (
             <>
-              {/* Dashboard: charts that drive the data */}
-              <div className="roster-dashboard">
-                <div className="roster-dash-main">
-                  <ClassChart
-                    classCounts={data.summary.classCounts}
-                    levelBreakdown={levelBreakdown}
-                    classFilter={classFilter}
-                    onClassFilterChange={setClassFilter}
-                  />
-                </div>
-                <div className="roster-dash-side">
-                  <LevelChart levelDist={levelDist} />
-                  <StatusChart statusCounts={statusCounts} total={filteredChars.length} />
-                </div>
+              <ClassChart
+                classCounts={data.summary.classCounts}
+                levelBreakdown={levelBreakdown}
+                classFilter={classFilter}
+                onClassFilterChange={setClassFilter}
+              />
+
+              <div className="roster-readouts">
+                <LevelChart levelDist={levelDist} />
+                <StatusChart statusCounts={statusCounts} total={filteredChars.length} />
               </div>
 
-              {/* Member list below */}
               <div className="roster-members-section">
                 <div className="roster-members-header">
                   <span className="roster-members-title">
-                    {classFilter || 'All Members'}
+                    {classFilter ? `// ${classFilter.toUpperCase()}` : '// ROSTER'}
                   </span>
-                  <span className="roster-members-count">
-                    {filtered.length}
-                  </span>
+                  <span className="roster-members-count">{filtered.length}</span>
                   <input
                     className="roster-members-search"
                     type="text"
-                    placeholder="Search..."
+                    placeholder="search..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                   />

@@ -1,6 +1,115 @@
-function classToPip(className: string): string {
-  return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
+import { useMemo } from 'react';
+
+const CLASS_COLORS: Record<string, string> = {
+  'Cleric': '#f0c040',
+  'Warrior': '#c79c6e',
+  'Wizard': '#69ccf0',
+  'Magician': '#69ccf0',
+  'Enchanter': '#b490d0',
+  'Necromancer': '#a330c9',
+  'Shadow Knight': '#a330c9',
+  'Rogue': '#fff569',
+  'Ranger': '#abd473',
+  'Druid': '#ff7d0a',
+  'Monk': '#00ff96',
+  'Bard': '#e6005c',
+  'Paladin': '#f58cba',
+  'Shaman': '#0070de',
+  'Warlock': '#9482c9',
+};
+
+function getClassColor(cls: string): string {
+  return CLASS_COLORS[cls] || '#8888aa';
 }
+
+/* ── Squarified Treemap Algorithm ────────────────────────── */
+
+interface TreemapNode {
+  label: string;
+  value: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+function worstRatio(areas: number[], total: number, side: number): number {
+  const len = total / side;
+  let worst = 0;
+  for (const a of areas) {
+    const s = a / len;
+    const r = Math.max(len / s, s / len);
+    if (r > worst) worst = r;
+  }
+  return worst;
+}
+
+function layoutStrip(
+  items: { label: string; value: number; area: number }[],
+  x: number, y: number, w: number, h: number
+): TreemapNode[] {
+  if (items.length === 0) return [];
+  if (items.length === 1) {
+    return [{ label: items[0].label, value: items[0].value, x, y, w, h }];
+  }
+
+  const isWide = w >= h;
+  const shortSide = isWide ? h : w;
+  const strip = [items[0]];
+  let stripTotal = items[0].area;
+
+  for (let i = 1; i < items.length; i++) {
+    const nextAreas = strip.map(s => s.area).concat(items[i].area);
+    const nextTotal = stripTotal + items[i].area;
+    if (worstRatio(nextAreas, nextTotal, shortSide) <= worstRatio(strip.map(s => s.area), stripTotal, shortSide)) {
+      strip.push(items[i]);
+      stripTotal = nextTotal;
+    } else break;
+  }
+
+  const thickness = stripTotal / shortSide;
+  const results: TreemapNode[] = [];
+  let pos = 0;
+
+  for (const item of strip) {
+    const span = item.area / thickness;
+    if (isWide) {
+      results.push({ label: item.label, value: item.value, x, y: y + pos, w: thickness, h: span });
+    } else {
+      results.push({ label: item.label, value: item.value, x: x + pos, y, w: span, h: thickness });
+    }
+    pos += span;
+  }
+
+  const rest = items.slice(strip.length);
+  if (rest.length === 0) return results;
+
+  if (isWide) {
+    return [...results, ...layoutStrip(rest, x + thickness, y, w - thickness, h)];
+  } else {
+    return [...results, ...layoutStrip(rest, x, y + thickness, w, h - thickness)];
+  }
+}
+
+function computeTreemap(
+  items: { label: string; value: number }[],
+  x: number, y: number, w: number, h: number
+): TreemapNode[] {
+  if (items.length === 0 || w <= 0 || h <= 0) return [];
+  const total = items.reduce((s, i) => s + i.value, 0);
+  if (total === 0) return [];
+  const area = w * h;
+  const scaled = items
+    .map(i => ({ ...i, area: (i.value / total) * area }))
+    .sort((a, b) => b.area - a.area);
+  return layoutStrip(scaled, x, y, w, h);
+}
+
+// Virtual space matches CSS aspect-ratio: 2/1
+const VW = 1000;
+const VH = 500;
+
+/* ── ClassChart (Treemap) ────────────────────────────────── */
 
 interface ClassChartProps {
   classCounts: Record<string, number>;
@@ -10,39 +119,53 @@ interface ClassChartProps {
 }
 
 export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFilterChange }: ClassChartProps) {
-  const sorted = Object.entries(classCounts).sort((a, b) => b[1] - a[1]);
-  const maxCount = sorted[0]?.[1] || 1;
+  const items = useMemo(() =>
+    Object.entries(classCounts)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value),
+    [classCounts]
+  );
+
+  const nodes = useMemo(() =>
+    computeTreemap(items, 0, 0, VW, VH),
+    [items]
+  );
 
   return (
-    <div className="class-chart">
-      {sorted.map(([cls, count]) => {
-        const pct = (count / maxCount) * 100;
-        const lb = levelBreakdown[cls];
+    <div className="treemap" role="img" aria-label="Class composition">
+      {nodes.map(node => {
+        const color = getClassColor(node.label);
+        const lb = levelBreakdown[node.label];
         const maxLvl = lb ? lb.max : 0;
-        const isActive = classFilter === cls;
+        const isActive = classFilter === node.label;
         const isDimmed = classFilter !== null && !isActive;
 
         return (
           <button
-            key={cls}
-            className={`class-chart-row${isActive ? ' active' : ''}${isDimmed ? ' dimmed' : ''}`}
-            onClick={() => onClassFilterChange(isActive ? null : cls)}
+            key={node.label}
+            className={`treemap-cell${isActive ? ' active' : ''}${isDimmed ? ' dimmed' : ''}`}
+            style={{
+              left: `${(node.x / VW) * 100}%`,
+              top: `${(node.y / VH) * 100}%`,
+              width: `${(node.w / VW) * 100}%`,
+              height: `${(node.h / VH) * 100}%`,
+              '--cell-color': color,
+            } as React.CSSProperties}
+            onClick={() => onClassFilterChange(isActive ? null : node.label)}
+            title={`${node.label}: ${node.value} characters (${maxLvl} at 60)`}
           >
-            <span className="class-chart-label">{cls}</span>
-            <span className="class-chart-track">
-              <span
-                className={`class-chart-bar ${classToPip(cls)}`}
-                style={{ width: `${pct}%` }}
-              />
-            </span>
-            <span className="class-chart-count">{count}</span>
-            <span className="class-chart-max">{maxLvl} @ 60</span>
+            <span className="treemap-label">{node.label}</span>
+            <span className="treemap-count">{node.value}</span>
+            {maxLvl > 0 && <span className="treemap-meta">{maxLvl} @ 60</span>}
           </button>
         );
       })}
+      <div className="treemap-scanlines" />
     </div>
   );
 }
+
+/* ── StatusChart ─────────────────────────────────────────── */
 
 interface StatusChartProps {
   statusCounts: Record<string, number>;
@@ -53,22 +176,26 @@ export function StatusChart({ statusCounts, total }: StatusChartProps) {
   const statuses = ['Main', 'Alt', 'Bot', 'Probationary'].filter(s => statusCounts[s]);
 
   return (
-    <div className="status-chart">
-      <div className="status-chart-bar">
+    <div className="readout">
+      <div className="readout-header">
+        <span className="readout-title">STATUS</span>
+        <span className="readout-value">{total}</span>
+      </div>
+      <div className="readout-bar">
         {statuses.map(s => (
           <span
             key={s}
-            className={`status-chart-segment status-${s.toLowerCase()}`}
+            className={`readout-seg status-${s.toLowerCase()}`}
             style={{ flex: statusCounts[s] }}
             title={`${s}: ${statusCounts[s]}`}
           />
         ))}
       </div>
-      <div className="status-chart-legend">
+      <div className="readout-detail">
         {statuses.map(s => (
-          <span key={s} className="status-chart-item">
-            <span className={`status-dot-sm status-${s.toLowerCase()}`} />
-            {s} <span className="status-chart-num">{statusCounts[s]}</span>
+          <span key={s} className="readout-item">
+            <span className={`readout-dot status-${s.toLowerCase()}`} />
+            {s} {statusCounts[s]}
           </span>
         ))}
       </div>
@@ -76,26 +203,28 @@ export function StatusChart({ statusCounts, total }: StatusChartProps) {
   );
 }
 
+/* ── LevelChart ──────────────────────────────────────────── */
+
 interface LevelChartProps {
   levelDist: { level60: number; sub60: number };
 }
 
 export function LevelChart({ levelDist }: LevelChartProps) {
   const total = levelDist.level60 + levelDist.sub60;
-  const pct60 = total > 0 ? Math.round((levelDist.level60 / total) * 100) : 0;
+  const pct = total > 0 ? Math.round((levelDist.level60 / total) * 100) : 0;
 
   return (
-    <div className="level-chart">
-      <div className="level-chart-header">
-        <span className="level-chart-title">Level 60</span>
-        <span className="level-chart-pct">{pct60}%</span>
+    <div className="readout">
+      <div className="readout-header">
+        <span className="readout-title">LVL 60</span>
+        <span className="readout-value readout-green">{pct}%</span>
       </div>
-      <div className="level-chart-track">
-        <span className="level-chart-fill" style={{ width: `${pct60}%` }} />
+      <div className="readout-bar">
+        <span className="readout-fill-green" style={{ width: `${pct}%` }} />
       </div>
-      <div className="level-chart-counts">
-        <span>{levelDist.level60} max level</span>
-        <span>{levelDist.sub60} leveling</span>
+      <div className="readout-detail">
+        <span className="readout-item">{levelDist.level60} max</span>
+        <span className="readout-item">{levelDist.sub60} leveling</span>
       </div>
     </div>
   );
