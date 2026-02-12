@@ -25,7 +25,6 @@ export interface RosterMember {
 export default function RosterRow({ member, classFilter }: { member: RosterMember; classFilter?: string | null }) {
   const [expanded, setExpanded] = useState(false);
 
-  // When a class filter is active, feature the matching character instead of the main
   const featured = classFilter
     ? member.characters.find(c => c.class === classFilter) || member.characters[0]
     : member.characters.find(c => c.status === 'Main') || member.characters[0];
@@ -36,22 +35,33 @@ export default function RosterRow({ member, classFilter }: { member: RosterMembe
   const netDkp = member.earnedDkp - member.spentDkp;
 
   return (
-    <div className={`roster-member${expanded ? ' expanded' : ''}`}>
-      <div className="roster-member-header" onClick={() => setExpanded(e => !e)}>
-        <div className={`char-pip ${classToPip(featuredClass)}`} />
-        <div className="roster-col roster-col-name">
-          <span className="char-name">{featuredName}</span>
-          <span className="char-class">{featuredClass} <span className="roster-player-name">{member.displayName}</span></span>
+    <div
+      className={`roster-card${expanded ? ' expanded' : ''}`}
+      style={{ '--pip-color': `var(--pip-${featuredClass.toLowerCase().replace(/\s+/g, '-')}-color, var(--text-dim))` } as React.CSSProperties}
+    >
+      <div className={`roster-card-pip ${classToPip(featuredClass)}`} />
+      <div className="roster-card-body" onClick={() => setExpanded(e => !e)}>
+        <div className="roster-card-main">
+          <div className="roster-card-identity">
+            <span className="roster-card-name">{featuredName}</span>
+            <span className="roster-card-meta">
+              {featuredClass} &middot; {featuredLevel}
+              {member.characters.length > 1 && (
+                <span className="roster-card-alts"> &middot; {member.characters.length} chars</span>
+              )}
+            </span>
+          </div>
+          <div className="roster-card-right">
+            <span className="roster-card-dkp">{netDkp}</span>
+            <span className="roster-card-dkp-label">DKP</span>
+          </div>
         </div>
-        <div className="roster-col roster-col-level char-level">{featuredLevel}</div>
-        <div className="roster-col roster-col-chars">{member.characters.length} char{member.characters.length !== 1 ? 's' : ''}</div>
-        <div className="roster-col roster-col-dkp">{netDkp} DKP</div>
-        <div className="roster-col roster-col-expand">{expanded ? '\u25B4' : '\u25BE'}</div>
+        <div className="roster-card-player">{member.displayName}</div>
       </div>
       {expanded && (
-        <div className="roster-member-chars">
+        <div className="roster-card-chars">
           {member.characters.map(c => (
-            <div className="char-row" key={c.name}>
+            <div className="roster-char" key={c.name}>
               <div className={`char-pip ${classToPip(c.class)}`} />
               <div className="char-level">{c.level}</div>
               <div className="char-info">

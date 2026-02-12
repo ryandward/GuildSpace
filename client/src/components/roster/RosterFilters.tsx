@@ -7,6 +7,11 @@ interface RosterFiltersProps {
   onStatusFilterChange: (value: string | null) => void;
   availableClasses: string[];
   availableStatuses: string[];
+  classCounts: Record<string, number>;
+}
+
+function classToPip(className: string): string {
+  return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
 }
 
 export default function RosterFilters({
@@ -18,39 +23,42 @@ export default function RosterFilters({
   onStatusFilterChange,
   availableClasses,
   availableStatuses,
+  classCounts,
 }: RosterFiltersProps) {
   return (
     <div className="roster-filters">
-      <input
-        className="roster-search"
-        type="text"
-        placeholder="Search by name..."
-        value={search}
-        onChange={e => onSearchChange(e.target.value)}
-      />
-      <div className="roster-filter-group">
+      <div className="roster-filter-row">
+        <input
+          className="roster-search"
+          type="text"
+          placeholder="Search names..."
+          value={search}
+          onChange={e => onSearchChange(e.target.value)}
+        />
         <div className="roster-filter-pills">
           {availableStatuses.map(status => (
             <button
               key={status}
-              className={`filter-pill${statusFilter === status ? ' active' : ''}`}
+              className={`filter-pill status-pill${statusFilter === status ? ' active' : ''}`}
               onClick={() => onStatusFilterChange(statusFilter === status ? null : status)}
             >
               {status}
             </button>
           ))}
         </div>
-        <div className="roster-filter-pills">
-          {availableClasses.map(cls => (
-            <button
-              key={cls}
-              className={`filter-pill${classFilter === cls ? ' active' : ''}`}
-              onClick={() => onClassFilterChange(classFilter === cls ? null : cls)}
-            >
-              {cls}
-            </button>
-          ))}
-        </div>
+      </div>
+      <div className="roster-filter-pills class-pills">
+        {availableClasses.map(cls => (
+          <button
+            key={cls}
+            className={`filter-pill class-pill${classFilter === cls ? ' active' : ''}`}
+            onClick={() => onClassFilterChange(classFilter === cls ? null : cls)}
+          >
+            <span className={`filter-pip ${classToPip(cls)}`} />
+            {cls}
+            <span className="filter-count">{classCounts[cls] || 0}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

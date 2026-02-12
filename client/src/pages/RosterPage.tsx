@@ -90,44 +90,71 @@ export default function RosterPage() {
     return members;
   }, [data, search, classFilter, statusFilter]);
 
+  const classCount = classFilter
+    ? data?.summary.classCounts[classFilter] ?? 0
+    : 0;
+
   return (
     <div className="app-shell">
       <AppHeader />
       <div className="roster-page">
-        <div className="roster-summary">
-          {data && (
-            <span className="roster-stats">
-              {data.summary.totalMembers} members &middot; {data.summary.totalCharacters} characters
-            </span>
+        <div className="roster-content">
+          {/* Dashboard summary */}
+          <div className="roster-dashboard">
+            <div className="roster-stat-card">
+              <div className="roster-stat-value">{data ? filtered.length : '--'}</div>
+              <div className="roster-stat-label">
+                {filtered.length !== (data?.summary.totalMembers ?? 0) ? (
+                  <>Shown <span className="roster-stat-of">of {data?.summary.totalMembers}</span></>
+                ) : 'Members'}
+              </div>
+            </div>
+            <div className="roster-stat-card">
+              <div className="roster-stat-value accent">
+                {data ? (classFilter ? classCount : data.summary.totalCharacters) : '--'}
+              </div>
+              <div className="roster-stat-label">
+                {classFilter ? classFilter + 's' : 'Characters'}
+              </div>
+            </div>
+            <div className="roster-stat-card">
+              <div className="roster-stat-value dkp">
+                {data ? Math.round(data.members.reduce((s, m) => s + m.earnedDkp - m.spentDkp, 0) / (data.members.length || 1)) : '--'}
+              </div>
+              <div className="roster-stat-label">Avg Net DKP</div>
+            </div>
+            <button
+              className="roster-refresh-btn"
+              onClick={fetchRoster}
+              disabled={loading}
+              title="Refresh roster"
+            >
+              {loading ? '...' : '\u21BB'}
+            </button>
+          </div>
+
+          {error && <div className="roster-error">{error}</div>}
+
+          {!loading && data && (
+            <>
+              <RosterFilters
+                search={search}
+                onSearchChange={setSearch}
+                classFilter={classFilter}
+                onClassFilterChange={setClassFilter}
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+                availableClasses={availableClasses}
+                availableStatuses={availableStatuses}
+                classCounts={data.summary.classCounts}
+              />
+              <RosterTable members={filtered} classFilter={classFilter} />
+              {filtered.length === 0 && (
+                <div className="roster-empty">No members match your filters.</div>
+              )}
+            </>
           )}
-          <button
-            className="roster-refresh"
-            onClick={fetchRoster}
-            disabled={loading}
-            title="Refresh roster"
-          >
-            {loading ? 'Loading...' : 'Refresh'}
-          </button>
         </div>
-        {error && <div className="roster-error">{error}</div>}
-        {!loading && data && (
-          <>
-            <RosterFilters
-              search={search}
-              onSearchChange={setSearch}
-              classFilter={classFilter}
-              onClassFilterChange={setClassFilter}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              availableClasses={availableClasses}
-              availableStatuses={availableStatuses}
-            />
-            <RosterTable members={filtered} classFilter={classFilter} />
-            {filtered.length === 0 && (
-              <div className="roster-empty">No members match your filters.</div>
-            )}
-          </>
-        )}
       </div>
     </div>
   );

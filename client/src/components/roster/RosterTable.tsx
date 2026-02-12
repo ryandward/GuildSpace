@@ -56,26 +56,25 @@ export default function RosterTable({ members, classFilter }: RosterTableProps) 
   }
 
   return (
-    <div className="roster-table">
-      <div className="roster-table-header">
-        <div className="roster-th roster-th-pip" />
-        <div className="roster-th roster-th-name" onClick={() => handleSort('name')}>
-          Name{sortIndicator('name')}
-        </div>
-        <div className="roster-th roster-th-level" onClick={() => handleSort('level')}>
-          Lvl{sortIndicator('level')}
-        </div>
-        <div className="roster-th roster-th-chars" onClick={() => handleSort('chars')}>
-          Chars{sortIndicator('chars')}
-        </div>
-        <div className="roster-th roster-th-dkp" onClick={() => handleSort('dkp')}>
-          DKP{sortIndicator('dkp')}
-        </div>
-        <div className="roster-th roster-th-expand" />
+    <div className="roster-list">
+      <div className="roster-sort-bar">
+        <span className="roster-sort-label">Sort</span>
+        {(['name', 'level', 'dkp', 'chars'] as const).map(key => (
+          <button
+            key={key}
+            className={`roster-sort-btn${sortKey === key ? ' active' : ''}`}
+            onClick={() => handleSort(key)}
+          >
+            {{ name: 'Name', level: 'Level', dkp: 'DKP', chars: 'Chars' }[key]}
+            {sortIndicator(key)}
+          </button>
+        ))}
       </div>
-      {sorted.map(m => (
-        <RosterRow key={m.discordId} member={m} classFilter={classFilter} />
-      ))}
+      <div className="roster-cards">
+        {sorted.map(m => (
+          <RosterRow key={m.discordId} member={m} classFilter={classFilter} />
+        ))}
+      </div>
     </div>
   );
 }
