@@ -22,6 +22,7 @@ import { AppDataSource } from '../../app_data.js';
 import { GuildSpaceUser } from '../../entities/GuildSpaceUser.js';
 import { ChatMessage } from '../../entities/ChatMessage.js';
 import { ActiveToons } from '../../entities/ActiveToons.js';
+import { Dkp } from '../../entities/Dkp.js';
 import type {
   PlatformCommand,
   CommandInteraction,
@@ -403,6 +404,78 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err) {
       console.error('Failed to fetch user toons:', err);
       res.status(500).json({ error: 'Failed to fetch characters' });
+    }
+  });
+
+  // ─── Roster ────────────────────────────────────────────────────────
+
+  app.get('/api/roster', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const [toons, dkpRows, gsUsers] = await Promise.all([
+        AppDataSource.manager.find(ActiveToons),
+        AppDataSource.manager.find(Dkp),
+        AppDataSource.manager.find(GuildSpaceUser),
+      ]);
+
+      const dkpByDiscord = new Map(dkpRows.map(d => [d.DiscordId, d]));
+      const gsUserByDiscord = new Map(gsUsers.map(u => [u.discordId, u]));
+
+      // Group characters by DiscordId
+      const grouped = new Map<string, typeof toons>();
+      for (const t of toons) {
+        let arr = grouped.get(t.DiscordId);
+        if (!arr) { arr = []; grouped.set(t.DiscordId, arr); }
+        arr.push(t);
+      }
+
+      const classCounts: Record<string, number> = {};
+      let totalCharacters = 0;
+
+      const members = Array.from(grouped.entries()).map(([discordId, chars]) => {
+        const dkp = dkpByDiscord.get(discordId);
+        const gsUser = gsUserByDiscord.get(discordId);
+
+        const mainChar = chars.find(c => c.Status === 'Main');
+        const displayName = gsUser?.displayName || dkp?.DiscordName || discordId;
+
+        const characters = chars.map(c => {
+          const cls = c.CharacterClass;
+          classCounts[cls] = (classCounts[cls] || 0) + 1;
+          totalCharacters++;
+          return {
+            name: c.Name,
+            class: cls,
+            level: Number(c.Level),
+            status: c.Status,
+          };
+        });
+
+        return {
+          discordId,
+          displayName,
+          characters,
+          mainName: mainChar?.Name || characters[0]?.name || null,
+          mainClass: mainChar?.CharacterClass || characters[0]?.class || null,
+          mainLevel: mainChar ? Number(mainChar.Level) : (characters[0]?.level || null),
+          earnedDkp: dkp ? Number(dkp.EarnedDkp) : 0,
+          spentDkp: dkp ? Number(dkp.SpentDkp) : 0,
+        };
+      });
+
+      res.json({
+        members,
+        summary: {
+          totalMembers: members.length,
+          totalCharacters,
+          classCounts,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to fetch roster:', err);
+      res.status(500).json({ error: 'Failed to fetch roster' });
     }
   });
 
