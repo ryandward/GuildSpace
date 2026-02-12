@@ -122,7 +122,7 @@ export default function RosterPage() {
               availableClasses={availableClasses}
               availableStatuses={availableStatuses}
             />
-            <RosterTable members={filtered} />
+            <RosterTable members={filtered} classFilter={classFilter} />
             {filtered.length === 0 && (
               <div className="roster-empty">No members match your filters.</div>
             )}

@@ -22,23 +22,28 @@ export interface RosterMember {
   spentDkp: number;
 }
 
-export default function RosterRow({ member }: { member: RosterMember }) {
+export default function RosterRow({ member, classFilter }: { member: RosterMember; classFilter?: string | null }) {
   const [expanded, setExpanded] = useState(false);
 
-  const mainClass = member.mainClass || member.characters[0]?.class || '';
-  const mainName = member.mainName || member.characters[0]?.name || member.displayName;
-  const mainLevel = member.mainLevel || member.characters[0]?.level || 0;
+  // When a class filter is active, feature the matching character instead of the main
+  const featured = classFilter
+    ? member.characters.find(c => c.class === classFilter) || member.characters[0]
+    : member.characters.find(c => c.status === 'Main') || member.characters[0];
+
+  const featuredClass = featured?.class || '';
+  const featuredName = featured?.name || member.displayName;
+  const featuredLevel = featured?.level || 0;
   const netDkp = member.earnedDkp - member.spentDkp;
 
   return (
     <div className={`roster-member${expanded ? ' expanded' : ''}`}>
       <div className="roster-member-header" onClick={() => setExpanded(e => !e)}>
-        <div className={`char-pip ${classToPip(mainClass)}`} />
+        <div className={`char-pip ${classToPip(featuredClass)}`} />
         <div className="roster-col roster-col-name">
-          <span className="char-name">{mainName}</span>
-          <span className="char-class">{mainClass}</span>
+          <span className="char-name">{featuredName}</span>
+          <span className="char-class">{featuredClass} <span className="roster-player-name">{member.displayName}</span></span>
         </div>
-        <div className="roster-col roster-col-level char-level">{mainLevel}</div>
+        <div className="roster-col roster-col-level char-level">{featuredLevel}</div>
         <div className="roster-col roster-col-chars">{member.characters.length} char{member.characters.length !== 1 ? 's' : ''}</div>
         <div className="roster-col roster-col-dkp">{netDkp} DKP</div>
         <div className="roster-col roster-col-expand">{expanded ? '\u25B4' : '\u25BE'}</div>

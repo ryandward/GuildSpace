@@ -5,9 +5,10 @@ type SortKey = 'name' | 'class' | 'level' | 'dkp' | 'chars';
 
 interface RosterTableProps {
   members: RosterMember[];
+  classFilter?: string | null;
 }
 
-export default function RosterTable({ members }: RosterTableProps) {
+export default function RosterTable({ members, classFilter }: RosterTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -20,17 +21,24 @@ export default function RosterTable({ members }: RosterTableProps) {
     }
   }
 
+  function getFeatured(m: RosterMember) {
+    if (classFilter) return m.characters.find(c => c.class === classFilter) || m.characters[0];
+    return m.characters.find(c => c.status === 'Main') || m.characters[0];
+  }
+
   const sorted = [...members].sort((a, b) => {
     let cmp = 0;
+    const fa = getFeatured(a);
+    const fb = getFeatured(b);
     switch (sortKey) {
       case 'name':
-        cmp = (a.mainName || '').localeCompare(b.mainName || '');
+        cmp = (fa?.name || '').localeCompare(fb?.name || '');
         break;
       case 'class':
-        cmp = (a.mainClass || '').localeCompare(b.mainClass || '');
+        cmp = (fa?.class || '').localeCompare(fb?.class || '');
         break;
       case 'level':
-        cmp = (a.mainLevel || 0) - (b.mainLevel || 0);
+        cmp = (fa?.level || 0) - (fb?.level || 0);
         break;
       case 'dkp':
         cmp = (a.earnedDkp - a.spentDkp) - (b.earnedDkp - b.spentDkp);
@@ -66,7 +74,7 @@ export default function RosterTable({ members }: RosterTableProps) {
         <div className="roster-th roster-th-expand" />
       </div>
       {sorted.map(m => (
-        <RosterRow key={m.discordId} member={m} />
+        <RosterRow key={m.discordId} member={m} classFilter={classFilter} />
       ))}
     </div>
   );
