@@ -65,6 +65,16 @@
     }
     #login-screen button:hover { background: #4752C4; }
 
+    #setup-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 16px;
+    }
+    #setup-screen h2 { color: var(--accent); margin-bottom: 8px; }
+
     /* ─── Main App ───────────────────────────────────── */
     #app { display: none; flex: 1; flex-direction: column; overflow: hidden; }
     #app.active { display: flex; }
@@ -280,6 +290,15 @@
   </button>
 </div>
 
+<!-- Name Setup Screen -->
+<div id="setup-screen" style="display:none;">
+  <h2>🏰 Welcome to GuildSpace</h2>
+  <p style="color: var(--text-dim); margin-bottom: 16px;">Choose your name</p>
+  <input type="text" id="setup-name" placeholder="Your GuildSpace name" maxlength="32" style="background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 16px; font-family: inherit; font-size: 14px; width: 280px; border-radius: 4px;">
+  <p id="setup-error" style="color: #e74c3c; font-size: 13px; display: none;"></p>
+  <button id="setup-btn" onclick="submitName()" style="background: var(--accent); color: white; border: none; padding: 10px 32px; font-family: inherit; font-size: 14px; cursor: pointer; border-radius: 4px;">Let's go</button>
+</div>
+
 <!-- Main App -->
 <div id="app">
   <header>
@@ -324,7 +343,6 @@ const $ac = $('#autocomplete');
 const $help = $('#command-help');
 
 // ─── Login ────────────────────────────────────────────────────────────────────
-// Check for token in URL (Discord OAuth redirect)
 async function checkAuth() {
   const params = new URLSearchParams(window.location.search);
   const urlToken = params.get('token');
@@ -332,22 +350,82 @@ async function checkAuth() {
 
   // Clean the URL
   window.history.replaceState({}, '', '/');
-
   token = urlToken;
 
-  // Verify token by trying to load commands
   try {
-    await loadCommands();
-    user = { id: 'loading...', username: 'loading...' };
-    $('#login-screen').style.display = 'none';
-    $('#app').classList.add('active');
-    connectSocket();
-    $input.focus();
+    const res = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) { token = null; return; }
+
+    const me = await res.json();
+
+    if (me.needsSetup) {
+      // Show name setup screen
+      $('#login-screen').style.display = 'none';
+      $('#setup-screen').style.display = 'flex';
+      $('#setup-name').focus();
+      return;
+    }
+
+    // Already set up, go to app
+    user = me;
+    enterApp();
   } catch (err) {
     console.error('Auth failed:', err);
     token = null;
   }
 }
+
+async function submitName() {
+  const name = $('#setup-name').value.trim();
+  if (name.length < 2) {
+    $('#setup-error').textContent = 'Name must be at least 2 characters';
+    $('#setup-error').style.display = 'block';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/set-name', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ displayName: name }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      $('#setup-error').textContent = data.error || 'Something went wrong';
+      $('#setup-error').style.display = 'block';
+      return;
+    }
+
+    // Refresh user info and enter app
+    const meRes = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    user = await meRes.json();
+    $('#setup-screen').style.display = 'none';
+    enterApp();
+  } catch (err) {
+    $('#setup-error').textContent = 'Failed to set name';
+    $('#setup-error').style.display = 'block';
+  }
+}
+
+function enterApp() {
+  $('#login-screen').style.display = 'none';
+  $('#setup-screen').style.display = 'none';
+  $('#app').classList.add('active');
+  $('#user-display').textContent = `Logged in as ${user.displayName || user.username}`;
+  loadCommands();
+  connectSocket();
+  $input.focus();
+}
+
+$('#setup-name')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitName(); });
 
 checkAuth();
 

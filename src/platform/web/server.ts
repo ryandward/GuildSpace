@@ -16,6 +16,8 @@ import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { AppDataSource } from '../../app_data.js';
+import { GuildSpaceUser } from '../../entities/GuildSpaceUser.js';
 import type {
   PlatformCommand,
   CommandInteraction,
@@ -199,14 +201,23 @@ export function createWebServer(opts: WebServerOptions) {
         global_name: string | null;
       };
 
+      // Check if user has a GuildSpace account
+      const existing = await AppDataSource.manager.findOne(GuildSpaceUser, {
+        where: { discordId: discordUser.id },
+      });
+
       // Create session
       const sessionToken = `tok_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const user: InteractionUser = {
         id: discordUser.id,
-        username: discordUser.username,
-        displayName: discordUser.global_name || discordUser.username,
+        username: existing?.displayName || discordUser.username,
+        displayName: existing?.displayName || discordUser.global_name || discordUser.username,
       };
       sessions.set(sessionToken, user);
+
+      // Store Discord username in session for later
+      (user as any).discordUsername = discordUser.username;
+      (user as any).needsSetup = !existing;
 
       // Redirect to app with token
       res.redirect(`/?token=${sessionToken}`);
@@ -214,6 +225,58 @@ export function createWebServer(opts: WebServerOptions) {
       console.error('OAuth error:', err);
       res.status(500).send('Auth failed');
     }
+  });
+
+  // Check if user needs to set up their name
+  app.get('/api/auth/me', (req, res) => {
+    const user = getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    res.json({
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      needsSetup: (user as any).needsSetup || false,
+    });
+  });
+
+  // Set GuildSpace display name
+  app.post('/api/auth/set-name', async (req, res) => {
+    const user = getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const { displayName } = req.body;
+    if (!displayName || displayName.trim().length < 2 || displayName.trim().length > 32) {
+      return res.status(400).json({ error: 'Name must be 2-32 characters' });
+    }
+
+    const name = displayName.trim();
+
+    // Check if name is taken
+    const taken = await AppDataSource.manager.findOne(GuildSpaceUser, {
+      where: { displayName: name },
+    });
+    if (taken && taken.discordId !== user.id) {
+      return res.status(409).json({ error: 'Name already taken' });
+    }
+
+    // Create or update
+    let gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, {
+      where: { discordId: user.id },
+    });
+    if (!gsUser) {
+      gsUser = new GuildSpaceUser();
+      gsUser.discordId = user.id;
+      gsUser.discordUsername = (user as any).discordUsername || user.username;
+    }
+    gsUser.displayName = name;
+    await AppDataSource.manager.save(gsUser);
+
+    // Update session
+    user.username = name;
+    user.displayName = name;
+    (user as any).needsSetup = false;
+
+    res.json({ ok: true, displayName: name });
   });
 
   // ─── Command Registry ──────────────────────────────────────────────
