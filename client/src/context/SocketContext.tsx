@@ -14,6 +14,22 @@ export interface CommandOption {
   type: string;
   required?: boolean;
   autocomplete?: boolean;
+  choices?: { name: string; value: string | number }[];
+  minValue?: number;
+  maxValue?: number;
+}
+
+export interface AutocompleteChoice {
+  name: string;
+  value: string;
+  metadata?: Record<string, string | number>;
+}
+
+export interface ToonInfo {
+  name: string;
+  class: string;
+  level: number;
+  status: string;
 }
 
 export interface ChatMsg {
@@ -97,7 +113,8 @@ interface SocketContextValue {
   sendChat: (content: string) => void;
   submitModal: (modalId: string, fields: Record<string, string>) => void;
   sendComponentInteraction: (parentInteractionId: string, customId: string, values?: string[]) => void;
-  fetchAutocomplete: (cmdName: string, optionName: string, value: string) => Promise<{ name: string; value: string }[]>;
+  fetchAutocomplete: (cmdName: string, optionName: string, value: string) => Promise<AutocompleteChoice[]>;
+  fetchMyToons: () => Promise<ToonInfo[]>;
   showHelp: () => void;
 }
 
@@ -270,7 +287,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     }]);
   }
 
-  async function fetchAutocomplete(cmdName: string, optionName: string, value: string) {
+  async function fetchAutocomplete(cmdName: string, optionName: string, value: string): Promise<AutocompleteChoice[]> {
     try {
       const res = await fetch(`/api/commands/${cmdName}/autocomplete`, {
         method: 'POST',
@@ -283,6 +300,18 @@ export function SocketProvider({ children }: { children: ReactNode }) {
           focused: { name: optionName, value },
         }),
       });
+      return await res.json();
+    } catch {
+      return [];
+    }
+  }
+
+  async function fetchMyToons(): Promise<ToonInfo[]> {
+    try {
+      const res = await fetch('/api/toons/mine', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
       return await res.json();
     } catch {
       return [];
@@ -302,6 +331,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       submitModal: submitModalFn,
       sendComponentInteraction,
       fetchAutocomplete,
+      fetchMyToons,
       showHelp,
     }}>
       {children}

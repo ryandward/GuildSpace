@@ -56,7 +56,11 @@ export async function autocomplete(interaction: AutocompleteInteraction) {
         take: 10,
       };
       const toons = await AppDataSource.manager.find(ActiveToons, choices);
-      await interaction.respond(toons.map(toon => ({ name: toon.Name, value: toon.Name })));
+      await interaction.respond(toons.map(toon => ({
+        name: toon.Name,
+        value: toon.Name,
+        metadata: { level: Number(toon.Level), class: toon.CharacterClass, status: toon.Status },
+      })));
     }
   }
   catch (error) {

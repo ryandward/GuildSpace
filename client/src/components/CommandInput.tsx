@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
 import { useSocket, type Command } from '../context/SocketContext';
+import CommandForm from './CommandForm';
 
 interface AcItem {
   name: string;
@@ -7,15 +8,17 @@ interface AcItem {
   desc?: string;
 }
 
+type InputMode = 'chat' | 'command-select' | 'form';
+
 export default function CommandInput() {
   const { commands, executeCommand, sendChat, fetchAutocomplete } = useSocket();
 
+  const [mode, setMode] = useState<InputMode>('chat');
   const [value, setValue] = useState('');
   const [acItems, setAcItems] = useState<AcItem[]>([]);
   const [acSelected, setAcSelected] = useState(-1);
   const [acVisible, setAcVisible] = useState(false);
-  const [helpHtml, setHelpHtml] = useState('');
-  const [helpVisible, setHelpVisible] = useState(false);
+  const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -24,11 +27,6 @@ export default function CommandInput() {
     setAcVisible(false);
     setAcItems([]);
     setAcSelected(-1);
-  }, []);
-
-  const hideHelp = useCallback(() => {
-    setHelpVisible(false);
-    setHelpHtml('');
   }, []);
 
   function showCommandAutocomplete(partial: string) {
@@ -41,36 +39,34 @@ export default function CommandInput() {
     setAcItems(items);
     setAcSelected(0);
     setAcVisible(true);
+    setMode('command-select');
   }
 
-  function showCommandHelp(cmd: Command, currentOptionIndex: number) {
-    if (!cmd.options || cmd.options.length === 0) {
-      hideHelp();
+  function selectCommand(cmdName: string) {
+    const cmd = commands.find(c => c.name === cmdName);
+    hideAutocomplete();
+
+    if (!cmd) {
+      setValue('');
+      setMode('chat');
       return;
     }
-    const parts = cmd.options.map((opt, i) => {
-      const cls = opt.required ? 'opt required' : 'opt';
-      const marker = i === currentOptionIndex ? '\u25B6 ' : '';
-      return `${marker}<span class="${cls}">${opt.name}</span>: ${opt.description}`;
-    }).join(' | ');
-    setHelpHtml(`/${cmd.name} \u2014 ${parts}`);
-    setHelpVisible(true);
+
+    // If command has options, show form
+    if (cmd.options && cmd.options.length > 0) {
+      setSelectedCommand(cmd);
+      setMode('form');
+      setValue('');
+    } else {
+      // No options — execute immediately
+      executeCommand(cmd.name, {});
+      setValue('');
+      setMode('chat');
+    }
   }
 
-  function selectItem(item: AcItem, currentValue: string) {
-    const parts = currentValue.slice(1).split(/\s+/);
-    let newVal: string;
-    if (parts.length <= 1) {
-      newVal = `/${item.value} `;
-    } else {
-      parts[parts.length - 1] = item.value;
-      newVal = '/' + parts.join(' ') + ' ';
-    }
-    setValue(newVal);
-    hideAutocomplete();
-    // Trigger input processing after state update
-    setTimeout(() => handleInputChange(newVal), 0);
-    inputRef.current?.focus();
+  function selectItem(item: AcItem) {
+    selectCommand(item.value);
   }
 
   function handleInputChange(val: string) {
@@ -80,39 +76,20 @@ export default function CommandInput() {
 
       if (parts.length === 1 && !val.includes(' ')) {
         showCommandAutocomplete(cmdName);
-        hideHelp();
         return;
       }
 
-      const cmd = commands.find(c => c.name === cmdName);
-      if (cmd) {
-        const argParts = parts.slice(1);
-        const typingIndex = argParts.length - 1;
-        const currentOptionIndex = typingIndex >= 0 && typingIndex < cmd.options.length ? typingIndex : -1;
-
-        const currentOpt = cmd.options[currentOptionIndex];
-        if (currentOpt?.autocomplete) {
-          const currentValue = argParts[argParts.length - 1] || '';
-          clearTimeout(fetchTimerRef.current);
-          fetchTimerRef.current = setTimeout(async () => {
-            const choices = await fetchAutocomplete(cmdName, currentOpt.name, currentValue);
-            if (choices.length > 0) {
-              setAcItems(choices.map((c: { name: string; value: string }) => ({ name: c.name, value: c.value, desc: '' })));
-              setAcSelected(0);
-              setAcVisible(true);
-            } else {
-              hideAutocomplete();
-            }
-          }, 100);
-        } else {
-          hideAutocomplete();
+      // If user typed a space after command name (e.g. "/alt "), select that command
+      if (parts.length >= 1 && val.includes(' ')) {
+        const cmd = commands.find(c => c.name === cmdName);
+        if (cmd) {
+          selectCommand(cmdName);
+          return;
         }
-
-        showCommandHelp(cmd, currentOptionIndex);
       }
     } else {
       hideAutocomplete();
-      hideHelp();
+      setMode('chat');
     }
   }
 
@@ -129,44 +106,39 @@ export default function CommandInput() {
     if (!trimmed.startsWith('/')) {
       sendChat(trimmed);
       setValue('');
+      setMode('chat');
       return;
     }
 
     hideAutocomplete();
-    hideHelp();
 
     const parts = trimmed.slice(1).split(/\s+/);
     const cmdName = parts[0].toLowerCase();
-    const cmd = commands.find(c => c.name === cmdName);
+    selectCommand(cmdName);
+  }
 
-    if (!cmd) {
-      // Unknown command - still clear input
-      setValue('');
-      return;
-    }
-
-    const options: Record<string, unknown> = {};
-    for (let i = 0; i < cmd.options.length && i + 1 < parts.length; i++) {
-      const opt = cmd.options[i];
-      const v = parts[i + 1];
-      if (opt.type === 'integer' || opt.type === 'number') {
-        options[opt.name] = Number(v);
-      } else if (opt.type === 'boolean') {
-        options[opt.name] = v === 'true';
-      } else {
-        options[opt.name] = v;
-      }
-    }
-
-    executeCommand(cmdName, options);
+  function handleFormExecute(options: Record<string, unknown>) {
+    if (!selectedCommand) return;
+    executeCommand(selectedCommand.name, options);
+    setSelectedCommand(null);
+    setMode('chat');
     setValue('');
+    // Refocus text input after form closes
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function handleFormCancel() {
+    setSelectedCommand(null);
+    setMode('chat');
+    setValue('');
+    setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Tab' && acVisible) {
       e.preventDefault();
       if (acSelected >= 0 && acSelected < acItems.length) {
-        selectItem(acItems[acSelected], value);
+        selectItem(acItems[acSelected]);
       }
       return;
     }
@@ -183,7 +155,7 @@ export default function CommandInput() {
     if (e.key === 'Enter') {
       if (acVisible && acSelected >= 0) {
         e.preventDefault();
-        selectItem(acItems[acSelected], value);
+        selectItem(acItems[acSelected]);
       } else {
         e.preventDefault();
         execute();
@@ -192,25 +164,33 @@ export default function CommandInput() {
     }
     if (e.key === 'Escape') {
       hideAutocomplete();
-      hideHelp();
+      setMode('chat');
     }
   }
 
+  // Form mode — render the form instead of the text input
+  if (mode === 'form' && selectedCommand) {
+    return (
+      <div className="input-area">
+        <CommandForm
+          command={selectedCommand}
+          onExecute={handleFormExecute}
+          onCancel={handleFormCancel}
+        />
+      </div>
+    );
+  }
+
+  // Chat or command-select mode
   return (
     <div className="input-area">
-      {helpVisible && (
-        <div
-          className="command-help active"
-          dangerouslySetInnerHTML={{ __html: helpHtml }}
-        />
-      )}
       {acVisible && (
         <div className="autocomplete active">
           {acItems.map((item, i) => (
             <div
               key={`${item.value}-${i}`}
               className={`ac-item ${i === acSelected ? 'selected' : ''}`}
-              onClick={() => selectItem(item, value)}
+              onClick={() => selectItem(item)}
             >
               <span className="ac-name">{item.name}</span>
               {item.desc && <span className="ac-desc">{item.desc}</span>}

@@ -21,6 +21,7 @@ import { fileURLToPath } from 'url';
 import { AppDataSource } from '../../app_data.js';
 import { GuildSpaceUser } from '../../entities/GuildSpaceUser.js';
 import { ChatMessage } from '../../entities/ChatMessage.js';
+import { ActiveToons } from '../../entities/ActiveToons.js';
 import type {
   PlatformCommand,
   CommandInteraction,
@@ -363,7 +364,7 @@ export function createWebServer(opts: WebServerOptions) {
     if (!command?.autocomplete) return res.status(404).json({ error: 'No autocomplete handler' });
 
     const { options, focused } = req.body;
-    let choices: { name: string; value: string }[] = [];
+    let choices: { name: string; value: string; metadata?: Record<string, string | number> }[] = [];
 
     const interaction: AutocompleteInteraction = {
       user,
@@ -380,6 +381,28 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (error) {
       console.error(`Autocomplete error for /${req.params.name}:`, error);
       res.json([]);
+    }
+  });
+
+  // ─── User's Toons ─────────────────────────────────────────────────
+
+  app.get('/api/toons/mine', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const toons = await AppDataSource.manager.find(ActiveToons, {
+        where: { DiscordId: user.id },
+      });
+      res.json(toons.map(t => ({
+        name: t.Name,
+        class: t.CharacterClass,
+        level: Number(t.Level),
+        status: t.Status,
+      })));
+    } catch (err) {
+      console.error('Failed to fetch user toons:', err);
+      res.status(500).json({ error: 'Failed to fetch characters' });
     }
   });
 

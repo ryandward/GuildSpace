@@ -352,7 +352,7 @@ export interface AutocompleteInteraction {
   user: InteractionUser;
   options: InteractionOptions;
   commandName: string;
-  respond(choices: { name: string; value: string }[]): Promise<void>;
+  respond(choices: { name: string; value: string; metadata?: Record<string, string | number> }[]): Promise<void>;
 }
 
 /**
