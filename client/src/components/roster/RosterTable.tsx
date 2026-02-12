@@ -7,7 +7,7 @@ interface Props {
 
 export default function MemberList({ members, classFilter }: Props) {
   return (
-    <div className="member-list">
+    <div className="flex flex-col">
       {members.map(m => (
         <RosterRow key={m.discordId} member={m} classFilter={classFilter} />
       ))}

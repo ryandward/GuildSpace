@@ -52,13 +52,11 @@ export default function CommandInput() {
       return;
     }
 
-    // If command has options, show form
     if (cmd.options && cmd.options.length > 0) {
       setSelectedCommand(cmd);
       setMode('form');
       setValue('');
     } else {
-      // No options — execute immediately
       executeCommand(cmd.name, {});
       setValue('');
       setMode('chat');
@@ -79,7 +77,6 @@ export default function CommandInput() {
         return;
       }
 
-      // If user typed a space after command name (e.g. "/alt "), select that command
       if (parts.length >= 1 && val.includes(' ')) {
         const cmd = commands.find(c => c.name === cmdName);
         if (cmd) {
@@ -123,7 +120,6 @@ export default function CommandInput() {
     setSelectedCommand(null);
     setMode('chat');
     setValue('');
-    // Refocus text input after form closes
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
@@ -168,10 +164,10 @@ export default function CommandInput() {
     }
   }
 
-  // Form mode — render the form instead of the text input
+  // Form mode
   if (mode === 'form' && selectedCommand) {
     return (
-      <div className="input-area">
+      <div className="bg-surface border-t border-border p-2.5 px-5 flex flex-col relative">
         <CommandForm
           command={selectedCommand}
           onExecute={handleFormExecute}
@@ -183,17 +179,17 @@ export default function CommandInput() {
 
   // Chat or command-select mode
   return (
-    <div className="input-area">
+    <div className="bg-surface border-t border-border py-3 px-5 flex gap-2 relative">
       {acVisible && (
-        <div className="autocomplete active">
+        <div className="absolute bottom-full left-5 right-5 bg-surface border border-border max-h-[300px] overflow-y-auto">
           {acItems.map((item, i) => (
             <div
               key={`${item.value}-${i}`}
-              className={`ac-item ${i === acSelected ? 'selected' : ''}`}
+              className={`py-2 px-3.5 cursor-pointer text-xs border-b border-border ${i === acSelected ? 'bg-surface-2' : 'hover:bg-surface-2'}`}
               onClick={() => selectItem(item)}
             >
-              <span className="ac-name">{item.name}</span>
-              {item.desc && <span className="ac-desc">{item.desc}</span>}
+              <span className="text-text">{item.name}</span>
+              {item.desc && <span className="text-text-dim text-xs ml-2">{item.desc}</span>}
             </div>
           ))}
         </div>
@@ -201,14 +197,19 @@ export default function CommandInput() {
       <input
         ref={inputRef}
         type="text"
-        className="command-input"
+        className="flex-1 bg-bg border border-border text-text font-mono text-sm py-2.5 px-3.5 focus:outline-none focus:border-accent placeholder:text-text-dim"
         placeholder="Type a message, or / for commands"
         autoComplete="off"
         value={value}
         onChange={onChange}
         onKeyDown={onKeyDown}
       />
-      <button className="send-btn" onClick={execute}>Send</button>
+      <button
+        className="bg-accent text-bg border-none py-2.5 px-5 font-mono text-sm font-bold cursor-pointer"
+        onClick={execute}
+      >
+        Send
+      </button>
     </div>
   );
 }

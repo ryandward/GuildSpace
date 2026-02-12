@@ -8,7 +8,7 @@ export default function AppShell() {
   const { modal } = useSocket();
 
   return (
-    <div className="app-shell">
+    <div className="flex flex-1 flex-col overflow-hidden">
       <AppHeader />
       <MessageList />
       <CommandInput />

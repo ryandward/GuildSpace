@@ -25,10 +25,10 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="setup-screen">
-      <img src="/logo.svg" alt="GuildSpace" style={{ width: 80, height: 'auto', marginBottom: 8 }} />
-      <h2>Welcome to GuildSpace</h2>
-      <p style={{ color: 'var(--text-dim)', marginBottom: 16 }}>Choose your name</p>
+    <div className="flex flex-col items-center justify-center flex-1 gap-4">
+      <img src="/logo.svg" alt="GuildSpace" className="w-[80px] h-auto mb-2" />
+      <h2 className="text-accent text-lg font-bold mb-2">Welcome to GuildSpace</h2>
+      <p className="text-text-dim mb-4">Choose your name</p>
       <input
         type="text"
         placeholder="Your GuildSpace name"
@@ -37,9 +37,14 @@ export default function SetupPage() {
         onChange={e => setName(e.target.value)}
         onKeyDown={handleKeyDown}
         autoFocus
+        className="bg-surface-2 border border-border text-text py-2.5 px-4 font-mono text-sm w-[280px] focus:outline-none focus:border-accent"
       />
-      {error && <p className="setup-error">{error}</p>}
-      <button className="setup-btn" onClick={handleSubmit} disabled={submitting}>
+      {error && <p className="text-red text-xs">{error}</p>}
+      <button
+        className="bg-accent text-bg border-none py-2.5 px-8 font-mono text-sm font-bold cursor-pointer"
+        onClick={handleSubmit}
+        disabled={submitting}
+      >
         {submitting ? 'Setting up...' : "Let's go"}
       </button>
     </div>

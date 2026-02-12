@@ -21,25 +21,31 @@ export default function UserMenu() {
   if (!user) return null;
 
   return (
-    <div className="user-menu" ref={menuRef}>
-      <button className="user-menu-trigger" onClick={() => setOpen(o => !o)}>
-        <span className={`status-dot ${connected ? 'online' : 'offline'}`} />
-        <span className="user-menu-name">{user.displayName || user.username}</span>
+    <div className="relative" ref={menuRef}>
+      <button
+        className="bg-transparent border border-border text-text font-mono text-xs py-0.5 px-2.5 cursor-pointer flex items-center gap-1.5 hover:border-text-dim"
+        onClick={() => setOpen(o => !o)}
+      >
+        <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${connected ? 'bg-green' : 'bg-red'}`} />
+        <span className="text-text-dim">{user.displayName || user.username}</span>
       </button>
       {open && (
-        <div className="user-menu-dropdown">
-          <div className="user-menu-header">
-            <span className="user-menu-display">{user.displayName || user.username}</span>
+        <div className="absolute top-[calc(100%+4px)] right-0 bg-surface border border-border min-w-[180px] z-50 animate-[fadeIn_0.15s_ease]">
+          <div className="px-3 pt-2.5 pb-1.5">
+            <span className="block text-xs font-bold text-text">{user.displayName || user.username}</span>
             {user.discordUsername && (
-              <span className="user-menu-discord">@{user.discordUsername}</span>
+              <span className="block text-[10px] text-text-dim mt-0.5">@{user.discordUsername}</span>
             )}
           </div>
-          <div className="user-menu-status">
-            <span className={`status-dot ${connected ? 'online' : 'offline'}`} />
+          <div className="px-3 py-1 pb-2 flex items-center gap-1.5 text-xs text-text-dim">
+            <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${connected ? 'bg-green' : 'bg-red'}`} />
             <span>{connected ? 'Connected' : 'Disconnected'}</span>
           </div>
-          <div className="user-menu-divider" />
-          <button className="user-menu-item" onClick={() => { setOpen(false); logout(); }}>
+          <div className="h-px bg-border" />
+          <button
+            className="block w-full text-left bg-transparent border-none text-text-dim font-mono text-xs py-2 px-3 cursor-pointer hover:bg-surface-2 hover:text-red"
+            onClick={() => { setOpen(false); logout(); }}
+          >
             Logout
           </button>
         </div>

@@ -111,12 +111,12 @@ export default function RosterPage() {
   }, [data, search, classFilter]);
 
   return (
-    <div className="app-shell">
+    <div className="flex flex-1 flex-col overflow-hidden">
       <AppHeader />
-      <div className="roster-page">
-        <div className="roster-content">
-          {error && <div className="roster-error">{error}</div>}
-          {loading && <div className="roster-loading">Loading...</div>}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-[1100px] mx-auto py-6 px-6 pb-16 w-full flex flex-col max-md:px-2 max-md:py-2.5 max-md:pb-10">
+          {error && <div className="text-red text-xs">{error}</div>}
+          {loading && <div className="text-text-dim text-xs py-12 text-center">Loading...</div>}
 
           {!loading && data && (
             <>
@@ -127,19 +127,19 @@ export default function RosterPage() {
                 onClassFilterChange={setClassFilter}
               />
 
-              <div className="roster-readouts">
+              <div className="flex border-b border-border max-md:flex-col">
                 <LevelChart levelDist={levelDist} />
                 <StatusChart statusCounts={statusCounts} total={filteredChars.length} />
               </div>
 
-              <div className="roster-members-section">
-                <div className="roster-members-header">
-                  <span className="roster-members-title">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 py-2.5 pb-2 border-b border-border max-md:flex-wrap">
+                  <span className="text-[10px] font-bold text-text-dim tracking-wide">
                     {classFilter ? `// ${classFilter.toUpperCase()}` : '// ROSTER'}
                   </span>
-                  <span className="roster-members-count">{filtered.length}</span>
+                  <span className="text-xs font-bold text-text">{filtered.length}</span>
                   <input
-                    className="roster-members-search"
+                    className="ml-auto bg-transparent border border-border text-text font-mono text-xs py-0.5 px-2 w-[140px] focus:outline-none focus:border-accent placeholder:text-text-dim/40 max-md:w-full max-md:ml-0"
                     type="text"
                     placeholder="search..."
                     value={search}
@@ -148,7 +148,7 @@ export default function RosterPage() {
                 </div>
                 <MemberList members={filtered} classFilter={classFilter} />
                 {filtered.length === 0 && (
-                  <div className="roster-empty">No results.</div>
+                  <div className="text-text-dim text-xs text-center py-8">No results.</div>
                 )}
               </div>
             </>

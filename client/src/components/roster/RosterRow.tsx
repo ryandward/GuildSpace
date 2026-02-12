@@ -33,27 +33,31 @@ export default function RosterRow({ member, classFilter }: Props) {
   const netDkp = member.earnedDkp - member.spentDkp;
 
   return (
-    <div className="roster-member">
-      <div className="roster-member-primary">
-        <span className={`roster-member-pip ${classToPip(featured?.class || '')}`} />
-        <span className="roster-member-name">{featured?.name || member.displayName}</span>
-        <span className="roster-member-class">{featured?.class}</span>
-        <span className="roster-member-level">{featured?.level}</span>
-        <span className="roster-member-player">{member.displayName}</span>
-        <span className="roster-member-dkp">{netDkp}</span>
+    <div className="border-b border-border">
+      <div className="grid grid-cols-[3px_1fr_80px_28px_100px_54px] items-center gap-2 py-1.5 px-1 transition-colors duration-100 hover:bg-surface max-md:grid-cols-[3px_1fr_28px_48px]">
+        <span className={`w-[3px] self-stretch ${classToPip(featured?.class || '')}`} />
+        <span className="text-sm font-bold text-text overflow-hidden text-ellipsis whitespace-nowrap">{featured?.name || member.displayName}</span>
+        <span className="text-[10px] text-text-dim overflow-hidden text-ellipsis whitespace-nowrap max-md:hidden">{featured?.class}</span>
+        <span className="text-xs font-bold text-text-dim text-center">{featured?.level}</span>
+        <span className="text-[10px] text-text-dim opacity-40 overflow-hidden text-ellipsis whitespace-nowrap max-md:hidden">{member.displayName}</span>
+        <span className="text-xs font-bold text-yellow text-right">{netDkp}</span>
       </div>
       {member.characters.length > 1 && (
-        <div className="roster-member-alts">
+        <div className="pl-4">
           {member.characters.filter(c => c !== featured).map(c => (
             <div
               key={c.name}
-              className={`roster-member-alt${classFilter && c.class === classFilter ? ' highlighted' : ''}`}
+              className={`grid grid-cols-[2px_1fr_60px_28px_auto] items-center gap-1.5 py-0.5 px-1 transition-colors duration-100 hover:bg-surface ${classFilter && c.class === classFilter ? 'bg-accent/[0.06]' : ''}`}
             >
-              <span className={`roster-alt-pip ${classToPip(c.class)}`} />
-              <span className="roster-alt-name">{c.name}</span>
-              <span className="roster-alt-class">{c.class}</span>
-              <span className="roster-alt-level">{c.level}</span>
-              <span className={`roster-alt-badge ${c.status.toLowerCase()}`}>{c.status}</span>
+              <span className={`w-0.5 h-3 ${classToPip(c.class)}`} />
+              <span className="text-xs text-text-dim overflow-hidden text-ellipsis whitespace-nowrap">{c.name}</span>
+              <span className="text-[9px] text-text-dim opacity-50">{c.class}</span>
+              <span className="text-[10px] text-text-dim opacity-50 text-center">{c.level}</span>
+              <span className={`text-[8px] font-bold uppercase tracking-wide text-text-dim ${
+                c.status.toLowerCase() === 'main' ? 'text-accent' :
+                c.status.toLowerCase() === 'alt' ? 'text-green' :
+                c.status.toLowerCase() === 'bot' ? 'text-yellow' : ''
+              }`}>{c.status}</span>
             </div>
           ))}
         </div>

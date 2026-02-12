@@ -48,11 +48,12 @@ function isDkpEmbed(fields: EmbedField[]): boolean {
   return fields.length <= 3 && fields.every(f => f.inline !== false && !isNaN(Number(f.value)));
 }
 
-function escapeHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str || '';
-  return div.innerHTML;
-}
+const embedBorderColors: Record<string, string> = {
+  Red: 'border-l-red',
+  Blue: 'border-l-blue',
+  Yellow: 'border-l-yellow',
+  Green: 'border-l-green',
+};
 
 // --- Sub-components ---
 
@@ -75,36 +76,45 @@ function CensusPanel({ embed }: { embed: Embed }) {
   const lines = desc.split('\n');
 
   return (
-    <div className="profile-panel">
-      <div className="profile-header">
-        <div className="profile-avatar">{initial}</div>
-        <div style={{ flex: 1 }}>
-          <div className="profile-name">{lines[0]}</div>
-          <div className="profile-subtitle">{lines.slice(1).join(' \u00B7 ')}</div>
+    <div className="max-w-[600px] animate-[fadeIn_0.25s_ease]">
+      <div className="bg-surface border border-border p-4 px-5 mb-2 flex items-center gap-4">
+        <div className="w-12 h-12 bg-surface-2 border-2 border-accent flex items-center justify-center text-lg font-bold text-accent shrink-0">
+          {initial}
+        </div>
+        <div className="flex-1">
+          <div className="text-base font-bold text-text leading-tight">{lines[0]}</div>
+          <div className="text-xs text-text-dim mt-0.5">{lines.slice(1).join(' \u00B7 ')}</div>
         </div>
       </div>
-      <div className="stats-row">
-        <div className="stat-card">
-          <div className="stat-value chars">{totalChars}</div>
-          <div className="stat-label">Characters</div>
+      <div className="flex gap-1.5 mb-2">
+        <div className="bg-surface border border-border py-3 px-4 flex-1 text-center">
+          <div className="text-2xl font-bold text-accent leading-none">{totalChars}</div>
+          <div className="text-[9px] font-bold uppercase tracking-widest text-text-dim mt-1">Characters</div>
         </div>
       </div>
       {groups.map((g, gi) => (
-        <div className="char-section" key={gi}>
-          <div className="char-section-header">
-            {g.status} <span className="count">{g.names.length}</span>
+        <div className="bg-surface border border-border mb-2 last:mb-0 overflow-hidden" key={gi}>
+          <div className="py-2.5 px-4 border-b border-border text-[10px] font-bold uppercase tracking-widest text-text-dim flex items-center gap-2">
+            {g.status} <span className="bg-surface-2 text-[10px] py-px px-1.5 font-semibold">{g.names.length}</span>
           </div>
           {g.names.map((name, j) => {
             const cn = (g.classes[j] || '').trim();
+            const badgeStyle = g.status.toLowerCase();
             return (
-              <div className="char-row" key={j}>
-                <div className={`char-pip ${classToPip(cn)}`} />
-                <div className="char-level">{g.levels[j] || ''}</div>
-                <div className="char-info">
-                  <div className="char-name">{name}</div>
-                  <div className="char-class">{cn}</div>
+              <div className="flex items-center py-2.5 px-4 border-b border-border last:border-b-0 gap-3" key={j}>
+                <div className={`w-[3px] h-7 shrink-0 ${classToPip(cn)}`} />
+                <div className="text-[15px] font-bold text-text-dim min-w-7 text-center">{g.levels[j] || ''}</div>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-text leading-tight">{name}</div>
+                  <div className="text-xs text-text-dim">{cn}</div>
                 </div>
-                <div className={`char-badge ${g.status.toLowerCase()}`}>{g.status}</div>
+                <div className={`text-[9px] font-bold uppercase tracking-wide py-0.5 px-2 bg-surface-2 text-text-dim ${
+                  badgeStyle === 'main' ? 'bg-accent/10 text-accent' :
+                  badgeStyle === 'alt' ? 'bg-green/10 text-green' :
+                  badgeStyle === 'bot' ? 'bg-yellow/10 text-yellow' : ''
+                }`}>
+                  {g.status}
+                </div>
               </div>
             );
           })}
@@ -120,21 +130,23 @@ function DkpPanel({ embed }: { embed: Embed }) {
   const fields = embed.fields || [];
 
   return (
-    <div className="profile-panel">
-      <div className="profile-header">
-        <div className="profile-avatar">{initial}</div>
-        <div style={{ flex: 1 }}>
-          <div className="profile-name">{renderEmoji(embed.title || '')}</div>
-          <div className="profile-subtitle">{desc}</div>
+    <div className="max-w-[600px] animate-[fadeIn_0.25s_ease]">
+      <div className="bg-surface border border-border p-4 px-5 mb-2 flex items-center gap-4">
+        <div className="w-12 h-12 bg-surface-2 border-2 border-accent flex items-center justify-center text-lg font-bold text-accent shrink-0">
+          {initial}
+        </div>
+        <div className="flex-1">
+          <div className="text-base font-bold text-text leading-tight">{renderEmoji(embed.title || '')}</div>
+          <div className="text-xs text-text-dim mt-0.5">{desc}</div>
         </div>
       </div>
-      <div className="stats-row">
+      <div className="flex gap-1.5 mb-2">
         {fields.map((field, i) => {
           const label = renderEmoji(field.name).replace(/[^\w\s]/g, '').trim();
           return (
-            <div className="stat-card" key={i}>
-              <div className="stat-value dkp">{field.value}</div>
-              <div className="stat-label">{label}</div>
+            <div className="bg-surface border border-border py-3 px-4 flex-1 text-center" key={i}>
+              <div className="text-2xl font-bold text-yellow leading-none">{field.value}</div>
+              <div className="text-[9px] font-bold uppercase tracking-widest text-text-dim mt-1">{label}</div>
             </div>
           );
         })}
@@ -153,16 +165,18 @@ function EmbedView({ embed }: { embed: Embed }) {
     return <DkpPanel embed={embed} />;
   }
 
+  const borderColor = embedBorderColors[embed.color || 'Green'] || 'border-l-green';
+
   return (
-    <div className={`embed color-${embed.color || 'Green'}`}>
-      {embed.title && <div className="embed-title">{renderEmoji(embed.title)}</div>}
-      {embed.description && <div className="embed-description">{cleanText(embed.description)}</div>}
+    <div className={`bg-surface border-l-3 py-3 px-4 max-w-[600px] ${borderColor}`}>
+      {embed.title && <div className="font-bold mb-1.5 text-sm">{renderEmoji(embed.title)}</div>}
+      {embed.description && <div className="text-text-dim mb-2.5 text-xs whitespace-pre-wrap">{cleanText(embed.description)}</div>}
       {fields.length > 0 && (
-        <div className="embed-fields">
+        <div className="flex flex-wrap gap-x-5 gap-y-1">
           {fields.map((field, i) => (
-            <div className={`embed-field ${field.inline === false ? 'full-width' : ''}`} key={i}>
-              <div className="embed-field-name">{renderEmoji(field.name)}</div>
-              <div className="embed-field-value">{cleanText(field.value)}</div>
+            <div className={`min-w-[120px] mb-2 ${field.inline === false ? 'w-full' : ''}`} key={i}>
+              <div className="font-bold text-xs text-text-dim mb-0.5">{renderEmoji(field.name)}</div>
+              <div className="text-xs whitespace-pre-wrap">{cleanText(field.value)}</div>
             </div>
           ))}
         </div>
@@ -174,9 +188,15 @@ function EmbedView({ embed }: { embed: Embed }) {
 function ButtonView({ btn, parentInteractionId }: { btn: { customId: string; label: string; style?: string }; parentInteractionId?: string }) {
   const { sendComponentInteraction } = useSocket();
 
+  const styleClasses: Record<string, string> = {
+    Success: 'border-green text-green',
+    Danger: 'border-red text-red',
+    Primary: 'border-accent text-accent',
+  };
+
   return (
     <button
-      className={`comp-button style-${btn.style || 'Primary'}`}
+      className={`py-1.5 px-4 border border-border bg-surface-2 text-text font-mono text-xs cursor-pointer hover:bg-border ${styleClasses[btn.style || 'Primary'] || ''}`}
       onClick={() => parentInteractionId && sendComponentInteraction(parentInteractionId, btn.customId)}
     >
       {btn.label}
@@ -189,7 +209,7 @@ function SelectMenuView({ menu, parentInteractionId }: { menu: { customId: strin
 
   return (
     <select
-      className="comp-select"
+      className="py-1.5 px-3 bg-surface-2 border border-border text-text font-mono text-xs min-w-[200px]"
       defaultValue=""
       onChange={e => parentInteractionId && sendComponentInteraction(parentInteractionId, menu.customId, [e.target.value])}
     >
@@ -210,7 +230,7 @@ function ComponentsView({ components, interactionId }: { components: (ComponentR
           : ('components' in row && row.components) ? row.components : [row as Component];
 
         return (
-          <div className="components" key={ri}>
+          <div className="flex gap-2 flex-wrap mt-2" key={ri}>
             {items.map((comp, ci) => {
               if (comp.type === 'button') {
                 return <ButtonView key={ci} btn={comp} parentInteractionId={interactionId} />;
@@ -229,8 +249,8 @@ function ComponentsView({ components, interactionId }: { components: (ComponentR
 
 function ReplyView({ data }: { data: ReplyData }) {
   return (
-    <div className="message">
-      {data.content && <div className="text-reply">{cleanText(data.content)}</div>}
+    <div className="max-w-[700px] animate-[fadeIn_0.2s_ease]">
+      {data.content && <div className="whitespace-pre-wrap">{cleanText(data.content)}</div>}
       {data.embeds?.map((embed, i) => <EmbedView key={i} embed={embed} />)}
       {data.components && <ComponentsView components={data.components} interactionId={data.interactionId} />}
     </div>
@@ -240,10 +260,10 @@ function ReplyView({ data }: { data: ReplyData }) {
 function ChatMessageView({ msg, isMe }: { msg: { createdAt: string; displayName: string; content: string }; isMe: boolean }) {
   const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return (
-    <div className="message chat">
-      <span className="chat-time">{time}</span>{' '}
-      <span className={`chat-name${isMe ? ' chat-me' : ''}`}>{msg.displayName}</span>{' '}
-      <span className="chat-text">{msg.content}</span>
+    <div className="max-w-[700px] animate-[fadeIn_0.2s_ease]">
+      <span className="text-text-dim text-xs">{time}</span>{' '}
+      <span className={`font-bold ${isMe ? 'text-green' : 'text-accent'}`}>{msg.displayName}</span>{' '}
+      <span className="text-text">{msg.content}</span>
     </div>
   );
 }
@@ -251,13 +271,13 @@ function ChatMessageView({ msg, isMe }: { msg: { createdAt: string; displayName:
 function MessageView({ msg, userId }: { msg: AppMessage; userId?: string }) {
   switch (msg.type) {
     case 'system':
-      return <div className="message system">{msg.content}</div>;
+      return <div className="max-w-[700px] animate-[fadeIn_0.2s_ease] text-text-dim italic text-xs">{msg.content}</div>;
     case 'command':
-      return <div className="message command">{msg.content}</div>;
+      return <div className="max-w-[700px] animate-[fadeIn_0.2s_ease] text-text-dim text-xs message-command">{msg.content}</div>;
     case 'error':
-      return <div className="message error">{msg.content}</div>;
+      return <div className="max-w-[700px] animate-[fadeIn_0.2s_ease] text-red">{msg.content}</div>;
     case 'loading':
-      return <div className="message system loading">{msg.content}</div>;
+      return <div className="max-w-[700px] animate-[fadeIn_0.2s_ease] text-text-dim italic text-xs loading">{msg.content}</div>;
     case 'chat':
       return <ChatMessageView msg={msg.msg} isMe={userId === msg.msg.userId} />;
     case 'reply':
@@ -275,7 +295,7 @@ export default function MessageList() {
   }, [messages]);
 
   return (
-    <div className="messages">
+    <div className="flex-1 overflow-y-auto py-4 px-5 flex flex-col gap-2.5">
       {messages.map(msg => (
         <MessageView key={msg.id} msg={msg} userId={user?.id} />
       ))}

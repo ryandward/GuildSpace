@@ -10,8 +10,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="login-screen">
-        <p style={{ color: 'var(--text-dim)' }}>Loading...</p>
+      <div className="flex flex-col items-center justify-center flex-1">
+        <p className="text-text-dim">Loading...</p>
       </div>
     );
   }

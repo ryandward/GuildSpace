@@ -132,7 +132,7 @@ export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFi
   );
 
   return (
-    <div className="treemap" role="img" aria-label="Class composition">
+    <div className="relative w-full aspect-[2/1] overflow-hidden border border-border max-md:aspect-[3/2]" role="img" aria-label="Class composition">
       {nodes.map(node => {
         const color = getClassColor(node.label);
         const lb = levelBreakdown[node.label];
@@ -176,12 +176,12 @@ export function StatusChart({ statusCounts, total }: StatusChartProps) {
   const statuses = ['Main', 'Alt', 'Bot', 'Probationary'].filter(s => statusCounts[s]);
 
   return (
-    <div className="readout">
-      <div className="readout-header">
-        <span className="readout-title">STATUS</span>
-        <span className="readout-value">{total}</span>
+    <div className="flex-1 py-2.5 px-4 border-r border-border last:border-r-0 max-md:border-r-0 max-md:border-b max-md:border-border max-md:last:border-b-0">
+      <div className="flex justify-between items-baseline mb-1.5">
+        <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-text-dim">STATUS</span>
+        <span className="text-sm font-bold text-text">{total}</span>
       </div>
-      <div className="readout-bar">
+      <div className="flex h-[3px] bg-surface-2 gap-px mb-1.5 overflow-hidden">
         {statuses.map(s => (
           <span
             key={s}
@@ -191,10 +191,10 @@ export function StatusChart({ statusCounts, total }: StatusChartProps) {
           />
         ))}
       </div>
-      <div className="readout-detail">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-text-dim">
         {statuses.map(s => (
-          <span key={s} className="readout-item">
-            <span className={`readout-dot status-${s.toLowerCase()}`} />
+          <span key={s} className="flex items-center gap-1">
+            <span className={`readout-dot w-[5px] h-[5px] shrink-0 status-${s.toLowerCase()}`} />
             {s} {statusCounts[s]}
           </span>
         ))}
@@ -214,17 +214,17 @@ export function LevelChart({ levelDist }: LevelChartProps) {
   const pct = total > 0 ? Math.round((levelDist.level60 / total) * 100) : 0;
 
   return (
-    <div className="readout">
-      <div className="readout-header">
-        <span className="readout-title">LVL 60</span>
-        <span className="readout-value readout-green">{pct}%</span>
+    <div className="flex-1 py-2.5 px-4 border-r border-border last:border-r-0 max-md:border-r-0 max-md:border-b max-md:border-border max-md:last:border-b-0">
+      <div className="flex justify-between items-baseline mb-1.5">
+        <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-text-dim">LVL 60</span>
+        <span className="text-sm font-bold text-green">{pct}%</span>
       </div>
-      <div className="readout-bar">
-        <span className="readout-fill-green" style={{ width: `${pct}%` }} />
+      <div className="flex h-[3px] bg-surface-2 gap-px mb-1.5 overflow-hidden">
+        <span className="h-full bg-green transition-[width] duration-300" style={{ width: `${pct}%` }} />
       </div>
-      <div className="readout-detail">
-        <span className="readout-item">{levelDist.level60} max</span>
-        <span className="readout-item">{levelDist.sub60} leveling</span>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-text-dim">
+        <span className="flex items-center gap-1">{levelDist.level60} max</span>
+        <span className="flex items-center gap-1">{levelDist.sub60} leveling</span>
       </div>
     </div>
   );
