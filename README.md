@@ -7,29 +7,21 @@
 
 ---
 
-MySpace was a place for friends. GuildSpace is a place for guilds.
+Your guild gets a home on the web. Not a chat server. A website.
 
-Your guild gets a home on the web. Member profiles, rosters, DKP standings, bank inventories, raid history. It's all there when people show up, like a website. Because it is one.
+A guild page with your roster, your history, your loot tables. Player pages with character profiles, raid attendance, DKP. A bulletin board, a bank ledger, a raid calendar. Real pages you can browse and link to.
 
-## Why not just use Discord?
+## Where we're going
 
-Discord is a chat app. Your guild's entire history lives in a corporate chatroom you don't control, behind terms of service that change whenever they want, scrolling into oblivion.
+Every player gets a page. Every guild gets a page. DKP standings are a leaderboard you can browse. When a recruit visits your guild, they see the whole picture on one page. When someone looks you up, they see your characters, your raid history, your contributions.
 
-GuildSpace is not a chat app. Nobody needs to be online at the same time. You check the roster, look up someone's toons, see who made the last raid. It's a bulletin board, not a group chat.
+Chat is here too. But chat is just one thing on the page, not the whole page.
 
-## Why this is cheap to run
+## Where we are
 
-Real-time messaging is expensive. Expensive platforms need revenue. Revenue means ads, data harvesting, or paywalls. That's the treadmill every chat platform ends up on.
+The data layer works. Census, DKP, attendance, bank — all live and queryable. Discord OAuth gets you in. Right now you interact through commands, same as a bot. The next step is putting that data on real pages so it doesn't need a command to see it.
 
-An asynchronous guild platform costs almost nothing compared to pushing millions of live messages. When your costs are low, you don't need to monetize your users.
-
-**Advertising and monetization are banned on GuildSpace.** Not "we don't do it yet." Banned. There are no ads. There is no premium tier. Users are not the product.
-
-No DMs. No adult content. No predator vectors. No age-gated content requiring biometric verification. Just guild pages and character profiles.
-
-## Status
-
-Early development. Ex Astra is the first guild on the platform.
+Ex Astra is the first guild on the platform.
 
 ## Stack
 
