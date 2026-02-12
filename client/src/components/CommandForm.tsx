@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react';
 import { useSocket, type Command, type CommandOption, type AutocompleteChoice, type ToonInfo } from '../context/SocketContext';
 
 interface CommandFormProps {
@@ -27,10 +27,8 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
   const [acSelected, setAcSelected] = useState(-1);
   const [acField, setAcField] = useState<string | null>(null);
 
-  const [toonPickerOpen, setToonPickerOpen] = useState(false);
+  // Client-side toon cache for create commands
   const [myToons, setMyToons] = useState<ToonInfo[]>([]);
-  const [toonFilter, setToonFilter] = useState('');
-  const [toonSelected, setToonSelected] = useState(0);
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -41,17 +39,26 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
   const nameOpt = command.options.find(o => o.name === 'name');
   const isCreateCommand = nameOpt && !nameOpt.autocomplete;
 
-  // Focus first field on mount; if it's autocomplete, trigger initial fetch
+  // Pre-fetch user's toons for create commands so name field can autocomplete client-side
+  useEffect(() => {
+    if (isCreateCommand) {
+      fetchMyToons().then(setMyToons);
+    }
+  }, [isCreateCommand]);
+
+  // Focus first field on mount; trigger autocomplete if applicable
   useEffect(() => {
     const firstOpt = command.options[0];
     if (firstOpt) {
-      const el = fieldRefs.current[firstOpt.name];
-      el?.focus();
+      fieldRefs.current[firstOpt.name]?.focus();
       if (firstOpt.autocomplete) {
-        triggerAutocomplete(firstOpt, '');
+        triggerServerAutocomplete(firstOpt, '');
+      } else if (isCreateCommand && firstOpt.name === 'name') {
+        // Show all toons immediately for create commands
+        showClientAutocomplete('name', '');
       }
     }
-  }, [command]);
+  }, [command, myToons]);
 
   const hideAutocomplete = useCallback(() => {
     setAcChoices([]);
@@ -83,34 +90,45 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     });
   }
 
-  function applyToon(toon: ToonInfo) {
+  function applyToonToSiblings(toon: ToonInfo) {
     setFields(prev => {
       const next = { ...prev };
       for (const opt of command.options) {
+        if (opt.name === 'name') continue; // don't overwrite the name they're typing
         if (opt.name === 'level' && toon.level != null) {
-          next[opt.name] = { value: String(toon.level), prefilledBy: 'toon-copy' };
+          next[opt.name] = { value: String(toon.level), prefilledBy: 'autocomplete' };
         } else if (opt.name === 'class' && toon.class) {
-          next[opt.name] = { value: toon.class, prefilledBy: 'toon-copy' };
+          next[opt.name] = { value: toon.class, prefilledBy: 'autocomplete' };
         } else if (opt.name === 'status' && toon.status) {
-          next[opt.name] = { value: toon.status, prefilledBy: 'toon-copy' };
+          next[opt.name] = { value: toon.status, prefilledBy: 'autocomplete' };
         }
       }
       return next;
     });
-    setToonPickerOpen(false);
-    setToonFilter('');
-    fieldRefs.current['name']?.focus();
   }
 
-  async function openToonPicker() {
-    const toons = await fetchMyToons();
-    setMyToons(toons);
-    setToonPickerOpen(true);
-    setToonSelected(0);
-    setToonFilter('');
+  // Client-side autocomplete for create commands (filters pre-fetched toons)
+  function showClientAutocomplete(optName: string, val: string) {
+    if (myToons.length === 0) return;
+    const lower = val.toLowerCase();
+    const filtered = lower
+      ? myToons.filter(t => t.name.toLowerCase().includes(lower))
+      : myToons;
+    if (filtered.length > 0) {
+      setAcChoices(filtered.map(t => ({
+        name: t.name,
+        value: t.name,
+        metadata: { level: t.level, class: t.class, status: t.status },
+      })));
+      setAcSelected(0);
+      setAcField(optName);
+    } else {
+      hideAutocomplete();
+    }
   }
 
-  function triggerAutocomplete(opt: CommandOption, val: string) {
+  // Server-side autocomplete for update commands
+  function triggerServerAutocomplete(opt: CommandOption, val: string) {
     clearTimeout(fetchTimerRef.current);
     setAcField(opt.name);
     fetchTimerRef.current = setTimeout(async () => {
@@ -122,16 +140,21 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
       } else {
         hideAutocomplete();
       }
-    }, val ? 100 : 0); // immediate on focus, debounced on typing
+    }, val ? 100 : 0);
   }
 
   function handleAutocompleteSelect(choice: AutocompleteChoice, optName: string) {
-    setFieldValue(optName, choice.value);
-    if (choice.metadata) {
-      applyMetadata(choice.metadata);
+    if (isCreateCommand && optName === 'name') {
+      // For create commands: fill siblings from toon data, but set name too as starting point
+      setFieldValue(optName, choice.value);
+      const toon = myToons.find(t => t.name === choice.value);
+      if (toon) applyToonToSiblings(toon);
+    } else {
+      // For update commands: set name and fill siblings from metadata
+      setFieldValue(optName, choice.value);
+      if (choice.metadata) applyMetadata(choice.metadata);
     }
     hideAutocomplete();
-    // Advance to next unfilled field, or submit if all filled
     const idx = command.options.findIndex(o => o.name === optName);
     const nextOpt = command.options[idx + 1];
     if (nextOpt) {
@@ -141,15 +164,18 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
 
   function handleFieldFocus(opt: CommandOption) {
     if (opt.autocomplete) {
-      const val = fields[opt.name]?.value || '';
-      triggerAutocomplete(opt, val);
+      triggerServerAutocomplete(opt, fields[opt.name]?.value || '');
+    } else if (isCreateCommand && opt.name === 'name') {
+      showClientAutocomplete('name', fields['name']?.value || '');
     }
   }
 
-  async function handleFieldChange(opt: CommandOption, val: string) {
+  function handleFieldChange(opt: CommandOption, val: string) {
     setFieldValue(opt.name, val);
     if (opt.autocomplete) {
-      triggerAutocomplete(opt, val);
+      triggerServerAutocomplete(opt, val);
+    } else if (isCreateCommand && opt.name === 'name') {
+      showClientAutocomplete('name', val);
     }
   }
 
@@ -230,28 +256,10 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     }
   }
 
-  function handleToonPickerKeyDown(e: KeyboardEvent) {
-    const filtered = myToons.filter(t =>
-      t.name.toLowerCase().includes(toonFilter.toLowerCase())
-    );
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setToonSelected(s => Math.min(s + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setToonSelected(s => Math.max(s - 1, 0));
-    } else if (e.key === 'Enter' && filtered[toonSelected]) {
-      e.preventDefault();
-      applyToon(filtered[toonSelected]);
-    } else if (e.key === 'Escape') {
-      setToonPickerOpen(false);
-      setToonFilter('');
-    }
+  // Unified field renderer: name fields on create commands get client-side autocomplete
+  function hasAutocompleteUI(opt: CommandOption): boolean {
+    return opt.autocomplete || (isCreateCommand && opt.name === 'name') || false;
   }
-
-  const filteredToons = myToons.filter(t =>
-    t.name.toLowerCase().includes(toonFilter.toLowerCase())
-  );
 
   function renderField(opt: CommandOption, idx: number) {
     const fieldState = fields[opt.name] || { value: '' };
@@ -282,7 +290,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
       );
     }
 
-    if (opt.autocomplete) {
+    if (hasAutocompleteUI(opt)) {
       return (
         <div className="command-form-field" key={opt.name}>
           <label className="command-form-label">
@@ -403,45 +411,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
         <span className="command-form-desc-header">{command.description}</span>
         <button className="command-form-cancel" onClick={onCancel} title="Cancel (Esc)">Esc</button>
       </div>
-
-      {isCreateCommand && (
-        <button className="command-form-copy-btn" onClick={openToonPicker} type="button">
-          Copy from existing toon
-        </button>
-      )}
-
-      {toonPickerOpen && (
-        <div className="command-form-toon-picker">
-          <input
-            type="text"
-            className="command-form-input"
-            placeholder="Filter characters..."
-            value={toonFilter}
-            autoFocus
-            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              setToonFilter(e.target.value);
-              setToonSelected(0);
-            }}
-            onKeyDown={handleToonPickerKeyDown}
-          />
-          <div className="command-form-toon-list">
-            {filteredToons.length === 0 && (
-              <div className="command-form-toon-empty">No characters found</div>
-            )}
-            {filteredToons.map((t, i) => (
-              <div
-                key={t.name}
-                className={`command-form-toon-item${i === toonSelected ? ' selected' : ''}`}
-                onClick={() => applyToon(t)}
-              >
-                <span className="toon-name">{t.name}</span>
-                <span className="toon-detail">Lv{t.level} {t.class}</span>
-                <span className="toon-status">{t.status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="command-form-fields">
         {command.options.map((opt, idx) => renderField(opt, idx))}

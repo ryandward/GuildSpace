@@ -566,20 +566,6 @@ header h1 { font-size: 16px; color: var(--accent); }
 }
 .command-form-cancel:hover { color: var(--text); border-color: var(--text-dim); }
 
-.command-form-copy-btn {
-  background: none;
-  border: 1px dashed var(--border);
-  color: var(--text-dim);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 4px 10px;
-  cursor: pointer;
-  border-radius: 3px;
-  text-align: left;
-  align-self: flex-start;
-}
-.command-form-copy-btn:hover { color: var(--accent); border-color: var(--accent); }
-
 .command-form-fields {
   display: flex;
   flex-wrap: wrap;
@@ -704,43 +690,6 @@ header h1 { font-size: 16px; color: var(--accent); }
 .command-form-ac-item.selected { background: var(--surface2); }
 .command-form-ac-item .ac-name { color: var(--text); }
 .command-form-ac-item .ac-meta { color: var(--text-dim); font-size: 11px; }
-
-/* --- Toon Picker --- */
-.command-form-toon-picker {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface2);
-  padding: 6px;
-  animation: fadeIn 0.15s ease;
-}
-
-.command-form-toon-list {
-  max-height: 160px;
-  overflow-y: auto;
-  margin-bottom: 4px;
-}
-
-.command-form-toon-item {
-  padding: 5px 8px;
-  cursor: pointer;
-  font-size: 13px;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.command-form-toon-item:hover,
-.command-form-toon-item.selected { background: var(--border); }
-.command-form-toon-item .toon-name { color: var(--text); font-weight: 600; min-width: 100px; }
-.command-form-toon-item .toon-detail { color: var(--text-dim); font-size: 12px; flex: 1; }
-.command-form-toon-item .toon-status { color: var(--text-dim); font-size: 11px; text-transform: uppercase; }
-
-.command-form-toon-empty {
-  padding: 8px;
-  color: var(--text-dim);
-  font-size: 12px;
-  text-align: center;
-}
 
 /* --- Input area adjustments for form mode --- */
 .input-area:has(.command-form) {
