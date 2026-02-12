@@ -9,7 +9,7 @@ interface CommandFormProps {
 
 interface FieldState {
   value: string;
-  prefilledBy?: string; // tracks if this was filled by autocomplete metadata
+  prefilledBy?: string;
 }
 
 export default function CommandForm({ command, onExecute, onCancel }: CommandFormProps) {
@@ -18,7 +18,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
   const [fields, setFields] = useState<Record<string, FieldState>>(() => {
     const init: Record<string, FieldState> = {};
     for (const opt of command.options) {
-      init[opt.name] = { value: opt.choices?.[0]?.value != null ? '' : '' };
+      init[opt.name] = { value: '' };
     }
     return init;
   });
@@ -38,17 +38,18 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const formRef = useRef<HTMLDivElement>(null);
 
-  // Does this command have any autocomplete fields?
-  const hasAutocompleteField = command.options.some(o => o.autocomplete);
-  // Is this a "create" command? (has name field without autocomplete)
   const nameOpt = command.options.find(o => o.name === 'name');
   const isCreateCommand = nameOpt && !nameOpt.autocomplete;
 
-  // Focus first field on mount
+  // Focus first field on mount; if it's autocomplete, trigger initial fetch
   useEffect(() => {
     const firstOpt = command.options[0];
     if (firstOpt) {
-      fieldRefs.current[firstOpt.name]?.focus();
+      const el = fieldRefs.current[firstOpt.name];
+      el?.focus();
+      if (firstOpt.autocomplete) {
+        triggerAutocomplete(firstOpt, '');
+      }
     }
   }, [command]);
 
@@ -60,7 +61,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
 
   function setFieldValue(name: string, value: string, prefilledBy?: string) {
     setFields(prev => ({ ...prev, [name]: { value, prefilledBy } }));
-    // Clear validation error when user changes a field
     setValidationErrors(prev => {
       if (prev[name]) {
         const next = { ...prev };
@@ -75,9 +75,8 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     setFields(prev => {
       const next = { ...prev };
       for (const opt of command.options) {
-        const metaKey = opt.name === 'class' ? 'class' : opt.name;
-        if (metadata[metaKey] != null) {
-          next[opt.name] = { value: String(metadata[metaKey]), prefilledBy: 'autocomplete' };
+        if (metadata[opt.name] != null) {
+          next[opt.name] = { value: String(metadata[opt.name]), prefilledBy: 'autocomplete' };
         }
       }
       return next;
@@ -100,7 +99,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     });
     setToonPickerOpen(false);
     setToonFilter('');
-    // Focus the name field after copying
     fieldRefs.current['name']?.focus();
   }
 
@@ -112,13 +110,28 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     setToonFilter('');
   }
 
+  function triggerAutocomplete(opt: CommandOption, val: string) {
+    clearTimeout(fetchTimerRef.current);
+    setAcField(opt.name);
+    fetchTimerRef.current = setTimeout(async () => {
+      const choices = await fetchAutocomplete(command.name, opt.name, val);
+      if (choices.length > 0) {
+        setAcChoices(choices);
+        setAcSelected(0);
+        setAcField(opt.name);
+      } else {
+        hideAutocomplete();
+      }
+    }, val ? 100 : 0); // immediate on focus, debounced on typing
+  }
+
   function handleAutocompleteSelect(choice: AutocompleteChoice, optName: string) {
     setFieldValue(optName, choice.value);
     if (choice.metadata) {
       applyMetadata(choice.metadata);
     }
     hideAutocomplete();
-    // Focus next field
+    // Advance to next unfilled field, or submit if all filled
     const idx = command.options.findIndex(o => o.name === optName);
     const nextOpt = command.options[idx + 1];
     if (nextOpt) {
@@ -126,26 +139,17 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     }
   }
 
+  function handleFieldFocus(opt: CommandOption) {
+    if (opt.autocomplete) {
+      const val = fields[opt.name]?.value || '';
+      triggerAutocomplete(opt, val);
+    }
+  }
+
   async function handleFieldChange(opt: CommandOption, val: string) {
     setFieldValue(opt.name, val);
-
     if (opt.autocomplete) {
-      clearTimeout(fetchTimerRef.current);
-      if (!val) {
-        hideAutocomplete();
-        return;
-      }
-      setAcField(opt.name);
-      fetchTimerRef.current = setTimeout(async () => {
-        const choices = await fetchAutocomplete(command.name, opt.name, val);
-        if (choices.length > 0) {
-          setAcChoices(choices);
-          setAcSelected(0);
-          setAcField(opt.name);
-        } else {
-          hideAutocomplete();
-        }
-      }, 100);
+      triggerAutocomplete(opt, val);
     }
   }
 
@@ -161,12 +165,8 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
         if (isNaN(num)) {
           errors[opt.name] = 'Must be a number';
         } else {
-          if (opt.minValue != null && num < opt.minValue) {
-            errors[opt.name] = `Min ${opt.minValue}`;
-          }
-          if (opt.maxValue != null && num > opt.maxValue) {
-            errors[opt.name] = `Max ${opt.maxValue}`;
-          }
+          if (opt.minValue != null && num < opt.minValue) errors[opt.name] = `Min ${opt.minValue}`;
+          if (opt.maxValue != null && num > opt.maxValue) errors[opt.name] = `Max ${opt.maxValue}`;
         }
       }
     }
@@ -176,26 +176,19 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
 
   function handleSubmit() {
     if (!validate()) return;
-
     const options: Record<string, unknown> = {};
     for (const opt of command.options) {
       const val = fields[opt.name]?.value;
       if (val == null || val === '') continue;
-      if (opt.type === 'integer') {
-        options[opt.name] = parseInt(val, 10);
-      } else if (opt.type === 'number') {
-        options[opt.name] = parseFloat(val);
-      } else if (opt.type === 'boolean') {
-        options[opt.name] = val === 'true';
-      } else {
-        options[opt.name] = val;
-      }
+      if (opt.type === 'integer') options[opt.name] = parseInt(val, 10);
+      else if (opt.type === 'number') options[opt.name] = parseFloat(val);
+      else if (opt.type === 'boolean') options[opt.name] = val === 'true';
+      else options[opt.name] = val;
     }
     onExecute(options);
   }
 
   function handleKeyDown(e: KeyboardEvent, opt: CommandOption, optIndex: number) {
-    // Autocomplete navigation
     if (acField === opt.name && acChoices.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -227,7 +220,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
 
     if (e.key === 'Enter' && !acField) {
       e.preventDefault();
-      // If not on last field, go to next
       const nextOpt = command.options[optIndex + 1];
       if (nextOpt) {
         fieldRefs.current[nextOpt.name]?.focus();
@@ -235,10 +227,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
         handleSubmit();
       }
       return;
-    }
-
-    if (e.key === 'Tab' && !e.shiftKey && !acField) {
-      // Let default tab behavior move to next field or submit button
     }
   }
 
@@ -270,7 +258,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     const error = validationErrors[opt.name];
     const isPrefilled = !!fieldState.prefilledBy;
 
-    // Choices → select dropdown
     if (opt.choices && opt.choices.length > 0) {
       return (
         <div className="command-form-field" key={opt.name}>
@@ -285,7 +272,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
             onChange={(e) => setFieldValue(opt.name, e.target.value)}
             onKeyDown={(e) => handleKeyDown(e as unknown as KeyboardEvent, opt, idx)}
           >
-            <option value="">— select —</option>
+            <option value="">-- select --</option>
             {opt.choices.map(c => (
               <option key={String(c.value)} value={String(c.value)}>{c.name}</option>
             ))}
@@ -295,7 +282,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
       );
     }
 
-    // Autocomplete string field
     if (opt.autocomplete) {
       return (
         <div className="command-form-field" key={opt.name}>
@@ -304,17 +290,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
             <span className="command-form-desc">{opt.description}</span>
           </label>
           <div className="command-form-ac-wrap">
-            <input
-              ref={el => { fieldRefs.current[opt.name] = el; }}
-              type="text"
-              className={`command-form-input${error ? ' error' : ''}`}
-              value={fieldState.value}
-              placeholder={opt.description}
-              autoComplete="off"
-              onChange={(e) => handleFieldChange(opt, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, opt, idx)}
-              onBlur={() => setTimeout(hideAutocomplete, 150)}
-            />
             {acField === opt.name && acChoices.length > 0 && (
               <div className="command-form-ac-dropdown">
                 {acChoices.map((c, i) => (
@@ -333,13 +308,24 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
                 ))}
               </div>
             )}
+            <input
+              ref={el => { fieldRefs.current[opt.name] = el; }}
+              type="text"
+              className={`command-form-input${error ? ' error' : ''}`}
+              value={fieldState.value}
+              placeholder={opt.description}
+              autoComplete="off"
+              onFocus={() => handleFieldFocus(opt)}
+              onChange={(e) => handleFieldChange(opt, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(e, opt, idx)}
+              onBlur={() => setTimeout(hideAutocomplete, 150)}
+            />
           </div>
           {error && <span className="command-form-error">{error}</span>}
         </div>
       );
     }
 
-    // Number/integer field
     if (opt.type === 'integer' || opt.type === 'number') {
       return (
         <div className="command-form-field" key={opt.name}>
@@ -347,7 +333,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
             {opt.name}{opt.required && <span className="command-form-required">*</span>}
             <span className="command-form-desc">
               {opt.description}
-              {opt.minValue != null && opt.maxValue != null && ` (${opt.minValue}–${opt.maxValue})`}
+              {opt.minValue != null && opt.maxValue != null && ` (${opt.minValue}--${opt.maxValue})`}
             </span>
           </label>
           <input
@@ -366,7 +352,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
       );
     }
 
-    // Boolean field
     if (opt.type === 'boolean') {
       return (
         <div className="command-form-field" key={opt.name}>
@@ -381,7 +366,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
             onChange={(e) => setFieldValue(opt.name, e.target.value)}
             onKeyDown={(e) => handleKeyDown(e as unknown as KeyboardEvent, opt, idx)}
           >
-            <option value="">— select —</option>
+            <option value="">-- select --</option>
             <option value="true">true</option>
             <option value="false">false</option>
           </select>
@@ -390,7 +375,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
       );
     }
 
-    // Default: text input
     return (
       <div className="command-form-field" key={opt.name}>
         <label className="command-form-label">
@@ -421,11 +405,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
       </div>
 
       {isCreateCommand && (
-        <button
-          className="command-form-copy-btn"
-          onClick={openToonPicker}
-          type="button"
-        >
+        <button className="command-form-copy-btn" onClick={openToonPicker} type="button">
           Copy from existing toon
         </button>
       )}
@@ -468,9 +448,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
       </div>
 
       <div className="command-form-actions">
-        <button className="command-form-submit" onClick={handleSubmit}>
-          Execute
-        </button>
+        <button className="command-form-submit" onClick={handleSubmit}>Execute</button>
         <span className="command-form-hint">Enter to submit, Esc to cancel</span>
       </div>
     </div>
