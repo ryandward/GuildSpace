@@ -1393,6 +1393,22 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  app.get('/api/bank/history', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const history = await AppDataSource.manager.find(BankImport, {
+        order: { createdAt: 'DESC' },
+        take: 50,
+      });
+      res.json(history);
+    } catch (err) {
+      console.error('Failed to fetch bank history:', err);
+      res.status(500).json({ error: 'Failed to fetch transaction history' });
+    }
+  });
+
   app.get('/api/bank/:banker/history', async (req, res) => {
     const user = await getUser(req);
     if (!user) return res.status(401).json({ error: 'Not authenticated' });

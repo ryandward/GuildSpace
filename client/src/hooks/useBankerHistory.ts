@@ -18,6 +18,16 @@ export interface BankImportRecord {
   createdAt: string;
 }
 
+export function useBankHistory() {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: ['bankHistory'],
+    queryFn: () => authFetch<BankImportRecord[]>(token!, '/api/bank/history'),
+    enabled: !!token,
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useBankerHistory(banker: string | undefined) {
   const { token } = useAuth();
   return useQuery({

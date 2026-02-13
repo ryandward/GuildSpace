@@ -1,90 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useBankQuery } from '../hooks/useBankQuery';
-import { useBankerHistory, type BankImportRecord } from '../hooks/useBankerHistory';
+import { useBankerHistory } from '../hooks/useBankerHistory';
+import BankHistoryEntry from '../components/BankHistoryEntry';
 import AppHeader from '../components/AppHeader';
 import { Card, Input, Text, Badge, Heading } from '../ui';
 import { text } from '../ui/recipes';
-
-function timeAgo(dateStr: string): string {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
-}
-
-function HistoryEntry({ record }: { record: BankImportRecord }) {
-  const [expanded, setExpanded] = useState(false);
-  const { added, removed, changed } = record.diff;
-  const hasChanges = added.length > 0 || removed.length > 0 || changed.length > 0;
-
-  return (
-    <div className="border-b border-border last:border-b-0">
-      <button
-        className="w-full flex items-center gap-1.5 py-1.5 px-2 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast"
-        onClick={() => setExpanded(!expanded)}
-        disabled={!hasChanges}
-      >
-        {hasChanges && (
-          <span
-            className="collapse-chevron text-text-dim text-caption shrink-0"
-            data-expanded={expanded}
-          >
-            ›
-          </span>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="text-text font-body text-caption truncate">
-            <span className="font-semibold">{record.uploadedByName}</span>
-            {' imported '}
-            <span className="font-semibold">{record.itemCount}</span>
-            {' items'}
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className={text({ variant: 'caption' })}>{timeAgo(record.createdAt)}</span>
-            {hasChanges && (
-              <span className={text({ variant: 'caption' })}>
-                {added.length > 0 && <span className="text-green">+{added.length}</span>}
-                {added.length > 0 && (removed.length > 0 || changed.length > 0) && ' '}
-                {removed.length > 0 && <span className="text-red">-{removed.length}</span>}
-                {removed.length > 0 && changed.length > 0 && ' '}
-                {changed.length > 0 && <span className="text-accent">{changed.length} changed</span>}
-              </span>
-            )}
-          </div>
-        </div>
-      </button>
-      {hasChanges && (
-        <div className="collapse-container" data-expanded={expanded}>
-          <div className="collapse-inner">
-            <div className="px-2 pb-1.5 pt-0.5 ml-3 border-l border-border-subtle flex flex-col gap-px">
-              {added.map(item => (
-                <div key={item.name} className="text-caption font-body text-green truncate">
-                  +{item.quantity} {item.name}
-                </div>
-              ))}
-              {removed.map(item => (
-                <div key={item.name} className="text-caption font-body text-red truncate">
-                  -{item.quantity} {item.name}
-                </div>
-              ))}
-              {changed.map(item => (
-                <div key={item.name} className="text-caption font-body text-text-dim truncate">
-                  {item.name}: {item.oldQuantity} → {item.newQuantity}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function BankerDetailPage() {
   const { banker } = useParams<{ banker: string }>();
@@ -169,7 +90,7 @@ export default function BankerDetailPage() {
                   </div>
                 </Card>
 
-                {/* Import history — takes 1/3 on desktop */}
+                {/* Transaction history — takes 1/3 on desktop */}
                 <Card className="flex-1 min-w-0 self-start">
                   <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
                     <span className={text({ variant: 'overline' })}>TRANSACTION HISTORY</span>
@@ -182,7 +103,7 @@ export default function BankerDetailPage() {
                       <Text variant="caption" className="text-center py-4 block">No imports yet</Text>
                     )}
                     {history?.map(record => (
-                      <HistoryEntry key={record.id} record={record} />
+                      <BankHistoryEntry key={record.id} record={record} />
                     ))}
                   </div>
                 </Card>

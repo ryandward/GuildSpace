@@ -23,6 +23,7 @@ export function useBankImport() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['bank'] });
       queryClient.invalidateQueries({ queryKey: ['bankerHistory', data.banker] });
+      queryClient.invalidateQueries({ queryKey: ['bankHistory'] });
     },
   });
 }

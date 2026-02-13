@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useBankQuery, type BankItem } from '../hooks/useBankQuery';
 import { useBankImport } from '../hooks/useBankImport';
+import { useBankHistory } from '../hooks/useBankerHistory';
+import BankHistoryEntry from '../components/BankHistoryEntry';
 import AppHeader from '../components/AppHeader';
 import { Card, Input, Text, Badge, Button } from '../ui';
 import { text } from '../ui/recipes';
@@ -71,6 +73,7 @@ export default function BankPage() {
   const { user } = useAuth();
   const { data, isLoading, error } = useBankQuery();
   const importMutation = useBankImport();
+  const { data: history, isLoading: historyLoading } = useBankHistory();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
 
@@ -202,6 +205,23 @@ export default function BankPage() {
                       No items match your search
                     </Text>
                   )}
+                </div>
+              </Card>
+
+              <Card>
+                <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
+                  <span className={text({ variant: 'overline' })}>TRANSACTION HISTORY</span>
+                </div>
+                <div>
+                  {historyLoading && (
+                    <Text variant="caption" className="text-center py-4 block">Loading...</Text>
+                  )}
+                  {!historyLoading && history && history.length === 0 && (
+                    <Text variant="caption" className="text-center py-4 block">No transactions yet</Text>
+                  )}
+                  {history?.map(record => (
+                    <BankHistoryEntry key={record.id} record={record} showBanker />
+                  ))}
                 </div>
               </Card>
             </>
