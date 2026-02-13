@@ -9,6 +9,7 @@ import CharacterCard from '../components/roster/CharacterCard';
 import { Text, Heading, Card, Button, Textarea, Badge } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
+import { getClassColor } from '../lib/classColors';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
@@ -46,6 +47,16 @@ export default function MemberDetailPage() {
   }, [bioMutation, bioText]);
 
   const netDkp = data ? data.earnedDkp - data.spentDkp : 0;
+  const nameColor = useMemo(() => {
+    if (!data?.characters.length) return undefined;
+    let best: { class: string; lastRaidDate: string | null } | null = null;
+    for (const c of data.characters) {
+      if (!c.lastRaidDate) continue;
+      if (!best || !best.lastRaidDate || c.lastRaidDate > best.lastRaidDate) best = c;
+    }
+    const cls = best?.class || data.characters.find(c => c.status === 'Main')?.class || data.characters[0]?.class;
+    return cls ? getClassColor(cls) : undefined;
+  }, [data]);
   const maxDkp = useMemo(() => {
     if (!data?.dkpByCharacter.length) return 1;
     return Math.max(...data.dkpByCharacter.map(c => c.totalDkp), 1);
@@ -55,7 +66,7 @@ export default function MemberDetailPage() {
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
       <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-5">
+        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           <Link to="/roster" className="no-underline">
             <Text variant="caption" className="hover:text-accent transition-colors duration-fast">&lsaquo; Back to roster</Text>
           </Link>
@@ -67,7 +78,7 @@ export default function MemberDetailPage() {
             <>
               {/* Header */}
               <div className="flex items-baseline gap-2 flex-wrap">
-                <Heading level="heading">{data.displayName}</Heading>
+                <Heading level="heading" style={nameColor ? { color: nameColor } : undefined}>{data.displayName}</Heading>
                 {data.isOwner && <Badge variant="status" className="bg-accent text-bg font-bold">Owner</Badge>}
                 {data.isAdmin && !data.isOwner && (
                   <Badge variant="status" className="bg-transparent border border-accent text-accent" title={data.adminSince ? `Since ${formatDate(data.adminSince)}` : undefined}>Admin</Badge>

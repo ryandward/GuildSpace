@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Text } from '../../ui';
 import { text } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
+import { getClassColor } from '../../lib/classColors';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
@@ -67,10 +68,13 @@ export default function RosterRow({ member, classFilter }: Props) {
         onClick={() => navigate(`/roster/${member.discordId}`)}
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
-        <Text variant="body" className="font-semibold truncate">
+        <span
+          className="font-body text-body font-semibold truncate"
+          style={{ color: getClassColor(featured?.class || '') }}
+        >
           {featured?.name || member.displayName}
           {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent ml-1 align-middle" title="GuildSpace member" />}
-        </Text>
+        </span>
         <Text variant="label" className="truncate">{featured?.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{netDkp}</span>

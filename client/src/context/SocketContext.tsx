@@ -109,6 +109,9 @@ interface SocketContextValue {
   commands: Command[];
   messages: AppMessage[];
   modal: ModalData | null;
+  onlineCount: number;
+  onlineIds: string[];
+  totalMembers: number;
   closeModal: () => void;
   executeCommand: (name: string, options: Record<string, unknown>) => void;
   sendChat: (content: string) => void;
@@ -141,6 +144,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<AppMessage[]>([]);
   const [modal, setModal] = useState<ModalData | null>(null);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [onlineIds, setOnlineIds] = useState<string[]>([]);
+  const [totalMembers, setTotalMembers] = useState(0);
 
   const { data: commands = [] } = useCommandsQuery(!!user);
 
@@ -222,6 +228,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setMessages(prev => [...prev, { type: 'chat', msg, id: nextId() }]);
     });
 
+    sock.on('presenceUpdate', (data: { onlineCount: number; onlineIds: string[]; totalMembers: number }) => {
+      setOnlineCount(data.onlineCount);
+      setOnlineIds(data.onlineIds);
+      setTotalMembers(data.totalMembers);
+    });
+
     return () => {
       sock.disconnect();
       socketRef.current = null;
@@ -278,6 +290,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       commands,
       messages,
       modal,
+      onlineCount,
+      onlineIds,
+      totalMembers,
       closeModal: () => setModal(null),
       executeCommand,
       sendChat,

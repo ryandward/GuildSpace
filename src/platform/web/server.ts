@@ -1200,6 +1200,26 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  // ─── Online Presence Tracking ──────────────────────────────────────
+
+  const onlineUsers = new Map<string, number>(); // discordId → connection count
+
+  async function emitPresenceUpdate() {
+    const onlineIds = Array.from(onlineUsers.keys());
+    let totalMembers = 0;
+    try {
+      const result = await AppDataSource.manager.query(
+        `SELECT COUNT(DISTINCT discord_id) as count FROM active_toons`
+      ) as { count: string }[];
+      totalMembers = Number(result[0]?.count ?? 0);
+    } catch { /* ignore */ }
+    io.emit('presenceUpdate', {
+      onlineCount: onlineIds.length,
+      onlineIds,
+      totalMembers,
+    });
+  }
+
   // ─── Command Execution (via WebSocket) ─────────────────────────────
 
   // Pending component collectors: interactionId → { resolve, filter, timeout }
@@ -1235,6 +1255,11 @@ export function createWebServer(opts: WebServerOptions) {
         sessionUser = user;
         socket.join('channel:general');
         socket.emit('authOk', user);
+
+        // Track online presence
+        const prev = onlineUsers.get(user.id) ?? 0;
+        onlineUsers.set(user.id, prev + 1);
+        if (prev === 0) emitPresenceUpdate();
 
         // Send recent chat history
         try {
@@ -1383,6 +1408,15 @@ export function createWebServer(opts: WebServerOptions) {
     });
 
     socket.on('disconnect', () => {
+      if (sessionUser) {
+        const count = onlineUsers.get(sessionUser.id) ?? 0;
+        if (count <= 1) {
+          onlineUsers.delete(sessionUser.id);
+          emitPresenceUpdate();
+        } else {
+          onlineUsers.set(sessionUser.id, count - 1);
+        }
+      }
       sessionUser = null;
     });
   });

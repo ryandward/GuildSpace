@@ -56,7 +56,7 @@ export default function RaidEventPage() {
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
       <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-5">
+        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           <Link to="/raids" className="no-underline">
             <Text variant="caption" className="hover:text-text">&larr; Back to raids</Text>
           </Link>
