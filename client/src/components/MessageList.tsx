@@ -75,19 +75,20 @@ function formatTime(dateStr: string): string {
 
 function bubbleRadius(isMe: boolean, isFirst: boolean, isLast: boolean): string {
   // Base: all corners lg (12px). Connecting sides get sm (4px).
-  // Incoming (left): left side flattens between grouped messages
-  // Outgoing (right): right side flattens between grouped messages
+  // Tail corner (bl for incoming, br for outgoing) is always sharp.
   let tl = 'rounded-tl-lg';
   let tr = 'rounded-tr-lg';
   let bl = 'rounded-bl-lg';
   let br = 'rounded-br-lg';
 
   if (isMe) {
+    // Outgoing: right side chains, bottom-right is the tail
     if (!isFirst) tr = 'rounded-tr-sm';
-    if (!isLast) br = 'rounded-br-sm';
+    br = 'rounded-br-sm'; // tail — always sharp
   } else {
+    // Incoming: left side chains, bottom-left is the tail
     if (!isFirst) tl = 'rounded-tl-sm';
-    if (!isLast) bl = 'rounded-bl-sm';
+    bl = 'rounded-bl-sm'; // tail — always sharp
   }
 
   return `${tl} ${tr} ${bl} ${br}`;
@@ -300,13 +301,24 @@ function ReplyView({ data }: { data: ReplyData }) {
 
 // --- Chat bubble ---
 
-function ChatBubble({ msg, isMe, isFirst, isLast }: {
+// Map class names to their pip CSS color values for text use
+const CLASS_COLORS: Record<string, string> = {
+  'Cleric': '#f0c040', 'Warrior': '#c79c6e', 'Wizard': '#69ccf0',
+  'Magician': '#69ccf0', 'Enchanter': '#b490d0', 'Necromancer': '#a330c9',
+  'Shadow Knight': '#a330c9', 'Rogue': '#fff569', 'Ranger': '#abd473',
+  'Druid': '#ff7d0a', 'Monk': '#00ff96', 'Bard': '#e6005c',
+  'Paladin': '#f58cba', 'Shaman': '#0070de',
+};
+
+function ChatBubble({ msg, isMe, isFirst, isLast, nameClass }: {
   msg: { createdAt: string; displayName: string; content: string };
   isMe: boolean;
   isFirst: boolean;
   isLast: boolean;
+  nameClass?: string | null;
 }) {
   const radius = bubbleRadius(isMe, isFirst, isLast);
+  const nameColor = nameClass ? CLASS_COLORS[nameClass] : undefined;
 
   return (
     <div className={cx(
@@ -316,12 +328,17 @@ function ChatBubble({ msg, isMe, isFirst, isLast }: {
     )}>
       {isFirst && (
         <div className={cx(
-          'flex items-baseline gap-1 mb-0.5',
+          'flex items-center gap-1 mb-0.5',
           isMe ? 'flex-row-reverse' : 'flex-row',
         )}>
-          <Text variant="body" className={cx('font-bold text-caption', isMe ? 'text-accent' : 'text-text-secondary')}>
+          <span
+            className={cx(text({ variant: 'body' }), 'font-bold text-caption',
+              !nameColor && (isMe ? 'text-accent' : 'text-text-secondary'),
+            )}
+            style={nameColor ? { color: nameColor } : undefined}
+          >
             {msg.displayName}
-          </Text>
+          </span>
           <Text variant="caption">{formatTime(msg.createdAt)}</Text>
         </div>
       )}
@@ -357,7 +374,7 @@ function SystemMessage({ content, variant }: { content: string; variant: 'system
 
 // --- Main list ---
 
-export default function MessageList() {
+export default function MessageList({ classMap }: { classMap?: Map<string, string> }) {
   const { messages } = useSocket();
   const { user } = useAuth();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -391,6 +408,7 @@ export default function MessageList() {
                 isMe={isMe}
                 isFirst={isFirst}
                 isLast={isLast}
+                nameClass={classMap?.get(msg.msg.userId)}
               />
             );
           }
