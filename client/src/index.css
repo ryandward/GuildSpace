@@ -351,7 +351,7 @@
 .collapse-container {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--duration-slow) var(--ease-decelerate);
+  transition: grid-template-rows var(--duration-slow) var(--ease-accelerate);
 }
 .collapse-container[data-expanded="true"] {
   grid-template-rows: 1fr;
