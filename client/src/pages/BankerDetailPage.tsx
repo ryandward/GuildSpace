@@ -172,7 +172,7 @@ export default function BankerDetailPage() {
                 {/* Import history — takes 1/3 on desktop */}
                 <Card className="flex-1 min-w-0 self-start">
                   <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
-                    <span className={text({ variant: 'overline' })}>IMPORT HISTORY</span>
+                    <span className={text({ variant: 'overline' })}>TRANSACTION HISTORY</span>
                   </div>
                   <div>
                     {historyLoading && (
