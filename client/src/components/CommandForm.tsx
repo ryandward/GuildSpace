@@ -255,9 +255,8 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     const classes = fieldClasses(opt);
 
     const label = (
-      <label className={text({ variant: 'label' }) + ' flex items-baseline gap-0.5'}>
+      <label className={text({ variant: 'label' })} title={opt.description}>
         {opt.name}{opt.required && <span className="text-yellow font-bold">*</span>}
-        <span className={text({ variant: 'caption' })}>{opt.description}</span>
       </label>
     );
 
