@@ -137,21 +137,25 @@ export default function RosterPage() {
               />
 
               {/* Filter strip */}
-              {classFilter && (
-                <div className="flex items-center gap-1 px-0.5 animate-fade-in">
-                  <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
-                  <Badge variant="filter" className="inline-flex items-center gap-1">
-                    <span className={`w-1 h-1 rounded-full ${('pip-' + classFilter.toLowerCase().replace(/\s+/g, '-'))}`} />
-                    <span>{classFilter}</span>
-                  </Badge>
-                  <button
-                    className="bg-transparent border-none cursor-pointer transition-colors duration-fast"
-                    onClick={() => setClassFilter(null)}
-                  >
-                    <Text variant="caption" className="hover:text-red">Clear</Text>
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-1 px-0.5">
+                <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
+                {classFilter ? (
+                  <>
+                    <Badge variant="filter" className="inline-flex items-center gap-1">
+                      <span className={`w-1 h-1 rounded-full ${('pip-' + classFilter.toLowerCase().replace(/\s+/g, '-'))}`} />
+                      <span>{classFilter}</span>
+                    </Badge>
+                    <button
+                      className="bg-transparent border-none cursor-pointer transition-colors duration-fast"
+                      onClick={() => setClassFilter(null)}
+                    >
+                      <Text variant="caption" className="hover:text-red">Clear</Text>
+                    </button>
+                  </>
+                ) : (
+                  <Text variant="caption" as="span">All Classes</Text>
+                )}
+              </div>
 
               {/* Stats */}
               <CollapsibleCard
