@@ -151,11 +151,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       .then(res => res.json())
       .then((cmds: Command[]) => {
         setCommands(cmds);
-        setMessages(prev => [...prev, {
-          type: 'system',
-          content: `${cmds.length} commands loaded: ${cmds.map(c => '/' + c.name).join(', ')}`,
-          id: nextId(),
-        }]);
       })
       .catch(console.error);
   }, [user]);
