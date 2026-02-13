@@ -255,8 +255,8 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     const classes = fieldClasses(opt);
 
     const label = (
-      <label className={text({ variant: 'label' })} title={opt.description}>
-        {opt.name}{opt.required && <span className="text-yellow font-bold">*</span>}
+      <label className={text({ variant: 'label' }) + ' field-tooltip text-yellow'} data-tooltip={opt.description}>
+        {opt.name}{opt.required && <span className="text-text-dim font-normal">*</span>}
       </label>
     );
 
