@@ -22,7 +22,9 @@ function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
   return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
 }
 
-const ROW_GRID = 'grid grid-cols-[3px_minmax(0,1fr)_auto_28px_auto_54px_20px] max-md:grid-cols-[3px_minmax(0,1fr)_28px_48px_20px] items-center gap-x-1.5 gap-y-0';
+// Column widths: N × space-unit (8px) except 3px pip (decorative stroke)
+// Name is auto (content-sized, capped by max-w on element); display-name is 1fr (absorbs remaining space)
+const ROW_GRID = 'grid grid-cols-[3px_auto_auto_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] items-center gap-x-1.5 gap-y-0';
 
 export interface RosterCharacter {
   name: string;
@@ -66,7 +68,7 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
         onClick={onToggle}
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
-        <Text variant="body" className="font-semibold truncate">{featured?.name || member.displayName}</Text>
+        <Text variant="body" className="font-semibold truncate max-w-48">{featured?.name || member.displayName}</Text>
         <Text variant="label" className="truncate max-md:hidden">{featured?.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <Text variant="label" className="truncate max-md:hidden" style={{ opacity: 'var(--opacity-5)' }}>{member.displayName}</Text>
@@ -98,7 +100,7 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
                 }}
               >
                 <span className={`w-0.5 h-1.5 rounded-full ${classToPip(c.class)}`} />
-                <Text variant="caption" className="text-text-secondary truncate pl-3">
+                <Text variant="caption" className="text-text-secondary truncate max-w-48 pl-3">
                   {c.name}
                   <Badge variant="status" color={statusColor(c.status)} className="ml-1.5 md:hidden">{c.status}</Badge>
                 </Text>
