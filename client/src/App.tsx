@@ -8,6 +8,7 @@ import AppShell from './layouts/AppShell';
 import RaidsPage from './pages/RaidsPage';
 import RaidEventPage from './pages/RaidEventPage';
 import BankPage from './pages/BankPage';
+import BankerDetailPage from './pages/BankerDetailPage';
 import BottomTabs from './components/BottomTabs';
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/raids" element={<RaidsPage />} />
         <Route path="/raids/:eventId" element={<RaidEventPage />} />
         <Route path="/bank" element={<BankPage />} />
+        <Route path="/bank/:banker" element={<BankerDetailPage />} />
         <Route path="/terminal" element={<AppShell />} />
         <Route path="*" element={<Navigate to="/roster" replace />} />
       </Routes>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useBankQuery, type BankItem } from '../hooks/useBankQuery';
 import AppHeader from '../components/AppHeader';
 import { Card, Input, Text, Badge } from '../ui';
@@ -44,7 +45,7 @@ function BankItemRow({ item }: { item: BankItem }) {
           <div className="px-2 pb-1.5 pt-0.5 ml-3 border-l border-border-subtle">
             {Array.from(bankerGroups.entries()).map(([banker, slots]) => (
               <div key={banker} className="py-0.5">
-                <span className="text-text-secondary font-body text-caption font-semibold">{banker}</span>
+                <Link to={`/bank/${encodeURIComponent(banker)}`} className="no-underline text-text-secondary font-body text-caption font-semibold hover:text-accent transition-colors duration-fast">{banker}</Link>
                 <div className="flex flex-col gap-px mt-0.5">
                   {slots.map((slot, i) => (
                     <div key={i} className="flex items-center gap-1.5 pl-1.5">
