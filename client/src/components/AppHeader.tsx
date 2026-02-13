@@ -9,31 +9,31 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="flex justify-between items-stretch min-h-6 bg-surface border-b border-border px-2.5">
-        <div className="flex items-stretch">
-          <h1 className="flex items-center font-display text-subheading font-bold text-accent tracking-wide">GuildSpace</h1>
-          <nav className="flex ml-3 max-md:hidden">
-            <NavLink
-              to="/roster"
-              className={({ isActive }) => navLink({ active: isActive })}
-            >
-              Roster
-            </NavLink>
-            <NavLink
-              to="/raids"
-              className={({ isActive }) => navLink({ active: isActive })}
-            >
-              Raids
-            </NavLink>
-            <NavLink
-              to="/terminal"
-              className={({ isActive }) => navLink({ active: isActive })}
-            >
-              Terminal
-            </NavLink>
-          </nav>
-          {/* Guild info — between nav and user menu area */}
-          <div className="flex items-center ml-3 gap-2 text-caption text-text-dim max-md:ml-2">
+      <header className="grid grid-cols-[auto_1fr_auto] items-center min-h-7 bg-surface border-b border-border px-3">
+        <h1 className="flex items-center font-display text-subheading font-bold text-accent tracking-wide">GuildSpace</h1>
+        <nav className="flex justify-center gap-1 max-md:hidden">
+          <NavLink
+            to="/roster"
+            className={({ isActive }) => navLink({ active: isActive })}
+          >
+            Roster
+          </NavLink>
+          <NavLink
+            to="/raids"
+            className={({ isActive }) => navLink({ active: isActive })}
+          >
+            Raids
+          </NavLink>
+          <NavLink
+            to="/terminal"
+            className={({ isActive }) => navLink({ active: isActive })}
+          >
+            Terminal
+          </NavLink>
+        </nav>
+        <div className="md:hidden" />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-caption text-text-dim max-md:hidden">
             {totalMembers > 0 && (
               <span>{totalMembers} Members</span>
             )}
@@ -47,8 +47,6 @@ export default function AppHeader() {
               </span>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-1">
           <Button intent="ghost" size="sm" onClick={showHelp} title="Show available commands" className="max-md:hidden">
             ?
           </Button>

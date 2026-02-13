@@ -24,7 +24,7 @@ export default function AppShell() {
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
       <div className="flex-1 flex flex-col overflow-hidden relative z-0">
-        <div className="max-w-terminal mx-auto w-full flex-1 flex flex-col overflow-hidden chat-bg border border-border rounded-lg max-md:border-x-0 max-md:rounded-none max-md:pb-7">
+        <div className="max-w-terminal mx-auto w-full flex-1 flex flex-col overflow-hidden chat-bg border-x border-border max-md:border-x-0 max-md:pb-7">
           <MessageList classMap={classMap} />
           <div className="px-2 pb-2 pt-1">
             <CommandInput />
