@@ -22,8 +22,6 @@ function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
   return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
 }
 
-// Alt rows live outside the parent subgrid, so they define their own columns
-const ALT_ROW_GRID = 'grid grid-cols-[3px_auto_auto_32px_auto_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] items-center gap-x-1.5 gap-y-0';
 
 export interface RosterCharacter {
   name: string;
@@ -87,12 +85,12 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
       </button>
 
       {hasAlts && (
-        <div className="collapse-container col-span-full" data-expanded={expanded}>
-          <div className="collapse-inner bg-surface-2 rounded-sm" key={expanded ? 'open' : 'closed'}>
+        <div className="collapse-container col-span-full grid-cols-subgrid" data-expanded={expanded}>
+          <div className="collapse-inner col-span-full grid grid-cols-subgrid bg-surface-2 rounded-sm" key={expanded ? 'open' : 'closed'}>
             {alts.map((c, i) => (
               <div
                 key={c.name}
-                className={cx(ALT_ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
+                className="col-span-full grid grid-cols-subgrid items-center py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter"
                 style={{
                   ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
                   ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
