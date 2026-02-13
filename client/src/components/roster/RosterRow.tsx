@@ -22,9 +22,8 @@ function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
   return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
 }
 
-// Column widths: N × space-unit (8px) except 3px pip (decorative stroke)
-// Name is auto (content-sized, capped by max-w on element); display-name is 1fr (absorbs remaining space)
-const ROW_GRID = 'grid grid-cols-[3px_auto_auto_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] items-center gap-x-1.5 gap-y-0';
+// Alt rows live outside the parent subgrid, so they define their own columns
+const ALT_ROW_GRID = 'grid grid-cols-[3px_auto_auto_32px_auto_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] items-center gap-x-1.5 gap-y-0';
 
 export interface RosterCharacter {
   name: string;
@@ -62,13 +61,13 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
   const delays = expanded ? phiStagger(alts.length) : [];
 
   return (
-    <div className="border-b border-border-subtle">
+    <div className="col-span-full grid grid-cols-subgrid border-b border-border-subtle">
       <button
-        className={cx(ROW_GRID, 'w-full py-1 px-0.5 transition-colors duration-fast hover:bg-surface text-left cursor-pointer bg-transparent border-none')}
+        className="col-span-full grid grid-cols-subgrid items-center w-full py-1 px-0.5 transition-colors duration-fast hover:bg-surface text-left cursor-pointer bg-transparent border-none"
         onClick={onToggle}
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
-        <Text variant="body" className="font-semibold truncate max-w-48">{featured?.name || member.displayName}</Text>
+        <Text variant="body" className="font-semibold truncate">{featured?.name || member.displayName}</Text>
         <Text variant="label" className="truncate max-md:hidden">{featured?.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <Text variant="label" className="truncate max-md:hidden" style={{ opacity: 'var(--opacity-5)' }}>{member.displayName}</Text>
@@ -88,19 +87,19 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
       </button>
 
       {hasAlts && (
-        <div className="collapse-container" data-expanded={expanded}>
+        <div className="collapse-container col-span-full" data-expanded={expanded}>
           <div className="collapse-inner bg-surface-2 rounded-sm" key={expanded ? 'open' : 'closed'}>
             {alts.map((c, i) => (
               <div
                 key={c.name}
-                className={cx(ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
+                className={cx(ALT_ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
                 style={{
                   ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
                   ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
                 }}
               >
                 <span className={`w-0.5 h-1.5 rounded-full ${classToPip(c.class)}`} />
-                <Text variant="caption" className="text-text-secondary truncate max-w-48 pl-3">
+                <Text variant="caption" className="text-text-secondary truncate pl-3">
                   {c.name}
                   <Badge variant="status" color={statusColor(c.status)} className="ml-1.5 md:hidden">{c.status}</Badge>
                 </Text>
