@@ -191,11 +191,11 @@
      ASPECT RATIOS — creates aspect-* utilities.
      ═══════════════════════════════════════════════════════ */
 
-  --aspect-ratio-treemap: 2/1;
+  --aspect-treemap: 2/1;
   /* TUNABLE — landscape gives treemap cells room for labels + counts
      without excessive vertical scroll */
 
-  --aspect-ratio-treemap-mobile: 3/2;
+  --aspect-treemap-mobile: 3/2;
   /* TUNABLE — taller on narrow screens to prevent cells from
      becoming too wide and flat */
 }
