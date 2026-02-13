@@ -175,7 +175,7 @@ export type HeadingVariants = VariantProps<typeof heading>;
 export const badge = cva('font-body font-bold', {
   variants: {
     variant: {
-      status: 'text-nano uppercase tracking-wide',
+      status: 'text-nano uppercase tracking-wide px-1 py-px rounded-sm bg-surface-2',
       count: 'bg-surface-2 text-micro py-px px-1 font-semibold rounded-sm normal-case',
       filter: 'bg-surface border border-border rounded-sm px-1 py-0.5 text-caption font-semibold normal-case',
     },

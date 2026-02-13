@@ -16,7 +16,14 @@ function SvgDefs() {
             numOctaves={2}
             seed={42}
             result="noise"
-          />
+          >
+            <animate
+              attributeName="baseFrequency"
+              dur="4s"
+              values="0.02 0.5;0.025 0.45;0.015 0.55;0.02 0.5"
+              repeatCount="indefinite"
+            />
+          </feTurbulence>
           <feDisplacementMap
             in="SourceGraphic"
             in2="noise"

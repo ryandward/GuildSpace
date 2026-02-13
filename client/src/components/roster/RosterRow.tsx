@@ -16,6 +16,8 @@ function statusColor(status: string): 'accent' | 'green' | 'yellow' | 'dim' {
   }
 }
 
+const ROW_GRID = 'grid grid-cols-[3px_1fr_80px_28px_100px_54px_20px] max-md:grid-cols-[3px_1fr_28px_48px_20px] items-center gap-1';
+
 export interface RosterCharacter {
   name: string;
   class: string;
@@ -54,7 +56,7 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
   return (
     <div className="border-b border-border-subtle">
       <button
-        className="w-full grid grid-cols-[3px_1fr_80px_28px_100px_54px_20px] items-center gap-1 py-1 px-0.5 transition-colors duration-fast hover:bg-surface text-left max-md:grid-cols-[3px_1fr_28px_48px_20px] cursor-pointer bg-transparent border-none"
+        className={cx(ROW_GRID, 'w-full py-1 px-0.5 transition-colors duration-fast hover:bg-surface text-left cursor-pointer bg-transparent border-none')}
         onClick={onToggle}
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
@@ -79,25 +81,30 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
 
       {hasAlts && (
         <div className="collapse-container" data-expanded={expanded}>
-          <div className="collapse-inner">
-            <div className="pl-2 border-l-2 border-accent-dim ml-1">
-              {alts.map((c, i) => (
-                <div
-                  key={c.name}
-                  className="grid grid-cols-[2px_1fr_60px_28px_auto] items-center gap-1 py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface"
-                  style={{
-                    ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
-                    ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
-                  }}
-                >
-                  <span className={`w-0.5 h-1.5 rounded-full ${classToPip(c.class)}`} />
-                  <Text variant="caption" className="text-text-secondary truncate">{c.name}</Text>
-                  <Text variant="label" className="text-nano">{c.class}</Text>
-                  <span className={cx(text({ variant: 'mono' }), 'text-micro text-text-dim text-center')}>{c.level}</span>
+          <div className="collapse-inner" key={expanded ? 'open' : 'closed'}>
+            {alts.map((c, i) => (
+              <div
+                key={c.name}
+                className={cx(ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface animate-alt-row-enter')}
+                style={{
+                  ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
+                  ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
+                }}
+              >
+                <span className={`w-0.5 h-1.5 rounded-full ${classToPip(c.class)}`} />
+                <Text variant="caption" className="text-text-secondary truncate pl-3">
+                  {c.name}
+                  <Badge variant="status" color={statusColor(c.status)} className="ml-1.5 md:hidden">{c.status}</Badge>
+                </Text>
+                <Text variant="label" className="text-nano max-md:hidden">{c.class}</Text>
+                <span className={cx(text({ variant: 'mono' }), 'text-micro text-text-dim text-center')}>{c.level}</span>
+                <span className="max-md:hidden">
                   <Badge variant="status" color={statusColor(c.status)}>{c.status}</Badge>
-                </div>
-              ))}
-            </div>
+                </span>
+                <span />
+                <span />
+              </div>
+            ))}
           </div>
         </div>
       )}
