@@ -16,7 +16,13 @@ function statusColor(status: string): 'accent' | 'green' | 'yellow' | 'dim' {
   }
 }
 
-const ROW_GRID = 'grid grid-cols-[3px_1fr_80px_28px_100px_54px_20px] max-md:grid-cols-[3px_1fr_28px_48px_20px] items-center gap-1';
+const STATUS_ORDER: Record<string, number> = { Main: 0, Alt: 1, Bot: 2 };
+
+function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
+  return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
+}
+
+const ROW_GRID = 'grid grid-cols-[3px_minmax(0,1fr)_auto_28px_auto_54px_20px] max-md:grid-cols-[3px_minmax(0,1fr)_28px_48px_20px] items-center gap-x-1.5 gap-y-0';
 
 export interface RosterCharacter {
   name: string;
@@ -49,7 +55,7 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
     : member.characters.find(c => c.status === 'Main') || member.characters[0];
 
   const netDkp = member.earnedDkp - member.spentDkp;
-  const alts = member.characters.filter(c => c !== featured);
+  const alts = member.characters.filter(c => c !== featured).sort(sortByStatus);
   const hasAlts = alts.length > 0;
   const delays = expanded ? phiStagger(alts.length) : [];
 
