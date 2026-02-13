@@ -254,9 +254,11 @@
 
 .pip-cleric { background: #f0c040; }
 .pip-warrior { background: #c79c6e; }
-.pip-wizard, .pip-magician { background: #69ccf0; }
+.pip-wizard { background: #69ccf0; }
+.pip-magician { background: #40b8b0; }
 .pip-enchanter { background: #b490d0; }
-.pip-necromancer, .pip-shadow-knight { background: #a330c9; }
+.pip-necromancer { background: #a330c9; }
+.pip-shadow-knight { background: #7b2ab0; }
 .pip-rogue { background: #fff569; }
 .pip-ranger { background: #abd473; }
 .pip-druid { background: #ff7d0a; }
