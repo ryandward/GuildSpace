@@ -147,15 +147,9 @@ export default function RosterPage() {
       );
     }
 
-    return [...members].sort((a, b) => {
-      const fa = classFilter
-        ? a.characters.find(c => c.class === classFilter) || a.characters[0]
-        : a.characters.find(c => c.status === 'Main') || a.characters[0];
-      const fb = classFilter
-        ? b.characters.find(c => c.class === classFilter) || b.characters[0]
-        : b.characters.find(c => c.status === 'Main') || b.characters[0];
-      return (fa?.name || '').localeCompare(fb?.name || '');
-    });
+    return [...members].sort((a, b) =>
+      (b.earnedDkp - b.spentDkp) - (a.earnedDkp - a.spentDkp)
+    );
   }, [data, search, classFilter]);
 
   return (
