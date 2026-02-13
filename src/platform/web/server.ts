@@ -801,14 +801,18 @@ export function createWebServer(opts: WebServerOptions) {
       });
 
       // Build attendance matrix data
-      const [gsUsers, dkpRows, allToons] = await Promise.all([
+      const [gsUsers, dkpRows, allToons, lastRaidRows] = await Promise.all([
         AppDataSource.manager.find(GuildSpaceUser),
         AppDataSource.manager.find(Dkp),
         AppDataSource.manager.find(ActiveToons),
+        AppDataSource.manager.query(
+          `SELECT name, MAX(date) as last_raid FROM attendance GROUP BY name`
+        ) as Promise<{ name: string; last_raid: string | null }[]>,
       ]);
       const gsUserMap = new Map(gsUsers.map(u => [u.discordId, u]));
       const dkpNameMap = new Map(dkpRows.map(d => [d.DiscordId, d.DiscordName]));
       const toonClassMap = new Map(allToons.map(t => [t.Name, t.CharacterClass]));
+      const lastRaidByName = new Map(lastRaidRows.map(r => [r.name, r.last_raid]));
 
       // For each call, get its attendees
       const callDetails = await Promise.all(calls.map(async (call) => {
@@ -855,7 +859,7 @@ export function createWebServer(opts: WebServerOptions) {
         }
       }
 
-      // Build discordId → main class (prefer Main status, then first toon)
+      // Build discordId → most-recently-raided class (matches AppShell classMap logic)
       const toonsByDiscord = new Map<string, typeof allToons>();
       for (const t of allToons) {
         let arr = toonsByDiscord.get(t.DiscordId);
@@ -866,7 +870,18 @@ export function createWebServer(opts: WebServerOptions) {
       const members = Array.from(memberMap.entries()).map(([discordId, data]) => {
         const gsUser = gsUserMap.get(discordId);
         const toons = toonsByDiscord.get(discordId);
-        const mainToon = toons?.find(t => t.Status === 'Main') || toons?.[0];
+        let mainToon: typeof allToons[number] | undefined;
+        if (toons) {
+          let bestDate: string | null = null;
+          for (const t of toons) {
+            const rd = lastRaidByName.get(t.Name) ?? null;
+            if (rd && (!bestDate || rd > bestDate)) {
+              bestDate = rd;
+              mainToon = t;
+            }
+          }
+          if (!mainToon) mainToon = toons.find(t => t.Status === 'Main') || toons[0];
+        }
         return {
           discordId,
           displayName: gsUser?.displayName || dkpNameMap.get(discordId) || discordId,
