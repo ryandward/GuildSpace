@@ -108,7 +108,21 @@ export default function MemberDetailPage() {
               {/* Characters */}
               <Text variant="overline" className="mt-1">Characters</Text>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                {data.characters.map(c => (
+                {[...data.characters].sort((a, b) => {
+                  // Most recent raid first
+                  const aDate = a.lastRaidDate ? new Date(a.lastRaidDate).getTime() : 0;
+                  const bDate = b.lastRaidDate ? new Date(b.lastRaidDate).getTime() : 0;
+                  if (bDate !== aDate) return bDate - aDate;
+                  // Then level
+                  if (b.level !== a.level) return b.level - a.level;
+                  // Then status: Main > Alt > Bot > rest
+                  const STATUS_ORDER: Record<string, number> = { Main: 0, Alt: 1, Bot: 2 };
+                  const aStatus = STATUS_ORDER[a.status] ?? 3;
+                  const bStatus = STATUS_ORDER[b.status] ?? 3;
+                  if (aStatus !== bStatus) return aStatus - bStatus;
+                  // Then alpha
+                  return a.name.localeCompare(b.name);
+                }).map(c => (
                   <CharacterCard
                     key={c.name}
                     name={c.name}
