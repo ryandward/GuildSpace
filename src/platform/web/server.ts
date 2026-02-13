@@ -499,10 +499,12 @@ export function createWebServer(opts: WebServerOptions) {
         AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } }),
         AppDataSource.manager.query(
-          `SELECT name, COALESCE(SUM(modifier), 0)::int as total_dkp, COUNT(*)::int as raid_count
-           FROM attendance WHERE discord_id = $1 GROUP BY name ORDER BY total_dkp DESC`,
+          `SELECT name, COALESCE(SUM(modifier), 0)::int as total_dkp, COUNT(*)::int as raid_count, MAX(date) as last_raid
+           FROM attendance WHERE discord_id = $1 GROUP BY name
+           HAVING COALESCE(SUM(modifier), 0) > 0
+           ORDER BY MAX(date) DESC NULLS LAST`,
           [discordId]
-        ) as Promise<{ name: string; total_dkp: number; raid_count: number }[]>,
+        ) as Promise<{ name: string; total_dkp: number; raid_count: number; last_raid: string | null }[]>,
         AppDataSource.manager.query(
           `SELECT name, MAX(date) as last_raid FROM attendance WHERE discord_id = $1 GROUP BY name`,
           [discordId]
