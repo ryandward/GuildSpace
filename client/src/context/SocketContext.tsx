@@ -141,6 +141,8 @@ function nextInteractionId() {
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { token, user } = useAuth();
   const socketRef = useRef<Socket | null>(null);
+  const hasConnectedOnce = useRef(false);
+  const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<AppMessage[]>([]);
   const [modal, setModal] = useState<ModalData | null>(null);
@@ -158,18 +160,30 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socketRef.current = sock;
 
     sock.on('connect', () => {
+      if (disconnectTimer.current) {
+        clearTimeout(disconnectTimer.current);
+        disconnectTimer.current = null;
+      }
       setConnected(true);
       sock.emit('auth', { token });
     });
 
-    sock.on('disconnect', () => setConnected(false));
+    sock.on('disconnect', () => {
+      // Delay showing "Reconnecting" to avoid flashing on brief blips
+      disconnectTimer.current = setTimeout(() => {
+        setConnected(false);
+      }, 2000);
+    });
 
     sock.on('authOk', () => {
-      setMessages(prev => [...prev, {
-        type: 'system',
-        content: 'Connected. Type / to see available commands.',
-        id: nextId(),
-      }]);
+      if (!hasConnectedOnce.current) {
+        hasConnectedOnce.current = true;
+        setMessages(prev => [...prev, {
+          type: 'system',
+          content: 'Connected. Type / to see available commands.',
+          id: nextId(),
+        }]);
+      }
     });
 
     sock.on('authError', (err: { error: string }) => {
@@ -235,6 +249,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      if (disconnectTimer.current) clearTimeout(disconnectTimer.current);
       sock.disconnect();
       socketRef.current = null;
     };
