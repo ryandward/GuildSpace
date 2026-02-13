@@ -246,6 +246,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  gap: calc(var(--space-unit) / 2);
   padding: var(--space-unit) calc(var(--space-unit) * 1.25);
   background: color-mix(in srgb, var(--cell-color) calc(var(--opacity-4) * 100%), var(--color-surface));
   border: 1px solid color-mix(in srgb, var(--cell-color) 10%, transparent);
@@ -280,7 +281,7 @@
 
 .treemap-label {
   font-family: var(--font-body);
-  font-size: var(--font-size-micro);
+  font-size: var(--font-size-caption);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -293,20 +294,11 @@
 
 .treemap-count {
   font-family: var(--font-mono);
-  font-size: var(--font-size-hero);
+  font-size: var(--font-size-body);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--cell-color);
   line-height: 1;
-  margin-top: 2px;
-}
-
-.treemap-meta {
-  font-family: var(--font-body);
-  font-size: var(--font-size-nano);
-  color: var(--color-text-dim);
-  line-height: 1;
-  margin-top: 3px;
 }
 
 /* ── Treemap texture (horizontal lines) ───────────────── */
@@ -435,6 +427,6 @@
 /* ── Mobile overrides for treemap ─────────────────────── */
 
 @media (max-width: 700px) {
-  .treemap-count { font-size: var(--font-size-subheading); }
-  .treemap-label { font-size: var(--font-size-nano); }
+  .treemap-count { font-size: var(--font-size-caption); }
+  .treemap-label { font-size: var(--font-size-micro); }
 }

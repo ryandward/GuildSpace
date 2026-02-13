@@ -151,7 +151,6 @@ export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFi
           >
             <span className="treemap-label">{node.label}</span>
             <span className="treemap-count">{node.value}</span>
-            {maxLvl > 0 && <span className="treemap-meta">{maxLvl} @ 60</span>}
           </button>
         );
       })}
