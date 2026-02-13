@@ -31,6 +31,7 @@ import { RaidCall } from '../../entities/RaidCall.js';
 import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
 import { Census } from '../../entities/Census.js';
 import { Bank } from '../../entities/Bank.js';
+import { BankImport } from '../../entities/BankImport.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
 import type {
   PlatformCommand,
@@ -1273,6 +1274,140 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err) {
       console.error('Failed to fetch bank inventory:', err);
       res.status(500).json({ error: 'Failed to fetch bank inventory' });
+    }
+  });
+
+  // ─── Bank Import ───────────────────────────────────────────────────
+
+  app.post('/api/bank/import', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+
+    try {
+      const { filename, content } = req.body;
+      if (!filename || !content) {
+        return res.status(400).json({ error: 'filename and content are required' });
+      }
+
+      // Extract banker name from filename (e.g. "Earanger-Inventory.txt" → "Earanger")
+      const bankerName = filename.split('.')[0].split('-')[0];
+      if (!bankerName) {
+        return res.status(400).json({ error: 'Could not determine banker name from filename' });
+      }
+
+      // Parse TSV content
+      const lines = content.split('\n').filter((l: string) => l.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ error: 'File appears to be empty or has no data rows' });
+      }
+
+      // First line is header: Location\tName\tID\tCount\tSlots
+      const header = lines[0].split('\t');
+      const colIdx = {
+        location: header.findIndex((h: string) => h.trim().toLowerCase() === 'location'),
+        name: header.findIndex((h: string) => h.trim().toLowerCase() === 'name'),
+        id: header.findIndex((h: string) => h.trim().toLowerCase() === 'id'),
+        count: header.findIndex((h: string) => h.trim().toLowerCase() === 'count'),
+        slots: header.findIndex((h: string) => h.trim().toLowerCase() === 'slots'),
+      };
+
+      if (colIdx.name === -1 || colIdx.count === -1) {
+        return res.status(400).json({ error: 'Could not find required Name and Count columns in TSV' });
+      }
+
+      const now = new Date();
+      const newEntities: Bank[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split('\t');
+        if (!cols[colIdx.name]?.trim()) continue;
+
+        const entity = new Bank();
+        entity.Banker = bankerName;
+        entity.Location = colIdx.location >= 0 ? (cols[colIdx.location] || '') : '';
+        entity.Name = cols[colIdx.name].trim();
+        entity.EqItemId = colIdx.id >= 0 ? (cols[colIdx.id] || '0') : '0';
+        entity.Quantity = parseInt(cols[colIdx.count] || '1', 10) || 1;
+        entity.Slots = colIdx.slots >= 0 ? (cols[colIdx.slots] || '0') : '0';
+        entity.Time = now;
+        newEntities.push(entity);
+      }
+
+      if (newEntities.length === 0) {
+        return res.status(400).json({ error: 'No valid items found in file' });
+      }
+
+      // Fetch old inventory for this banker, aggregate by name
+      const oldRows = await AppDataSource.manager.find(Bank, { where: { Banker: bankerName } });
+      const oldByName = new Map<string, number>();
+      for (const row of oldRows) {
+        oldByName.set(row.Name, (oldByName.get(row.Name) || 0) + Number(row.Quantity));
+      }
+
+      // Aggregate new by name
+      const newByName = new Map<string, number>();
+      for (const e of newEntities) {
+        newByName.set(e.Name, (newByName.get(e.Name) || 0) + e.Quantity);
+      }
+
+      // Compute diff
+      const added: { name: string; quantity: number }[] = [];
+      const removed: { name: string; quantity: number }[] = [];
+      const changed: { name: string; oldQuantity: number; newQuantity: number }[] = [];
+
+      for (const [name, qty] of newByName) {
+        const oldQty = oldByName.get(name);
+        if (oldQty === undefined) {
+          added.push({ name, quantity: qty });
+        } else if (oldQty !== qty) {
+          changed.push({ name, oldQuantity: oldQty, newQuantity: qty });
+        }
+      }
+      for (const [name, qty] of oldByName) {
+        if (!newByName.has(name)) {
+          removed.push({ name, quantity: qty });
+        }
+      }
+
+      // Delete old, insert new
+      await AppDataSource.manager.delete(Bank, { Banker: bankerName });
+      await AppDataSource.manager.save(newEntities);
+
+      // Save import record
+      const importRecord = new BankImport();
+      importRecord.banker = bankerName;
+      importRecord.uploadedBy = officer.user.id;
+      importRecord.uploadedByName = officer.user.displayName || officer.user.username;
+      importRecord.itemCount = newEntities.length;
+      importRecord.diff = { added, removed, changed };
+      const saved = await AppDataSource.manager.save(importRecord);
+
+      res.json({
+        banker: bankerName,
+        inserted: newEntities.length,
+        diff: { added: added.length, removed: removed.length, changed: changed.length },
+        importId: saved.id,
+      });
+    } catch (err) {
+      console.error('Failed to import bank inventory:', err);
+      res.status(500).json({ error: 'Failed to import bank inventory' });
+    }
+  });
+
+  app.get('/api/bank/:banker/history', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const { banker } = req.params;
+      const history = await AppDataSource.manager.find(BankImport, {
+        where: { banker },
+        order: { createdAt: 'DESC' },
+        take: 20,
+      });
+      res.json(history);
+    } catch (err) {
+      console.error('Failed to fetch bank import history:', err);
+      res.status(500).json({ error: 'Failed to fetch import history' });
     }
   });
 

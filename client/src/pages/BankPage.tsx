@@ -1,8 +1,10 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useBankQuery, type BankItem } from '../hooks/useBankQuery';
+import { useBankImport } from '../hooks/useBankImport';
 import AppHeader from '../components/AppHeader';
-import { Card, Input, Text, Badge } from '../ui';
+import { Card, Input, Text, Badge, Button } from '../ui';
 import { text } from '../ui/recipes';
 
 function BankItemRow({ item }: { item: BankItem }) {
@@ -66,7 +68,10 @@ function BankItemRow({ item }: { item: BankItem }) {
 }
 
 export default function BankPage() {
+  const { user } = useAuth();
   const { data, isLoading, error } = useBankQuery();
+  const importMutation = useBankImport();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -89,6 +94,20 @@ export default function BankPage() {
     setSearch(e.target.value);
   }, []);
 
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      importMutation.mutate({ filename: file.name, content: reader.result as string });
+    };
+    reader.readAsText(file);
+    // Reset so the same file can be re-selected
+    e.target.value = '';
+  }, [importMutation]);
+
+  const isOfficer = user?.isOfficer || user?.isAdmin || user?.isOwner;
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
@@ -96,6 +115,32 @@ export default function BankPage() {
         <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           {error && <Text variant="error">{error instanceof Error ? error.message : 'Failed to fetch bank'}</Text>}
           {isLoading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
+
+          {importMutation.isSuccess && importMutation.data && (
+            <Card className="border-green">
+              <div className="px-2 py-1.5 flex flex-col gap-0.5">
+                <Text variant="caption" className="text-green font-semibold">
+                  Imported {importMutation.data.inserted} items for {importMutation.data.banker}
+                </Text>
+                <Text variant="caption">
+                  {importMutation.data.diff.added > 0 && `+${importMutation.data.diff.added} added `}
+                  {importMutation.data.diff.removed > 0 && `-${importMutation.data.diff.removed} removed `}
+                  {importMutation.data.diff.changed > 0 && `${importMutation.data.diff.changed} changed`}
+                  {importMutation.data.diff.added === 0 && importMutation.data.diff.removed === 0 && importMutation.data.diff.changed === 0 && 'No changes from previous import'}
+                </Text>
+              </div>
+            </Card>
+          )}
+
+          {importMutation.isError && (
+            <Card className="border-red">
+              <div className="px-2 py-1.5">
+                <Text variant="caption" className="text-red">
+                  {importMutation.error instanceof Error ? importMutation.error.message : 'Import failed'}
+                </Text>
+              </div>
+            </Card>
+          )}
 
           {!isLoading && data && (
             <>
@@ -114,6 +159,26 @@ export default function BankPage() {
                     <span className={text({ variant: 'caption' }) + ' ml-auto max-md:ml-0'}>
                       {filtered.length} of {data.length} items
                     </span>
+                  )}
+                  {isOfficer && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".txt,.tsv"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      <Button
+                        intent="ghost"
+                        size="sm"
+                        className="ml-auto max-md:ml-0 shrink-0"
+                        disabled={importMutation.isPending}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {importMutation.isPending ? 'Importing...' : 'Import Inventory'}
+                      </Button>
+                    </>
                   )}
                 </div>
                 <div className="flex items-center gap-1 py-1 px-2 border-b border-border">
