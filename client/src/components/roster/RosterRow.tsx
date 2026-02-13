@@ -22,9 +22,13 @@ function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
   return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
 }
 
-// All fixed or fr — identical column positions across independent row grids.
-// 3px pip (decorative stroke); name 120px (15×8), class 120px (15×8); display-name 1fr absorbs rest.
-const ROW_GRID = 'grid grid-cols-[3px_120px_120px_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] items-center gap-x-1.5';
+// Desktop: pip | name(120) | class(120) | lvl(32) | display-name(1fr) | DKP(56) | chevron(24)
+// Mobile:  pip | name(1fr)  | class(80)  | lvl(32) | DKP(48) | chevron(24)  — display-name hidden
+const ROW_GRID = 'grid grid-cols-[3px_120px_120px_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px_48px_24px] items-center gap-x-1.5';
+
+// Alt rows: same desktop grid, tighter mobile (no DKP/chevron placeholders)
+// Mobile:  pip | name+badge(1fr) | class(80) | lvl(32)
+const ALT_GRID = 'grid grid-cols-[3px_120px_120px_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px] items-center gap-x-1.5';
 
 export interface RosterCharacter {
   name: string;
@@ -69,7 +73,7 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
         <Text variant="body" className="font-semibold truncate">{featured?.name || member.displayName}</Text>
-        <Text variant="label" className="truncate max-md:hidden">{featured?.class}</Text>
+        <Text variant="label" className="truncate">{featured?.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <Text variant="label" className="truncate max-md:hidden" style={{ opacity: 'var(--opacity-5)' }}>{member.displayName}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{netDkp}</span>
@@ -93,7 +97,7 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
             {alts.map((c, i) => (
               <div
                 key={c.name}
-                className={cx(ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
+                className={cx(ALT_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
                 style={{
                   ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
                   ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
@@ -104,13 +108,13 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
                   {c.name}
                   <Badge variant="status" color={statusColor(c.status)} className="ml-1.5 md:hidden">{c.status}</Badge>
                 </Text>
-                <Text variant="label" className="text-nano truncate max-md:hidden">{c.class}</Text>
+                <Text variant="label" className="text-nano truncate">{c.class}</Text>
                 <span className={cx(text({ variant: 'mono' }), 'text-micro text-text-dim text-center')}>{c.level}</span>
                 <span className="max-md:hidden">
                   <Badge variant="status" color={statusColor(c.status)}>{c.status}</Badge>
                 </span>
-                <span />
-                <span />
+                <span className="max-md:hidden" />
+                <span className="max-md:hidden" />
               </div>
             ))}
           </div>
