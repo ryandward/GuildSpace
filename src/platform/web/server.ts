@@ -11,6 +11,7 @@
  *
  * @module
  */
+import { ILike } from 'typeorm';
 import express from 'express';
 import crypto from 'crypto';
 import { existsSync } from 'fs';
@@ -423,6 +424,26 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (error) {
       console.error(`Autocomplete error for /${req.params.name}:`, error);
       res.json([]);
+    }
+  });
+
+  // ─── Toon Search ──────────────────────────────────────────────────
+
+  app.get('/api/toons/search', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const q = String(req.query.q || '');
+      const where = q ? { Name: ILike(`%${q}%`) } : {};
+      const toons = await AppDataSource.manager.find(ActiveToons, {
+        where,
+        take: 10,
+      });
+      res.json(toons.map(t => t.Name));
+    } catch (err) {
+      console.error('Failed to search toons:', err);
+      res.status(500).json({ error: 'Search failed' });
     }
   });
 

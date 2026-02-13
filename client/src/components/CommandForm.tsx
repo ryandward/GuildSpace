@@ -9,6 +9,8 @@ import { Input, Select } from '../ui/Input';
 import { dropdown, dropdownItem, text, input as inputRecipe } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 
+const EMPTY_TOONS: ToonInfo[] = [];
+
 interface CommandFormProps {
   command: Command;
   onExecute: (options: Record<string, unknown>) => void;
@@ -27,7 +29,8 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
   const nameOpt = command.options.find(o => o.name === 'name');
   const isCreateCommand = nameOpt && !nameOpt.autocomplete;
 
-  const { data: myToons = [] } = useMyToonsQuery(!!isCreateCommand);
+  const { data: rawToons } = useMyToonsQuery(!!isCreateCommand);
+  const myToons = rawToons ?? EMPTY_TOONS;
 
   const [fields, setFields] = useState<Record<string, FieldState>>(() => {
     const init: Record<string, FieldState> = {};

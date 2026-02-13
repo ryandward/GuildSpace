@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button, Badge, Text, Input } from '../../ui';
+import { dropdown, dropdownItem } from '../../ui/recipes';
+import { useToonSearchQuery } from '../../hooks/useToonSearchQuery';
 import type { CallDetail } from '../../hooks/useEventDetailQuery';
 import { getClassColor } from '../../lib/classColors';
 
@@ -24,6 +26,22 @@ export default function CallRow({
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [addName, setAddName] = useState('');
+  const [debouncedName, setDebouncedName] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const { data: suggestions } = useToonSearchQuery(debouncedName);
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    if (addName.trim().length > 0) {
+      debounceRef.current = setTimeout(() => setDebouncedName(addName.trim()), 150);
+    } else {
+      setDebouncedName('');
+    }
+    return () => clearTimeout(debounceRef.current);
+  }, [addName]);
 
   const isConfirmingDelete = confirmDeleteId === call.id;
 
@@ -76,19 +94,63 @@ export default function CallRow({
                   if (addName.trim()) {
                     onAddCharacter(call.id, addName.trim());
                     setAddName('');
+                    setShowSuggestions(false);
                   }
                 }}
                 className="flex items-center gap-0.5"
               >
-                <Input
-                  size="sm"
-                  variant="surface"
-                  type="text"
-                  placeholder="Add character..."
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  className="w-25"
-                />
+                <div className="relative">
+                  {showSuggestions && suggestions && suggestions.length > 0 && (
+                    <div className={dropdown({ position: 'above' }) + ' max-h-25 border-b-0 rounded-b-none'}>
+                      {suggestions.map((name, i) => (
+                        <div
+                          key={name}
+                          className={dropdownItem({ selected: i === selectedIdx })}
+                          onMouseDown={() => {
+                            onAddCharacter(call.id, name);
+                            setAddName('');
+                            setShowSuggestions(false);
+                          }}
+                        >
+                          {name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <Input
+                    size="sm"
+                    variant="surface"
+                    type="text"
+                    placeholder="Add character..."
+                    autoComplete="off"
+                    value={addName}
+                    onChange={(e) => {
+                      setAddName(e.target.value);
+                      setShowSuggestions(true);
+                      setSelectedIdx(0);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    onKeyDown={(e) => {
+                      if (!showSuggestions || !suggestions?.length) return;
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setSelectedIdx(i => Math.min(i + 1, suggestions.length - 1));
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setSelectedIdx(i => Math.max(i - 1, 0));
+                      } else if (e.key === 'Tab' || e.key === 'Enter') {
+                        if (selectedIdx >= 0 && selectedIdx < suggestions.length) {
+                          e.preventDefault();
+                          onAddCharacter(call.id, suggestions[selectedIdx]);
+                          setAddName('');
+                          setShowSuggestions(false);
+                        }
+                      }
+                    }}
+                    className="w-25"
+                  />
+                </div>
                 <Button intent="ghost" size="xs" type="submit" disabled={!addName.trim()}>Add</Button>
               </form>
 
