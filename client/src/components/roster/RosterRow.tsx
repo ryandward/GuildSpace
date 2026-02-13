@@ -81,11 +81,11 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
 
       {hasAlts && (
         <div className="collapse-container" data-expanded={expanded}>
-          <div className="collapse-inner bg-surface rounded-sm" key={expanded ? 'open' : 'closed'}>
+          <div className="collapse-inner bg-surface-2 rounded-sm" key={expanded ? 'open' : 'closed'}>
             {alts.map((c, i) => (
               <div
                 key={c.name}
-                className={cx(ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-2 animate-alt-row-enter')}
+                className={cx(ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
                 style={{
                   ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
                   ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
