@@ -136,24 +136,22 @@ export default function RosterPage() {
                 onClassFilterChange={setClassFilter}
               />
 
-              {/* Filter strip */}
-              <div className="flex items-center gap-1 px-0.5">
+              {/* Filter strip — fixed height to prevent layout shift */}
+              <div className="flex items-center gap-1 px-0.5 min-h-6">
                 <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
-                {classFilter ? (
-                  <>
-                    <Badge variant="filter" className="inline-flex items-center gap-1">
-                      <span className={`w-1 h-1 rounded-full ${('pip-' + classFilter.toLowerCase().replace(/\s+/g, '-'))}`} />
-                      <span>{classFilter}</span>
-                    </Badge>
-                    <button
-                      className="bg-transparent border-none cursor-pointer transition-colors duration-fast"
-                      onClick={() => setClassFilter(null)}
-                    >
-                      <Text variant="caption" className="hover:text-red">Clear</Text>
-                    </button>
-                  </>
-                ) : (
-                  <Text variant="caption" as="span">All Classes</Text>
+                <Badge variant="filter" className="inline-flex items-center gap-1">
+                  {classFilter && (
+                    <span className={`w-1 h-1 rounded-full ${('pip-' + classFilter.toLowerCase().replace(/\s+/g, '-'))}`} />
+                  )}
+                  <span>{classFilter || 'All Classes'}</span>
+                </Badge>
+                {classFilter && (
+                  <button
+                    className="bg-transparent border-none cursor-pointer transition-colors duration-fast"
+                    onClick={() => setClassFilter(null)}
+                  >
+                    <Text variant="caption" className="hover:text-red">Clear</Text>
+                  </button>
                 )}
               </div>
 
