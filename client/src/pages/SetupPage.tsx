@@ -1,5 +1,7 @@
 import { useState, type KeyboardEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Button, Heading, Text } from '../ui';
+import { Input } from '../ui/Input';
 
 export default function SetupPage() {
   const { submitName } = useAuth();
@@ -25,11 +27,13 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center flex-1 gap-4">
-      <img src="/logo.svg" alt="GuildSpace" className="w-[80px] h-auto mb-2" />
-      <h2 className="text-accent text-lg font-bold mb-2">Welcome to GuildSpace</h2>
-      <p className="text-text-dim mb-4">Choose your name</p>
-      <input
+    <div className="flex flex-col items-center justify-center flex-1 gap-2">
+      <img src="/logo.svg" alt="GuildSpace" className="w-10 h-auto mb-1" />
+      <Heading level="heading" className="mb-1">Welcome to GuildSpace</Heading>
+      <Text variant="secondary" className="mb-2">Choose your name</Text>
+      <Input
+        variant="surface"
+        size="lg"
         type="text"
         placeholder="Your GuildSpace name"
         maxLength={32}
@@ -37,16 +41,12 @@ export default function SetupPage() {
         onChange={e => setName(e.target.value)}
         onKeyDown={handleKeyDown}
         autoFocus
-        className="bg-surface-2 border border-border text-text py-2.5 px-4 font-mono text-sm w-[280px] focus:outline-none focus:border-accent"
+        className="w-35"
       />
-      {error && <p className="text-red text-xs">{error}</p>}
-      <button
-        className="bg-accent text-bg border-none py-2.5 px-8 font-mono text-sm font-bold cursor-pointer"
-        onClick={handleSubmit}
-        disabled={submitting}
-      >
+      {error && <Text variant="error">{error}</Text>}
+      <Button intent="primary" size="xl" onClick={handleSubmit} disabled={submitting}>
         {submitting ? 'Setting up...' : "Let's go"}
-      </button>
+      </Button>
     </div>
   );
 }

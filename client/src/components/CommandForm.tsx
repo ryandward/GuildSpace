@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react';
 import { useSocket, type Command, type CommandOption, type AutocompleteChoice, type ToonInfo } from '../context/SocketContext';
+import { Button } from '../ui';
+import { Input, Select } from '../ui/Input';
+import { dropdown, dropdownItem, text, input as inputRecipe } from '../ui/recipes';
+import { cx } from 'class-variance-authority';
 
 interface CommandFormProps {
   command: Command;
@@ -28,7 +32,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
   const [acField, setAcField] = useState<string | null>(null);
 
   const [myToons, setMyToons] = useState<ToonInfo[]>([]);
-
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const fieldRefs = useRef<Record<string, HTMLInputElement | HTMLSelectElement | null>>({});
@@ -252,25 +255,35 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     return opt.autocomplete || (isCreateCommand && opt.name === 'name') || false;
   }
 
-  const inputBase = "bg-bg border border-border text-text font-mono text-xs py-1.5 px-2.5 focus:outline-none focus:border-accent";
+  function fieldClasses(opt: CommandOption): string {
+    const fieldState = fields[opt.name] || { value: '' };
+    const error = validationErrors[opt.name];
+    return cx(
+      inputRecipe({ size: 'md' }),
+      error && 'border-red',
+      fieldState.prefilledBy && 'border-green border-dashed',
+    );
+  }
 
   function renderField(opt: CommandOption, idx: number) {
     const fieldState = fields[opt.name] || { value: '' };
     const error = validationErrors[opt.name];
-    const isPrefilled = !!fieldState.prefilledBy;
+    const classes = fieldClasses(opt);
 
-    const inputClasses = `${inputBase}${error ? ' border-red' : ''}${isPrefilled ? ' border-green border-dashed' : ''}`;
+    const label = (
+      <label className={text({ variant: 'label' }) + ' flex items-baseline gap-0.5'}>
+        {opt.name}{opt.required && <span className="text-yellow font-bold">*</span>}
+        <span className={text({ variant: 'caption' })}>{opt.description}</span>
+      </label>
+    );
 
     if (opt.choices && opt.choices.length > 0) {
       return (
-        <div className="flex flex-col gap-0.5 min-w-[140px] flex-1" key={opt.name}>
-          <label className="text-[10px] text-text-dim flex items-baseline gap-1">
-            {opt.name}{opt.required && <span className="text-yellow font-bold">*</span>}
-            <span className="text-[9px] text-text-dim opacity-70">{opt.description}</span>
-          </label>
+        <div className="flex flex-col gap-0.5 min-w-17 flex-1" key={opt.name}>
+          {label}
           <select
             ref={el => { fieldRefs.current[opt.name] = el; }}
-            className={inputClasses}
+            className={classes}
             value={fieldState.value}
             onChange={(e) => setFieldValue(opt.name, e.target.value)}
             onKeyDown={(e) => handleKeyDown(e as unknown as KeyboardEvent, opt, idx)}
@@ -280,30 +293,27 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
               <option key={String(c.value)} value={String(c.value)}>{c.name}</option>
             ))}
           </select>
-          {error && <span className="text-[9px] text-red">{error}</span>}
+          {error && <span className={text({ variant: 'error' })}>{error}</span>}
         </div>
       );
     }
 
     if (hasAutocompleteUI(opt)) {
       return (
-        <div className="flex flex-col gap-0.5 min-w-[140px] flex-1" key={opt.name}>
-          <label className="text-[10px] text-text-dim flex items-baseline gap-1">
-            {opt.name}{opt.required && <span className="text-yellow font-bold">*</span>}
-            <span className="text-[9px] text-text-dim opacity-70">{opt.description}</span>
-          </label>
+        <div className="flex flex-col gap-0.5 min-w-17 flex-1" key={opt.name}>
+          {label}
           <div className="relative">
             {acField === opt.name && acChoices.length > 0 && (
-              <div className="absolute bottom-full left-0 right-0 bg-surface border border-border border-b-0 max-h-[200px] overflow-y-auto z-20">
+              <div className={dropdown({ position: 'above' }) + ' max-h-25 border-b-0 rounded-b-none'}>
                 {acChoices.map((c, i) => (
                   <div
                     key={`${c.value}-${i}`}
-                    className={`py-1.5 px-2.5 cursor-pointer text-xs border-b border-border last:border-b-0 flex justify-between items-center ${i === acSelected ? 'bg-surface-2' : 'hover:bg-surface-2'}`}
+                    className={dropdownItem({ selected: i === acSelected }) + ' flex justify-between items-center'}
                     onMouseDown={() => handleAutocompleteSelect(c, opt.name)}
                   >
-                    <span className="text-text">{c.name}</span>
+                    <span>{c.name}</span>
                     {c.metadata && (
-                      <span className="text-text-dim text-[10px]">
+                      <span className={text({ variant: 'caption' })}>
                         Lv{c.metadata.level} {c.metadata.class}
                       </span>
                     )}
@@ -314,7 +324,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
             <input
               ref={el => { fieldRefs.current[opt.name] = el; }}
               type="text"
-              className={inputClasses + ' w-full'}
+              className={classes + ' w-full'}
               value={fieldState.value}
               placeholder={opt.description}
               autoComplete="off"
@@ -324,25 +334,19 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
               onBlur={() => setTimeout(hideAutocomplete, 150)}
             />
           </div>
-          {error && <span className="text-[9px] text-red">{error}</span>}
+          {error && <span className={text({ variant: 'error' })}>{error}</span>}
         </div>
       );
     }
 
     if (opt.type === 'integer' || opt.type === 'number') {
       return (
-        <div className="flex flex-col gap-0.5 min-w-[140px] flex-1" key={opt.name}>
-          <label className="text-[10px] text-text-dim flex items-baseline gap-1">
-            {opt.name}{opt.required && <span className="text-yellow font-bold">*</span>}
-            <span className="text-[9px] text-text-dim opacity-70">
-              {opt.description}
-              {opt.minValue != null && opt.maxValue != null && ` (${opt.minValue}--${opt.maxValue})`}
-            </span>
-          </label>
+        <div className="flex flex-col gap-0.5 min-w-17 flex-1" key={opt.name}>
+          {label}
           <input
             ref={el => { fieldRefs.current[opt.name] = el; }}
             type="number"
-            className={`${inputClasses} max-w-[120px]`}
+            className={classes + ' max-w-15'}
             value={fieldState.value}
             placeholder={opt.description}
             min={opt.minValue}
@@ -350,21 +354,18 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
             onChange={(e) => setFieldValue(opt.name, e.target.value)}
             onKeyDown={(e) => handleKeyDown(e, opt, idx)}
           />
-          {error && <span className="text-[9px] text-red">{error}</span>}
+          {error && <span className={text({ variant: 'error' })}>{error}</span>}
         </div>
       );
     }
 
     if (opt.type === 'boolean') {
       return (
-        <div className="flex flex-col gap-0.5 min-w-[140px] flex-1" key={opt.name}>
-          <label className="text-[10px] text-text-dim flex items-baseline gap-1">
-            {opt.name}{opt.required && <span className="text-yellow font-bold">*</span>}
-            <span className="text-[9px] text-text-dim opacity-70">{opt.description}</span>
-          </label>
+        <div className="flex flex-col gap-0.5 min-w-17 flex-1" key={opt.name}>
+          {label}
           <select
             ref={el => { fieldRefs.current[opt.name] = el; }}
-            className={inputClasses}
+            className={classes}
             value={fieldState.value}
             onChange={(e) => setFieldValue(opt.name, e.target.value)}
             onKeyDown={(e) => handleKeyDown(e as unknown as KeyboardEvent, opt, idx)}
@@ -373,58 +374,44 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
             <option value="true">true</option>
             <option value="false">false</option>
           </select>
-          {error && <span className="text-[9px] text-red">{error}</span>}
+          {error && <span className={text({ variant: 'error' })}>{error}</span>}
         </div>
       );
     }
 
     return (
-      <div className="flex flex-col gap-0.5 min-w-[140px] flex-1" key={opt.name}>
-        <label className="text-[10px] text-text-dim flex items-baseline gap-1">
-          {opt.name}{opt.required && <span className="text-yellow font-bold">*</span>}
-          <span className="text-[9px] text-text-dim opacity-70">{opt.description}</span>
-        </label>
+      <div className="flex flex-col gap-0.5 min-w-17 flex-1" key={opt.name}>
+        {label}
         <input
           ref={el => { fieldRefs.current[opt.name] = el; }}
           type="text"
-          className={inputClasses}
+          className={classes}
           value={fieldState.value}
           placeholder={opt.description}
           autoComplete="off"
           onChange={(e) => setFieldValue(opt.name, e.target.value)}
           onKeyDown={(e) => handleKeyDown(e, opt, idx)}
         />
-        {error && <span className="text-[9px] text-red">{error}</span>}
+        {error && <span className={text({ variant: 'error' })}>{error}</span>}
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col gap-2 animate-[fadeIn_0.15s_ease]" ref={formRef}>
-      <div className="flex items-center gap-2.5">
-        <span className="font-bold text-accent text-sm shrink-0">/{command.name}</span>
-        <span className="text-text-dim text-xs flex-1">{command.description}</span>
-        <button
-          className="bg-transparent border border-border text-text-dim font-mono text-[10px] py-0.5 px-2 cursor-pointer shrink-0 hover:text-text hover:border-text-dim"
-          onClick={onCancel}
-          title="Cancel (Esc)"
-        >
-          Esc
-        </button>
+    <div className="flex-1 flex flex-col gap-1 animate-fade-in" ref={formRef}>
+      <div className="flex items-center gap-1.5">
+        <span className="font-bold text-accent text-body font-mono shrink-0">/{command.name}</span>
+        <span className={text({ variant: 'caption' }) + ' flex-1'}>{command.description}</span>
+        <Button intent="ghost" size="xs" onClick={onCancel} title="Cancel (Esc)">Esc</Button>
       </div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+      <div className="flex flex-wrap gap-x-1.5 gap-y-1">
         {command.options.map((opt, idx) => renderField(opt, idx))}
       </div>
 
-      <div className="flex items-center gap-2.5">
-        <button
-          className="bg-accent text-bg border-none py-1.5 px-5 font-mono text-xs font-bold cursor-pointer hover:bg-accent-dim"
-          onClick={handleSubmit}
-        >
-          Execute
-        </button>
-        <span className="text-[10px] text-text-dim opacity-60">Enter to submit, Esc to cancel</span>
+      <div className="flex items-center gap-1.5">
+        <Button intent="primary" size="md" onClick={handleSubmit}>Execute</Button>
+        <span className={text({ variant: 'caption' })}>Enter to submit, Esc to cancel</span>
       </div>
     </div>
   );

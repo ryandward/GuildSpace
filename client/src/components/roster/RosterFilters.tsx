@@ -1,4 +1,7 @@
 import { useMemo } from 'react';
+import { r2Phase } from '../../utils/phase';
+import { text, progressTrack } from '../../ui/recipes';
+import { cx } from 'class-variance-authority';
 
 const CLASS_COLORS: Record<string, string> = {
   'Cleric': '#f0c040',
@@ -108,6 +111,7 @@ function computeTreemap(
 // Virtual space matches CSS aspect-ratio: 2/1
 const VW = 1000;
 const VH = 500;
+const PULSE_DURATION = 8472; // ms, matching CSS phi-cubed
 
 /* ── ClassChart (Treemap) ────────────────────────────────── */
 
@@ -132,24 +136,26 @@ export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFi
   );
 
   return (
-    <div className="relative w-full aspect-[2/1] overflow-hidden border border-border max-md:aspect-[3/2]" role="img" aria-label="Class composition">
-      {nodes.map(node => {
+    <div className="relative w-full aspect-treemap overflow-hidden rounded-md border border-border max-md:aspect-treemap-mobile" role="img" aria-label="Class composition">
+      {nodes.map((node, cellIndex) => {
         const color = getClassColor(node.label);
         const lb = levelBreakdown[node.label];
         const maxLvl = lb ? lb.max : 0;
         const isActive = classFilter === node.label;
         const isDimmed = classFilter !== null && !isActive;
+        const [pulsePhase] = r2Phase(cellIndex);
 
         return (
           <button
             key={node.label}
-            className={`treemap-cell${isActive ? ' active' : ''}${isDimmed ? ' dimmed' : ''}`}
+            className={`treemap-cell${isActive ? ' active treemap-cell--active' : ''}${isDimmed ? ' dimmed' : ''}`}
             style={{
               left: `${(node.x / VW) * 100}%`,
               top: `${(node.y / VH) * 100}%`,
               width: `${(node.w / VW) * 100}%`,
               height: `${(node.h / VH) * 100}%`,
               '--cell-color': color,
+              animationDelay: isActive ? `${Math.round(pulsePhase * PULSE_DURATION)}ms` : undefined,
             } as React.CSSProperties}
             onClick={() => onClassFilterChange(isActive ? null : node.label)}
             title={`${node.label}: ${node.value} characters (${maxLvl} at 60)`}
@@ -160,7 +166,7 @@ export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFi
           </button>
         );
       })}
-      <div className="treemap-scanlines" />
+      <div className="treemap-texture" />
     </div>
   );
 }
@@ -176,12 +182,12 @@ export function StatusChart({ statusCounts, total }: StatusChartProps) {
   const statuses = ['Main', 'Alt', 'Bot', 'Probationary'].filter(s => statusCounts[s]);
 
   return (
-    <div className="flex-1 py-2.5 px-4 border-r border-border last:border-r-0 max-md:border-r-0 max-md:border-b max-md:border-border max-md:last:border-b-0">
-      <div className="flex justify-between items-baseline mb-1.5">
-        <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-text-dim">STATUS</span>
-        <span className="text-sm font-bold text-text">{total}</span>
+    <div className="flex-1 py-1.5 px-2 border-r border-border last:border-r-0 max-md:border-r-0 max-md:border-b max-md:border-border max-md:last:border-b-0">
+      <div className="flex justify-between items-baseline mb-1">
+        <span className={text({ variant: 'overline' })}>STATUS</span>
+        <span className={cx(text({ variant: 'body' }), 'font-bold')}>{total}</span>
       </div>
-      <div className="flex h-[3px] bg-surface-2 gap-px mb-1.5 overflow-hidden">
+      <div className={cx(progressTrack(), 'mb-1')}>
         {statuses.map(s => (
           <span
             key={s}
@@ -191,10 +197,10 @@ export function StatusChart({ statusCounts, total }: StatusChartProps) {
           />
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-text-dim">
+      <div className={cx(text({ variant: 'label' }), 'flex flex-wrap gap-x-1.5 gap-y-0.5')}>
         {statuses.map(s => (
-          <span key={s} className="flex items-center gap-1">
-            <span className={`readout-dot w-[5px] h-[5px] shrink-0 status-${s.toLowerCase()}`} />
+          <span key={s} className="flex items-center gap-0.5">
+            <span className={`readout-dot w-1 h-1 rounded-full shrink-0 status-${s.toLowerCase()}`} />
             {s} {statusCounts[s]}
           </span>
         ))}
@@ -214,17 +220,17 @@ export function LevelChart({ levelDist }: LevelChartProps) {
   const pct = total > 0 ? Math.round((levelDist.level60 / total) * 100) : 0;
 
   return (
-    <div className="flex-1 py-2.5 px-4 border-r border-border last:border-r-0 max-md:border-r-0 max-md:border-b max-md:border-border max-md:last:border-b-0">
-      <div className="flex justify-between items-baseline mb-1.5">
-        <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-text-dim">LVL 60</span>
-        <span className="text-sm font-bold text-green">{pct}%</span>
+    <div className="flex-1 py-1.5 px-2 border-r border-border last:border-r-0 max-md:border-r-0 max-md:border-b max-md:border-border max-md:last:border-b-0">
+      <div className="flex justify-between items-baseline mb-1">
+        <span className={text({ variant: 'overline' })}>LVL 60</span>
+        <span className={cx(text({ variant: 'body' }), 'font-bold text-green')}>{pct}%</span>
       </div>
-      <div className="flex h-[3px] bg-surface-2 gap-px mb-1.5 overflow-hidden">
-        <span className="h-full bg-green transition-[width] duration-300" style={{ width: `${pct}%` }} />
+      <div className={cx(progressTrack(), 'mb-1')}>
+        <span className="h-full bg-green transition-all duration-slow" style={{ width: `${pct}%` }} />
       </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-text-dim">
-        <span className="flex items-center gap-1">{levelDist.level60} max</span>
-        <span className="flex items-center gap-1">{levelDist.sub60} leveling</span>
+      <div className={cx(text({ variant: 'label' }), 'flex flex-wrap gap-x-1.5 gap-y-0.5')}>
+        <span className="flex items-center gap-0.5">{levelDist.level60} max</span>
+        <span className="flex items-center gap-0.5">{levelDist.sub60} leveling</span>
       </div>
     </div>
   );

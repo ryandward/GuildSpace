@@ -1,3 +1,4 @@
+import { Heading, Text } from '../ui';
 import OAuthButton from '../components/OAuthButton';
 
 const DiscordIcon = () => (
@@ -8,10 +9,13 @@ const DiscordIcon = () => (
 
 export default function LoginPage() {
   return (
-    <div className="flex flex-col items-center justify-center flex-1 gap-5">
-      <img src="/logo.svg" alt="GuildSpace" className="w-[100px] h-auto mb-2" />
-      <h2 className="text-[28px] text-accent font-bold">GuildSpace</h2>
-      <p className="text-text-dim text-[15px] mb-8">a place for guilds</p>
+    <div className="flex flex-col items-center justify-center flex-1 gap-2.5">
+      <div className="relative">
+        <div className="absolute inset-0 blur-3xl bg-accent rounded-full scale-150" style={{ opacity: 'var(--opacity-4)' }} />
+        <img src="/logo.svg" alt="GuildSpace" className="w-12 h-auto mb-1 relative" />
+      </div>
+      <Heading level="hero">GuildSpace</Heading>
+      <Text variant="secondary" className="mb-4">a place for guilds</Text>
       <OAuthButton
         href="/api/auth/discord"
         icon={<DiscordIcon />}

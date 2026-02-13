@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
+import { Button } from '../ui';
+import { navLink, reconnectBanner } from '../ui/recipes';
 import UserMenu from './UserMenu';
 
 export default function AppHeader() {
@@ -7,47 +9,33 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="bg-surface border-b border-border px-5 flex justify-between items-stretch min-h-11">
+      <header className="flex justify-between items-stretch min-h-6 bg-surface border-b border-border px-2.5">
         <div className="flex items-stretch">
-          <h1 className="text-sm font-bold text-accent tracking-wide flex items-center">GuildSpace</h1>
-          <nav className="flex ml-6">
+          <h1 className="flex items-center font-display text-subheading font-bold text-accent tracking-wide">GuildSpace</h1>
+          <nav className="flex ml-3">
             <NavLink
               to="/roster"
-              className={({ isActive }) =>
-                `text-text-dim no-underline text-xs font-medium px-3.5 flex items-center uppercase tracking-widest border-b-2 transition-colors duration-150 ${
-                  isActive ? 'text-accent border-accent' : 'border-transparent hover:text-text'
-                }`
-              }
+              className={({ isActive }) => navLink({ active: isActive })}
             >
               Roster
             </NavLink>
             <NavLink
               to="/terminal"
-              className={({ isActive }) =>
-                `text-text-dim no-underline text-xs font-medium px-3.5 flex items-center uppercase tracking-widest border-b-2 transition-colors duration-150 ${
-                  isActive ? 'text-accent border-accent' : 'border-transparent hover:text-text'
-                }`
-              }
+              className={({ isActive }) => navLink({ active: isActive })}
             >
               Terminal
             </NavLink>
           </nav>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="bg-transparent border border-border text-text-dim font-mono text-xs py-0.5 px-2 cursor-pointer hover:text-text hover:border-text-dim"
-            onClick={showHelp}
-            title="Show available commands"
-          >
-            [?]
-          </button>
+        <div className="flex items-center gap-1">
+          <Button intent="ghost" size="sm" onClick={showHelp} title="Show available commands">
+            ?
+          </Button>
           <UserMenu />
         </div>
       </header>
       {!connected && (
-        <div className="bg-red text-white text-center py-1.5 text-xs font-bold uppercase tracking-wide animate-[pulse_1.5s_ease-in-out_infinite]">
-          Reconnecting...
-        </div>
+        <div className={reconnectBanner()}>Reconnecting...</div>
       )}
     </>
   );

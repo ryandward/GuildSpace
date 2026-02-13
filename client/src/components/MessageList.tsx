@@ -1,6 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket, type AppMessage, type ReplyData, type Embed, type EmbedField, type Component, type ComponentRow } from '../context/SocketContext';
+import { Button, Card, Badge, Text } from '../ui';
+import { text, embedCard, input, badge, heading, progressTrack, card } from '../ui/recipes';
+import { cx } from 'class-variance-authority';
 
 const emojiMap: Record<string, string> = {
   ':busts_in_silhouette:': '\u{1F465}', ':bust_in_silhouette:': '\u{1F464}',
@@ -48,18 +51,28 @@ function isDkpEmbed(fields: EmbedField[]): boolean {
   return fields.length <= 3 && fields.every(f => f.inline !== false && !isNaN(Number(f.value)));
 }
 
-const embedBorderColors: Record<string, string> = {
-  Red: 'border-l-red',
-  Blue: 'border-l-blue',
-  Yellow: 'border-l-yellow',
-  Green: 'border-l-green',
+const embedBorderMap: Record<string, 'red' | 'blue' | 'yellow' | 'green'> = {
+  Red: 'red',
+  Blue: 'blue',
+  Yellow: 'yellow',
+  Green: 'green',
 };
+
+function statusBadgeColor(status: string): 'accent' | 'green' | 'yellow' | 'dim' {
+  switch (status.toLowerCase()) {
+    case 'main': return 'accent';
+    case 'alt': return 'green';
+    case 'bot': return 'yellow';
+    default: return 'dim';
+  }
+}
 
 // --- Sub-components ---
 
 function CensusPanel({ embed }: { embed: Embed }) {
   const desc = renderDiscordMarkdown(embed.description || '');
   const fields = embed.fields || [];
+  const [expanded, setExpanded] = useState(false);
 
   const groups: { status: string; names: string[]; classes: string[]; levels: string[] }[] = [];
   let totalChars = 0;
@@ -76,50 +89,51 @@ function CensusPanel({ embed }: { embed: Embed }) {
   const lines = desc.split('\n');
 
   return (
-    <div className="max-w-[600px] animate-[fadeIn_0.25s_ease]">
-      <div className="bg-surface border border-border p-4 px-5 mb-2 flex items-center gap-4">
-        <div className="w-12 h-12 bg-surface-2 border-2 border-accent flex items-center justify-center text-lg font-bold text-accent shrink-0">
-          {initial}
+    <div className="max-w-embed animate-fade-in">
+      <Card className="p-2 px-2.5 mb-1 flex items-center gap-2">
+        <div className="w-6 h-6 bg-surface-2 border-2 border-accent rounded-md flex items-center justify-center shrink-0">
+          <span className={heading({ level: 'subheading' })}>{initial}</span>
         </div>
         <div className="flex-1">
-          <div className="text-base font-bold text-text leading-tight">{lines[0]}</div>
-          <div className="text-xs text-text-dim mt-0.5">{lines.slice(1).join(' \u00B7 ')}</div>
+          <span className={cx(text({ variant: 'body' }), 'font-bold leading-tight')}>{lines[0]}</span>
+          <span className={cx(text({ variant: 'caption' }), 'mt-0.5 block')}>{lines.slice(1).join(' \u00B7 ')}</span>
         </div>
-      </div>
-      <div className="flex gap-1.5 mb-2">
-        <div className="bg-surface border border-border py-3 px-4 flex-1 text-center">
-          <div className="text-2xl font-bold text-accent leading-none">{totalChars}</div>
-          <div className="text-[9px] font-bold uppercase tracking-widest text-text-dim mt-1">Characters</div>
-        </div>
-      </div>
-      {groups.map((g, gi) => (
-        <div className="bg-surface border border-border mb-2 last:mb-0 overflow-hidden" key={gi}>
-          <div className="py-2.5 px-4 border-b border-border text-[10px] font-bold uppercase tracking-widest text-text-dim flex items-center gap-2">
-            {g.status} <span className="bg-surface-2 text-[10px] py-px px-1.5 font-semibold">{g.names.length}</span>
-          </div>
-          {g.names.map((name, j) => {
-            const cn = (g.classes[j] || '').trim();
-            const badgeStyle = g.status.toLowerCase();
-            return (
-              <div className="flex items-center py-2.5 px-4 border-b border-border last:border-b-0 gap-3" key={j}>
-                <div className={`w-[3px] h-7 shrink-0 ${classToPip(cn)}`} />
-                <div className="text-[15px] font-bold text-text-dim min-w-7 text-center">{g.levels[j] || ''}</div>
-                <div className="flex-1">
-                  <div className="text-sm font-semibold text-text leading-tight">{name}</div>
-                  <div className="text-xs text-text-dim">{cn}</div>
-                </div>
-                <div className={`text-[9px] font-bold uppercase tracking-wide py-0.5 px-2 bg-surface-2 text-text-dim ${
-                  badgeStyle === 'main' ? 'bg-accent/10 text-accent' :
-                  badgeStyle === 'alt' ? 'bg-green/10 text-green' :
-                  badgeStyle === 'bot' ? 'bg-yellow/10 text-yellow' : ''
-                }`}>
-                  {g.status}
-                </div>
+      </Card>
+
+      <button
+        className={cx(card(), 'w-full py-1.5 px-2 mb-1 flex items-center gap-1.5 cursor-pointer hover:bg-surface-2 transition-colors duration-fast')}
+        onClick={() => setExpanded(e => !e)}
+      >
+        <span className="collapse-chevron text-text-dim text-caption" data-expanded={expanded}>›</span>
+        <span className={cx(heading({ level: 'display' }), 'font-mono tabular-nums leading-none')}>{totalChars}</span>
+        <span className={text({ variant: 'overline' })}>Characters</span>
+      </button>
+
+      <div className="collapse-container" data-expanded={expanded}>
+        <div className="collapse-inner">
+          {groups.map((g, gi) => (
+            <Card className="mb-1 last:mb-0 overflow-hidden" key={gi}>
+              <div className={cx(text({ variant: 'overline' }), 'py-1 px-2 border-b border-border flex items-center gap-1')}>
+                {g.status} <Badge variant="count">{g.names.length}</Badge>
               </div>
-            );
-          })}
+              {g.names.map((name, j) => {
+                const cn = (g.classes[j] || '').trim();
+                return (
+                  <div className="flex items-center py-1 px-2 border-b border-border-subtle last:border-b-0 gap-1.5" key={j}>
+                    <div className={`w-0.5 h-3.5 shrink-0 rounded-full ${classToPip(cn)}`} />
+                    <span className={cx(text({ variant: 'mono' }), 'font-bold min-w-3.5 text-center text-text-dim')}>{g.levels[j] || ''}</span>
+                    <div className="flex-1">
+                      <span className={cx(text({ variant: 'body' }), 'font-semibold leading-tight')}>{name}</span>
+                      <span className={cx(text({ variant: 'caption' }), 'block')}>{cn}</span>
+                    </div>
+                    <Badge variant="status" color={statusBadgeColor(g.status)}>{g.status}</Badge>
+                  </div>
+                );
+              })}
+            </Card>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
@@ -130,24 +144,24 @@ function DkpPanel({ embed }: { embed: Embed }) {
   const fields = embed.fields || [];
 
   return (
-    <div className="max-w-[600px] animate-[fadeIn_0.25s_ease]">
-      <div className="bg-surface border border-border p-4 px-5 mb-2 flex items-center gap-4">
-        <div className="w-12 h-12 bg-surface-2 border-2 border-accent flex items-center justify-center text-lg font-bold text-accent shrink-0">
-          {initial}
+    <div className="max-w-embed animate-fade-in">
+      <Card className="p-2 px-2.5 mb-1 flex items-center gap-2">
+        <div className="w-6 h-6 bg-surface-2 border-2 border-accent rounded-md flex items-center justify-center shrink-0">
+          <span className={heading({ level: 'subheading' })}>{initial}</span>
         </div>
         <div className="flex-1">
-          <div className="text-base font-bold text-text leading-tight">{renderEmoji(embed.title || '')}</div>
-          <div className="text-xs text-text-dim mt-0.5">{desc}</div>
+          <span className={cx(text({ variant: 'body' }), 'font-bold leading-tight')}>{renderEmoji(embed.title || '')}</span>
+          <span className={cx(text({ variant: 'caption' }), 'mt-0.5 block')}>{desc}</span>
         </div>
-      </div>
-      <div className="flex gap-1.5 mb-2">
+      </Card>
+      <div className="flex gap-1 mb-1">
         {fields.map((field, i) => {
           const label = renderEmoji(field.name).replace(/[^\w\s]/g, '').trim();
           return (
-            <div className="bg-surface border border-border py-3 px-4 flex-1 text-center" key={i}>
-              <div className="text-2xl font-bold text-yellow leading-none">{field.value}</div>
-              <div className="text-[9px] font-bold uppercase tracking-widest text-text-dim mt-1">{label}</div>
-            </div>
+            <Card className="py-1.5 px-2 flex-1 text-center" key={i}>
+              <span className={cx(heading({ level: 'display' }), 'leading-none font-mono tabular-nums text-yellow block')}>{field.value}</span>
+              <span className={cx(text({ variant: 'overline' }), 'mt-0.5 block')}>{label}</span>
+            </Card>
           );
         })}
       </div>
@@ -165,18 +179,18 @@ function EmbedView({ embed }: { embed: Embed }) {
     return <DkpPanel embed={embed} />;
   }
 
-  const borderColor = embedBorderColors[embed.color || 'Green'] || 'border-l-green';
+  const borderColor = embedBorderMap[embed.color || 'Green'] || 'green';
 
   return (
-    <div className={`bg-surface border-l-3 py-3 px-4 max-w-[600px] ${borderColor}`}>
-      {embed.title && <div className="font-bold mb-1.5 text-sm">{renderEmoji(embed.title)}</div>}
-      {embed.description && <div className="text-text-dim mb-2.5 text-xs whitespace-pre-wrap">{cleanText(embed.description)}</div>}
+    <div className={embedCard({ color: borderColor })}>
+      {embed.title && <span className={cx(text({ variant: 'body' }), 'font-bold mb-1 block')}>{renderEmoji(embed.title)}</span>}
+      {embed.description && <span className={cx(text({ variant: 'caption' }), 'mb-1.5 block whitespace-pre-wrap')}>{cleanText(embed.description)}</span>}
       {fields.length > 0 && (
-        <div className="flex flex-wrap gap-x-5 gap-y-1">
+        <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
           {fields.map((field, i) => (
-            <div className={`min-w-[120px] mb-2 ${field.inline === false ? 'w-full' : ''}`} key={i}>
-              <div className="font-bold text-xs text-text-dim mb-0.5">{renderEmoji(field.name)}</div>
-              <div className="text-xs whitespace-pre-wrap">{cleanText(field.value)}</div>
+            <div className={`min-w-15 mb-1 ${field.inline === false ? 'w-full' : ''}`} key={i}>
+              <span className={cx(text({ variant: 'caption' }), 'font-bold mb-0.5 block')}>{renderEmoji(field.name)}</span>
+              <span className={cx(text({ variant: 'caption' }), 'whitespace-pre-wrap block text-text')}>{cleanText(field.value)}</span>
             </div>
           ))}
         </div>
@@ -188,19 +202,20 @@ function EmbedView({ embed }: { embed: Embed }) {
 function ButtonView({ btn, parentInteractionId }: { btn: { customId: string; label: string; style?: string }; parentInteractionId?: string }) {
   const { sendComponentInteraction } = useSocket();
 
-  const styleClasses: Record<string, string> = {
-    Success: 'border-green text-green',
-    Danger: 'border-red text-red',
-    Primary: 'border-accent text-accent',
+  const intentMap: Record<string, 'success' | 'danger' | 'primary'> = {
+    Success: 'success',
+    Danger: 'danger',
+    Primary: 'primary',
   };
 
   return (
-    <button
-      className={`py-1.5 px-4 border border-border bg-surface-2 text-text font-mono text-xs cursor-pointer hover:bg-border ${styleClasses[btn.style || 'Primary'] || ''}`}
+    <Button
+      intent={intentMap[btn.style || 'Primary'] || 'component'}
+      size="md"
       onClick={() => parentInteractionId && sendComponentInteraction(parentInteractionId, btn.customId)}
     >
       {btn.label}
-    </button>
+    </Button>
   );
 }
 
@@ -209,7 +224,7 @@ function SelectMenuView({ menu, parentInteractionId }: { menu: { customId: strin
 
   return (
     <select
-      className="py-1.5 px-3 bg-surface-2 border border-border text-text font-mono text-xs min-w-[200px]"
+      className={cx(input({ variant: 'surface', size: 'md' }), 'min-w-25')}
       defaultValue=""
       onChange={e => parentInteractionId && sendComponentInteraction(parentInteractionId, menu.customId, [e.target.value])}
     >
@@ -230,7 +245,7 @@ function ComponentsView({ components, interactionId }: { components: (ComponentR
           : ('components' in row && row.components) ? row.components : [row as Component];
 
         return (
-          <div className="flex gap-2 flex-wrap mt-2" key={ri}>
+          <div className="flex gap-1 flex-wrap mt-1" key={ri}>
             {items.map((comp, ci) => {
               if (comp.type === 'button') {
                 return <ButtonView key={ci} btn={comp} parentInteractionId={interactionId} />;
@@ -249,8 +264,8 @@ function ComponentsView({ components, interactionId }: { components: (ComponentR
 
 function ReplyView({ data }: { data: ReplyData }) {
   return (
-    <div className="max-w-[700px] animate-[fadeIn_0.2s_ease]">
-      {data.content && <div className="whitespace-pre-wrap">{cleanText(data.content)}</div>}
+    <div className="max-w-message animate-fade-in">
+      {data.content && <Text variant="body" className="whitespace-pre-wrap block">{cleanText(data.content)}</Text>}
       {data.embeds?.map((embed, i) => <EmbedView key={i} embed={embed} />)}
       {data.components && <ComponentsView components={data.components} interactionId={data.interactionId} />}
     </div>
@@ -260,10 +275,10 @@ function ReplyView({ data }: { data: ReplyData }) {
 function ChatMessageView({ msg, isMe }: { msg: { createdAt: string; displayName: string; content: string }; isMe: boolean }) {
   const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return (
-    <div className="max-w-[700px] animate-[fadeIn_0.2s_ease]">
-      <span className="text-text-dim text-xs">{time}</span>{' '}
-      <span className={`font-bold ${isMe ? 'text-green' : 'text-accent'}`}>{msg.displayName}</span>{' '}
-      <span className="text-text">{msg.content}</span>
+    <div className="max-w-message animate-fade-in">
+      <Text variant="caption">{time}</Text>{' '}
+      <Text variant="body" className={`font-bold ${isMe ? 'text-green' : 'text-accent'}`}>{msg.displayName}</Text>{' '}
+      <Text variant="body">{msg.content}</Text>
     </div>
   );
 }
@@ -271,13 +286,13 @@ function ChatMessageView({ msg, isMe }: { msg: { createdAt: string; displayName:
 function MessageView({ msg, userId }: { msg: AppMessage; userId?: string }) {
   switch (msg.type) {
     case 'system':
-      return <div className="max-w-[700px] animate-[fadeIn_0.2s_ease] text-text-dim italic text-xs">{msg.content}</div>;
+      return <Text variant="system" className="max-w-message animate-fade-in block">{msg.content}</Text>;
     case 'command':
-      return <div className="max-w-[700px] animate-[fadeIn_0.2s_ease] text-text-dim text-xs message-command">{msg.content}</div>;
+      return <Text variant="command" className="max-w-message animate-fade-in block">{msg.content}</Text>;
     case 'error':
-      return <div className="max-w-[700px] animate-[fadeIn_0.2s_ease] text-red">{msg.content}</div>;
+      return <Text variant="error" className="max-w-message animate-fade-in block">{msg.content}</Text>;
     case 'loading':
-      return <div className="max-w-[700px] animate-[fadeIn_0.2s_ease] text-text-dim italic text-xs loading">{msg.content}</div>;
+      return <Text variant="system" className="max-w-message animate-fade-in loading block">{msg.content}</Text>;
     case 'chat':
       return <ChatMessageView msg={msg.msg} isMe={userId === msg.msg.userId} />;
     case 'reply':
@@ -295,7 +310,7 @@ export default function MessageList() {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto py-4 px-5 flex flex-col gap-2.5">
+    <div className="flex-1 overflow-y-auto py-2 px-2.5 flex flex-col gap-1.5">
       {messages.map(msg => (
         <MessageView key={msg.id} msg={msg} userId={user?.id} />
       ))}

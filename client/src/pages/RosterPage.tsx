@@ -1,9 +1,12 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
 import { ClassChart, StatusChart, LevelChart } from '../components/roster/RosterFilters';
 import MemberList from '../components/roster/RosterTable';
 import type { RosterMember } from '../components/roster/RosterRow';
+import { Button, Card, Badge, Text, Input } from '../ui';
+import { text, badge } from '../ui/recipes';
+import { cx } from 'class-variance-authority';
 
 interface RosterData {
   members: RosterMember[];
@@ -14,6 +17,41 @@ interface RosterData {
   };
 }
 
+function CollapsibleCard({ id, title, count, collapsedPanels, onToggle, children }: {
+  id: string;
+  title: string;
+  count?: number;
+  collapsedPanels: Set<string>;
+  onToggle: (id: string) => void;
+  children: React.ReactNode;
+}) {
+  const collapsed = collapsedPanels.has(id);
+  return (
+    <Card>
+      <button
+        className="w-full flex items-center gap-1 py-1 px-2 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast"
+        onClick={() => onToggle(id)}
+      >
+        <span
+          className="collapse-chevron text-text-dim text-caption"
+          data-expanded={!collapsed}
+        >
+          ›
+        </span>
+        <span className={text({ variant: 'overline' })}>{title}</span>
+        {count != null && (
+          <span className={cx(text({ variant: 'body' }), 'font-bold ml-auto')}>{count}</span>
+        )}
+      </button>
+      <div className="collapse-container" data-expanded={!collapsed}>
+        <div className="collapse-inner">
+          {children}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function RosterPage() {
   const { token } = useAuth();
   const [data, setData] = useState<RosterData | null>(null);
@@ -22,6 +60,16 @@ export default function RosterPage() {
 
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState<string | null>(null);
+  const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set());
+
+  const togglePanel = useCallback((id: string) => {
+    setCollapsedPanels(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   async function fetchRoster() {
     setLoading(true);
@@ -111,15 +159,16 @@ export default function RosterPage() {
   }, [data, search, classFilter]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[1100px] mx-auto py-6 px-6 pb-16 w-full flex flex-col max-md:px-2 max-md:py-2.5 max-md:pb-10">
-          {error && <div className="text-red text-xs">{error}</div>}
-          {loading && <div className="text-text-dim text-xs py-12 text-center">Loading...</div>}
+      <div className="flex-1 overflow-y-auto relative z-0">
+        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1 max-md:py-1.5 max-md:pb-5">
+          {error && <Text variant="error">{error}</Text>}
+          {loading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
 
           {!loading && data && (
             <>
+              {/* Treemap */}
               <ClassChart
                 classCounts={data.summary.classCounts}
                 levelBreakdown={levelBreakdown}
@@ -127,30 +176,62 @@ export default function RosterPage() {
                 onClassFilterChange={setClassFilter}
               />
 
-              <div className="flex border-b border-border max-md:flex-col">
-                <LevelChart levelDist={levelDist} />
-                <StatusChart statusCounts={statusCounts} total={filteredChars.length} />
-              </div>
-
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2 py-2.5 pb-2 border-b border-border max-md:flex-wrap">
-                  <span className="text-[10px] font-bold text-text-dim tracking-wide">
-                    {classFilter ? `// ${classFilter.toUpperCase()}` : '// ROSTER'}
-                  </span>
-                  <span className="text-xs font-bold text-text">{filtered.length}</span>
-                  <input
-                    className="ml-auto bg-transparent border border-border text-text font-mono text-xs py-0.5 px-2 w-[140px] focus:outline-none focus:border-accent placeholder:text-text-dim/40 max-md:w-full max-md:ml-0"
-                    type="text"
-                    placeholder="search..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                  />
+              {/* Filter strip */}
+              {classFilter && (
+                <div className="flex items-center gap-1 px-0.5 animate-fade-in">
+                  <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span className={`w-1 h-1 rounded-full ${('pip-' + classFilter.toLowerCase().replace(/\s+/g, '-'))}`} />
+                    <span>{classFilter}</span>
+                  </Badge>
+                  <button
+                    className="bg-transparent border-none cursor-pointer transition-colors duration-fast"
+                    onClick={() => setClassFilter(null)}
+                  >
+                    <Text variant="caption" className="hover:text-red">Clear</Text>
+                  </button>
                 </div>
-                <MemberList members={filtered} classFilter={classFilter} />
-                {filtered.length === 0 && (
-                  <div className="text-text-dim text-xs text-center py-8">No results.</div>
-                )}
-              </div>
+              )}
+
+              {/* Stats */}
+              <CollapsibleCard
+                id="stats"
+                title="Stats"
+                collapsedPanels={collapsedPanels}
+                onToggle={togglePanel}
+              >
+                <div className="flex border-t border-border max-md:flex-col">
+                  <LevelChart levelDist={levelDist} />
+                  <StatusChart statusCounts={statusCounts} total={filteredChars.length} />
+                </div>
+              </CollapsibleCard>
+
+              {/* Members */}
+              <CollapsibleCard
+                id="members"
+                title={classFilter ? classFilter.toUpperCase() : 'ROSTER'}
+                count={filtered.length}
+                collapsedPanels={collapsedPanels}
+                onToggle={togglePanel}
+              >
+                <div className="border-t border-border">
+                  <div className="flex items-center gap-1 py-1 px-2 border-b border-border max-md:flex-wrap">
+                    <Input
+                      variant="transparent"
+                      size="sm"
+                      type="text"
+                      placeholder="Search members..."
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      className="ml-auto w-22.5 max-md:w-full max-md:ml-0"
+                    />
+                  </div>
+                  <MemberList members={filtered} classFilter={classFilter} />
+                  {filtered.length === 0 && (
+                    <Text variant="caption" className="text-center py-4 block">No results.</Text>
+                  )}
+                </div>
+              </CollapsibleCard>
             </>
           )}
         </div>

@@ -10,7 +10,7 @@ export default function OAuthButton({ href, icon, label, color, hoverColor }: OA
   return (
     <a
       href={href}
-      className="inline-flex items-center gap-3 font-sans text-base font-medium text-white no-underline py-3.5 px-8 rounded-lg transition-colors duration-200"
+      className="inline-flex items-center gap-1.5 font-body text-body font-medium text-white no-underline py-1.5 px-4 rounded-md transition-colors duration-normal"
       style={{ backgroundColor: color }}
       onMouseEnter={e => (e.currentTarget.style.backgroundColor = hoverColor)}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = color)}

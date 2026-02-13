@@ -1,5 +1,8 @@
 import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
 import { useSocket, type Command } from '../context/SocketContext';
+import { Button, Card } from '../ui';
+import { Input } from '../ui/Input';
+import { dropdown, dropdownItem, text } from '../ui/recipes';
 import CommandForm from './CommandForm';
 
 interface AcItem {
@@ -11,7 +14,7 @@ interface AcItem {
 type InputMode = 'chat' | 'command-select' | 'form';
 
 export default function CommandInput() {
-  const { commands, executeCommand, sendChat, fetchAutocomplete } = useSocket();
+  const { commands, executeCommand, sendChat } = useSocket();
 
   const [mode, setMode] = useState<InputMode>('chat');
   const [value, setValue] = useState('');
@@ -21,7 +24,6 @@ export default function CommandInput() {
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const hideAutocomplete = useCallback(() => {
     setAcVisible(false);
@@ -167,49 +169,45 @@ export default function CommandInput() {
   // Form mode
   if (mode === 'form' && selectedCommand) {
     return (
-      <div className="bg-surface border-t border-border p-2.5 px-5 flex flex-col relative">
+      <Card elevated className="p-1.5 px-2 flex flex-col relative">
         <CommandForm
           command={selectedCommand}
           onExecute={handleFormExecute}
           onCancel={handleFormCancel}
         />
-      </div>
+      </Card>
     );
   }
 
   // Chat or command-select mode
   return (
-    <div className="bg-surface border-t border-border py-3 px-5 flex gap-2 relative">
+    <Card elevated className="py-1.5 px-2 flex gap-1 relative">
       {acVisible && (
-        <div className="absolute bottom-full left-5 right-5 bg-surface border border-border max-h-[300px] overflow-y-auto">
+        <div className={dropdown({ position: 'above' }) + ' max-h-37'}>
           {acItems.map((item, i) => (
             <div
               key={`${item.value}-${i}`}
-              className={`py-2 px-3.5 cursor-pointer text-xs border-b border-border ${i === acSelected ? 'bg-surface-2' : 'hover:bg-surface-2'}`}
+              className={dropdownItem({ selected: i === acSelected })}
               onClick={() => selectItem(item)}
             >
-              <span className="text-text">{item.name}</span>
-              {item.desc && <span className="text-text-dim text-xs ml-2">{item.desc}</span>}
+              <span className={text({ variant: 'mono' })}>{item.name}</span>
+              {item.desc && <span className={text({ variant: 'caption' }) + ' ml-1'}>{item.desc}</span>}
             </div>
           ))}
         </div>
       )}
-      <input
+      <Input
         ref={inputRef}
+        size="lg"
         type="text"
-        className="flex-1 bg-bg border border-border text-text font-mono text-sm py-2.5 px-3.5 focus:outline-none focus:border-accent placeholder:text-text-dim"
         placeholder="Type a message, or / for commands"
         autoComplete="off"
         value={value}
         onChange={onChange}
         onKeyDown={onKeyDown}
+        className="flex-1"
       />
-      <button
-        className="bg-accent text-bg border-none py-2.5 px-5 font-mono text-sm font-bold cursor-pointer"
-        onClick={execute}
-      >
-        Send
-      </button>
-    </div>
+      <Button intent="primary" size="lg" onClick={execute}>Send</Button>
+    </Card>
   );
 }
