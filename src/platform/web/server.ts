@@ -494,29 +494,26 @@ export function createWebServer(opts: WebServerOptions) {
     const { discordId } = req.params;
 
     try {
-      const [toons, dkpRow, gsUser, attendanceRows] = await Promise.all([
+      const [toons, dkpRow, gsUser, dkpByCharRows, lastRaidRows] = await Promise.all([
         AppDataSource.manager.find(ActiveToons, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } }),
-        AppDataSource.manager.find(Attendance, {
-          where: { DiscordId: discordId },
-          order: { Date: 'DESC' },
-          take: 50,
-        }),
+        AppDataSource.manager.query(
+          `SELECT name, COALESCE(SUM(modifier), 0)::int as total_dkp, COUNT(*)::int as raid_count
+           FROM attendance WHERE discord_id = $1 GROUP BY name ORDER BY total_dkp DESC`,
+          [discordId]
+        ) as Promise<{ name: string; total_dkp: number; raid_count: number }[]>,
+        AppDataSource.manager.query(
+          `SELECT name, MAX(date) as last_raid FROM attendance WHERE discord_id = $1 GROUP BY name`,
+          [discordId]
+        ) as Promise<{ name: string; last_raid: string | null }[]>,
       ]);
 
       if (toons.length === 0) {
         return res.status(404).json({ error: 'Member not found' });
       }
 
-      // Get last raid date per character name
-      const lastRaidByName = new Map<string, string>();
-      for (const a of attendanceRows) {
-        if (a.Name && a.Date && !lastRaidByName.has(a.Name)) {
-          lastRaidByName.set(a.Name, a.Date.toISOString());
-        }
-      }
-
+      const lastRaidByName = new Map(lastRaidRows.map(r => [r.name, r.last_raid]));
       const displayName = gsUser?.displayName || dkpRow?.DiscordName || discordId;
 
       const characters = toons.map(c => ({
@@ -527,11 +524,13 @@ export function createWebServer(opts: WebServerOptions) {
         lastRaidDate: lastRaidByName.get(c.Name) || null,
       }));
 
-      const recentAttendance = attendanceRows.map(a => ({
-        raid: a.Raid,
-        characterName: a.Name,
-        date: a.Date?.toISOString() || null,
-        modifier: a.Modifier ? Number(a.Modifier) : 0,
+      // Per-character DKP breakdown with class info
+      const charClassMap = new Map(toons.map(c => [c.Name, c.CharacterClass]));
+      const dkpByCharacter = dkpByCharRows.map(r => ({
+        name: r.name,
+        class: charClassMap.get(r.name) || 'Unknown',
+        totalDkp: r.total_dkp,
+        raidCount: r.raid_count,
       }));
 
       res.json({
@@ -540,7 +539,7 @@ export function createWebServer(opts: WebServerOptions) {
         characters,
         earnedDkp: dkpRow ? Number(dkpRow.EarnedDkp) : 0,
         spentDkp: dkpRow ? Number(dkpRow.SpentDkp) : 0,
-        recentAttendance,
+        dkpByCharacter,
       });
     } catch (err) {
       console.error('Failed to fetch member detail:', err);

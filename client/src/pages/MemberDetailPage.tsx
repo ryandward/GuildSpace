@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
@@ -6,6 +6,17 @@ import CharacterCard from '../components/roster/CharacterCard';
 import { Text, Heading, Card } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
+
+function classToPip(className: string): string {
+  return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
+}
+
+interface CharacterDkp {
+  name: string;
+  class: string;
+  totalDkp: number;
+  raidCount: number;
+}
 
 interface MemberDetail {
   discordId: string;
@@ -19,12 +30,7 @@ interface MemberDetail {
   }[];
   earnedDkp: number;
   spentDkp: number;
-  recentAttendance: {
-    raid: string | null;
-    characterName: string | null;
-    date: string | null;
-    modifier: number;
-  }[];
+  dkpByCharacter: CharacterDkp[];
 }
 
 export default function MemberDetailPage() {
@@ -58,6 +64,10 @@ export default function MemberDetailPage() {
   }, [discordId, token]);
 
   const netDkp = data ? data.earnedDkp - data.spentDkp : 0;
+  const maxDkp = useMemo(() => {
+    if (!data?.dkpByCharacter.length) return 1;
+    return Math.max(...data.dkpByCharacter.map(c => c.totalDkp), 1);
+  }, [data]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
@@ -110,28 +120,32 @@ export default function MemberDetailPage() {
                 ))}
               </div>
 
-              {/* Recent Attendance */}
-              {data.recentAttendance.length > 0 && (
+              {/* DKP by Character — horizontal bar chart */}
+              {data.dkpByCharacter.length > 0 && (
                 <>
-                  <Text variant="overline" className="mt-1">Recent Attendance</Text>
-                  <Card className="overflow-hidden">
-                    <div className="flex flex-col">
-                      {data.recentAttendance.map((a, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-2 py-1 px-2 border-b border-border-subtle last:border-b-0"
-                        >
-                          <Text variant="body" className="font-semibold flex-1 truncate">{a.raid}</Text>
-                          <Text variant="label" className="truncate max-md:hidden">{a.characterName}</Text>
-                          <span className={cx(text({ variant: 'mono' }), 'text-text-dim shrink-0')}>
-                            +{a.modifier}
-                          </span>
-                          <Text variant="caption" className="shrink-0">
-                            {a.date ? new Date(a.date).toLocaleDateString() : ''}
-                          </Text>
+                  <Text variant="overline" className="mt-1">DKP Earned by Character</Text>
+                  <Card className="p-2 flex flex-col gap-1.5">
+                    {data.dkpByCharacter.map(c => (
+                      <div key={c.name} className="flex flex-col gap-0.5">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`w-0.5 h-2 rounded-full shrink-0 ${classToPip(c.class)}`} />
+                            <Text variant="body" className="font-semibold truncate">{c.name}</Text>
+                            <Text variant="label" className="truncate shrink-0">{c.class}</Text>
+                          </div>
+                          <div className="flex items-baseline gap-1.5 shrink-0">
+                            <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{c.totalDkp}</span>
+                            <Text variant="caption">{c.raidCount} raids</Text>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                        <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${classToPip(c.class)} transition-all duration-slow`}
+                            style={{ width: `${(c.totalDkp / maxDkp) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </Card>
                 </>
               )}
