@@ -8,6 +8,7 @@ export interface User {
   needsSetup?: boolean;
   isOfficer?: boolean;
   isAdmin?: boolean;
+  isOwner?: boolean;
 }
 
 interface AuthState {

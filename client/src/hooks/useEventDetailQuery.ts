@@ -21,7 +21,6 @@ export interface CallDetail {
 export interface EventMember {
   discordId: string;
   displayName: string;
-  characterClass: string | null;
   callsPresent: number[];
   totalDkp: number;
 }

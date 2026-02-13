@@ -15,6 +15,7 @@ export interface MemberDetail {
   bio: string | null;
   isOfficer: boolean;
   isAdmin: boolean;
+  isOwner: boolean;
   characters: {
     name: string;
     class: string;

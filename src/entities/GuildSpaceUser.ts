@@ -29,6 +29,10 @@ export class GuildSpaceUser {
   @Column('boolean', { name: 'is_admin', default: false })
   isAdmin: boolean;
 
+  /** Whether this user is the guild owner (immutable top-tier role) */
+  @Column('boolean', { name: 'is_owner', default: false })
+  isOwner: boolean;
+
   /** Personal API key for companion app auth */
   @Column('text', { name: 'api_key', nullable: true })
   apiKey: string | null;

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Text } from '../../ui';
 import type { CallDetail, EventMember } from '../../hooks/useEventDetailQuery';
 
@@ -13,7 +14,6 @@ export default function AttendanceMatrix({ calls, members }: Props) {
         <thead>
           <tr className="border-b border-border">
             <th className="text-left py-1 px-2 font-bold text-text-dim text-micro uppercase tracking-overline whitespace-nowrap">Name</th>
-            <th className="text-left py-1 px-1 font-bold text-text-dim text-micro uppercase tracking-overline whitespace-nowrap max-md:hidden">Class</th>
             {calls.map((call, idx) => (
               <th
                 key={call.id}
@@ -33,10 +33,9 @@ export default function AttendanceMatrix({ calls, members }: Props) {
           {members.map(member => (
             <tr key={member.discordId} className="border-b border-border-subtle hover:bg-surface-2 transition-colors duration-fast">
               <td className="py-1 px-2 whitespace-nowrap">
-                <Text variant="body" className="text-caption font-medium">{member.displayName}</Text>
-              </td>
-              <td className="py-1 px-1 whitespace-nowrap max-md:hidden">
-                <Text variant="caption">{member.characterClass || '—'}</Text>
+                <Link to={`/roster/${member.discordId}`} className="no-underline">
+                  <Text variant="body" className="text-caption font-medium hover:text-accent transition-colors duration-fast">{member.displayName}</Text>
+                </Link>
               </td>
               {calls.map(call => {
                 const present = member.callsPresent.includes(call.id);

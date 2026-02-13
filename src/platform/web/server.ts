@@ -308,8 +308,9 @@ export function createWebServer(opts: WebServerOptions) {
       displayName: user.displayName,
       discordUsername: user.discordUsername,
       needsSetup: user.needsSetup || false,
-      isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || false,
-      isAdmin: gsUser?.isAdmin || false,
+      isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || gsUser?.isOwner || false,
+      isAdmin: gsUser?.isAdmin || gsUser?.isOwner || false,
+      isOwner: gsUser?.isOwner || false,
     });
   });
 
@@ -552,8 +553,9 @@ export function createWebServer(opts: WebServerOptions) {
         discordId,
         displayName,
         bio: gsUser?.bio || null,
-        isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || false,
-        isAdmin: gsUser?.isAdmin || false,
+        isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || gsUser?.isOwner || false,
+        isAdmin: gsUser?.isAdmin || gsUser?.isOwner || false,
+        isOwner: gsUser?.isOwner || false,
         characters,
         earnedDkp: dkpRow ? Number(dkpRow.EarnedDkp) : 0,
         spentDkp: dkpRow ? Number(dkpRow.SpentDkp) : 0,
@@ -568,8 +570,9 @@ export function createWebServer(opts: WebServerOptions) {
   // ─── Role Management (admin only) ─────────────────────────────────
 
   app.patch('/api/roster/:discordId/role', async (req, res) => {
-    const admin = await requireAdmin(req, res);
-    if (!admin) return;
+    // At minimum, caller must be admin (or owner, which implies admin)
+    const caller = await requireAdmin(req, res);
+    if (!caller) return;
 
     const { discordId } = req.params;
     const { isOfficer, isAdmin } = req.body;
@@ -579,11 +582,21 @@ export function createWebServer(opts: WebServerOptions) {
     }
 
     // Cannot modify own role
-    if (discordId === admin.user.id) {
+    if (discordId === caller.user.id) {
       return res.status(403).json({ error: 'Cannot modify your own role' });
     }
 
     let target = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } });
+
+    // Cannot modify the owner
+    if (target?.isOwner) {
+      return res.status(403).json({ error: 'Cannot modify the owner' });
+    }
+
+    // Admin changes require owner
+    if (typeof isAdmin === 'boolean' && !caller.gsUser.isOwner) {
+      return res.status(403).json({ error: 'Only the owner can change admin roles' });
+    }
 
     // If the user hasn't logged into GuildSpace yet, create a stub row
     if (!target) {
@@ -639,7 +652,7 @@ export function createWebServer(opts: WebServerOptions) {
     const user = await getUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
     const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
-    if (!gsUser?.isOfficer && !gsUser?.isAdmin) { res.status(403).json({ error: 'Officer access required' }); return null; }
+    if (!gsUser?.isOfficer && !gsUser?.isAdmin && !gsUser?.isOwner) { res.status(403).json({ error: 'Officer access required' }); return null; }
     return { user, gsUser };
   }
 
@@ -647,7 +660,15 @@ export function createWebServer(opts: WebServerOptions) {
     const user = await getUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
     const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
-    if (!gsUser?.isAdmin) { res.status(403).json({ error: 'Admin access required' }); return null; }
+    if (!gsUser?.isAdmin && !gsUser?.isOwner) { res.status(403).json({ error: 'Admin access required' }); return null; }
+    return { user, gsUser };
+  }
+
+  async function requireOwner(req: express.Request, res: express.Response): Promise<{ user: InteractionUser; gsUser: GuildSpaceUser } | null> {
+    const user = await getUser(req);
+    if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
+    const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+    if (!gsUser?.isOwner) { res.status(403).json({ error: 'Owner access required' }); return null; }
     return { user, gsUser };
   }
 
@@ -772,13 +793,6 @@ export function createWebServer(opts: WebServerOptions) {
       const gsUserMap = new Map(gsUsers.map(u => [u.discordId, u]));
       const dkpRows = await AppDataSource.manager.find(Dkp);
       const dkpNameMap = new Map(dkpRows.map(d => [d.DiscordId, d.DiscordName]));
-      const activeToons = await AppDataSource.manager.find(ActiveToons);
-      const toonsByDiscord = new Map<string, typeof activeToons>();
-      for (const t of activeToons) {
-        let arr = toonsByDiscord.get(t.DiscordId);
-        if (!arr) { arr = []; toonsByDiscord.set(t.DiscordId, arr); }
-        arr.push(t);
-      }
 
       // For each call, get its attendees
       const callDetails = await Promise.all(calls.map(async (call) => {
@@ -827,12 +841,9 @@ export function createWebServer(opts: WebServerOptions) {
 
       const members = Array.from(memberMap.entries()).map(([discordId, data]) => {
         const gsUser = gsUserMap.get(discordId);
-        const toons = toonsByDiscord.get(discordId);
-        const mainToon = toons?.find(t => t.Status === 'Main');
         return {
           discordId,
           displayName: gsUser?.displayName || dkpNameMap.get(discordId) || discordId,
-          characterClass: mainToon?.CharacterClass || toons?.[0]?.CharacterClass || null,
           callsPresent: data.callsPresent,
           totalDkp: data.totalDkp,
         };
@@ -900,6 +911,15 @@ export function createWebServer(opts: WebServerOptions) {
 
       // Process the /who log
       const result = await processWhoLog(whoLog, raidName, mod);
+
+      // Save raid name as a template if it doesn't exist yet
+      const existingRaid = await AppDataSource.manager.findOne(Raids, { where: { Raid: raidName } });
+      if (!existingRaid) {
+        const newRaid = new Raids();
+        newRaid.Raid = raidName;
+        newRaid.Modifier = mod;
+        await AppDataSource.manager.save(newRaid);
+      }
 
       // Create the call record
       const call = new RaidCall();
@@ -1115,6 +1135,15 @@ export function createWebServer(opts: WebServerOptions) {
       if (isNaN(mod)) return res.status(400).json({ error: 'modifier must be a number' });
 
       const result = await processWhoLog(whoLog, raidName, mod);
+
+      // Save raid name as a template if it doesn't exist yet
+      const existingRaid = await AppDataSource.manager.findOne(Raids, { where: { Raid: raidName } });
+      if (!existingRaid) {
+        const newRaid = new Raids();
+        newRaid.Raid = raidName;
+        newRaid.Modifier = mod;
+        await AppDataSource.manager.save(newRaid);
+      }
 
       const call = new RaidCall();
       call.eventId = activeEvent.id;

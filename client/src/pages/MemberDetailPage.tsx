@@ -26,7 +26,8 @@ export default function MemberDetailPage() {
   const [bioText, setBioText] = useState('');
 
   const isOwnProfile = authUser?.id === discordId;
-  const canManageRoles = authUser?.isAdmin && !isOwnProfile;
+  const canToggleOfficer = (authUser?.isOwner || authUser?.isAdmin) && !isOwnProfile && !data?.isOwner;
+  const canToggleAdmin = authUser?.isOwner && !isOwnProfile && !data?.isOwner;
 
   const startEditBio = useCallback(() => {
     setBioText(data?.bio || '');
@@ -62,51 +63,56 @@ export default function MemberDetailPage() {
               {/* Header */}
               <div className="flex items-baseline gap-2 flex-wrap">
                 <Heading level="heading">{data.displayName}</Heading>
-                {data.isAdmin && <Badge variant="status" color="accent">Admin</Badge>}
-                {data.isOfficer && !data.isAdmin && <Badge variant="status" color="yellow">Officer</Badge>}
+                {data.isOwner && <Badge variant="status" className="bg-accent text-bg font-bold">Owner</Badge>}
+                {data.isAdmin && !data.isOwner && <Badge variant="status" className="bg-transparent border border-accent text-accent">Admin</Badge>}
+                {data.isOfficer && !data.isAdmin && !data.isOwner && <Badge variant="status" color="yellow">Officer</Badge>}
                 <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{netDkp} DKP</span>
               </div>
 
-              {/* Role management (admin only) */}
-              {canManageRoles && (
+              {/* Role management */}
+              {(canToggleOfficer || canToggleAdmin) && (
                 <div className="flex gap-1.5">
-                  {data.isOfficer ? (
-                    <Button
-                      size="sm"
-                      intent="danger"
-                      disabled={roleMutation.isPending}
-                      onClick={() => roleMutation.mutate({ isOfficer: false })}
-                    >
-                      {roleMutation.isPending ? 'Updating...' : 'Remove Officer'}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      intent="primary"
-                      disabled={roleMutation.isPending}
-                      onClick={() => roleMutation.mutate({ isOfficer: true })}
-                    >
-                      {roleMutation.isPending ? 'Updating...' : 'Make Officer'}
-                    </Button>
+                  {canToggleOfficer && (
+                    data.isOfficer ? (
+                      <Button
+                        size="sm"
+                        intent="danger"
+                        disabled={roleMutation.isPending}
+                        onClick={() => roleMutation.mutate({ isOfficer: false })}
+                      >
+                        {roleMutation.isPending ? 'Updating...' : 'Remove Officer'}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        intent="primary"
+                        disabled={roleMutation.isPending}
+                        onClick={() => roleMutation.mutate({ isOfficer: true })}
+                      >
+                        {roleMutation.isPending ? 'Updating...' : 'Make Officer'}
+                      </Button>
+                    )
                   )}
-                  {data.isAdmin ? (
-                    <Button
-                      size="sm"
-                      intent="danger"
-                      disabled={roleMutation.isPending}
-                      onClick={() => roleMutation.mutate({ isAdmin: false })}
-                    >
-                      {roleMutation.isPending ? 'Updating...' : 'Remove Admin'}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      intent="ghost"
-                      disabled={roleMutation.isPending}
-                      onClick={() => roleMutation.mutate({ isAdmin: true })}
-                    >
-                      {roleMutation.isPending ? 'Updating...' : 'Make Admin'}
-                    </Button>
+                  {canToggleAdmin && (
+                    data.isAdmin ? (
+                      <Button
+                        size="sm"
+                        intent="danger"
+                        disabled={roleMutation.isPending}
+                        onClick={() => roleMutation.mutate({ isAdmin: false })}
+                      >
+                        {roleMutation.isPending ? 'Updating...' : 'Remove Admin'}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        intent="ghost"
+                        disabled={roleMutation.isPending}
+                        onClick={() => roleMutation.mutate({ isAdmin: true })}
+                      >
+                        {roleMutation.isPending ? 'Updating...' : 'Make Admin'}
+                      </Button>
+                    )
                   )}
                 </div>
               )}
