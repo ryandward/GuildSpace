@@ -332,7 +332,7 @@ function ChatBubble({ msg, isMe, isFirst, isLast, nameClass }: {
           isMe ? 'flex-row-reverse' : 'flex-row',
         )}>
           <span
-            className={cx(text({ variant: 'body' }), 'font-bold text-caption',
+            className={cx(text({ variant: 'body' }), 'font-bold',
               !nameColor && (isMe ? 'text-accent' : 'text-text-secondary'),
             )}
             style={nameColor ? { color: nameColor } : undefined}
