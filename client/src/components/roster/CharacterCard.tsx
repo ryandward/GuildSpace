@@ -15,6 +15,20 @@ function statusColor(status: string): 'accent' | 'green' | 'yellow' | 'dim' {
   }
 }
 
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
+}
+
 interface Props {
   name: string;
   class: string;
@@ -24,9 +38,7 @@ interface Props {
 }
 
 export default function CharacterCard(props: Props) {
-  const lastRaid = props.lastRaidDate
-    ? new Date(props.lastRaidDate).toLocaleDateString()
-    : null;
+  const lastRaid = props.lastRaidDate ? timeAgo(props.lastRaidDate) : null;
 
   return (
     <div className={cx(card(), 'p-2 flex flex-col gap-1')}>

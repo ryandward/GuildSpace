@@ -526,18 +526,21 @@ export function createWebServer(opts: WebServerOptions) {
         lastRaidDate: lastRaidByName.get(c.Name) || null,
       }));
 
-      // Per-character DKP breakdown with class info
+      // Per-character DKP breakdown — only include active characters
       const charClassMap = new Map(toons.map(c => [c.Name, c.CharacterClass]));
-      const dkpByCharacter = dkpByCharRows.map(r => ({
-        name: r.name,
-        class: charClassMap.get(r.name) || 'Unknown',
-        totalDkp: r.total_dkp,
-        raidCount: r.raid_count,
-      }));
+      const dkpByCharacter = dkpByCharRows
+        .filter(r => charClassMap.has(r.name))
+        .map(r => ({
+          name: r.name,
+          class: charClassMap.get(r.name)!,
+          totalDkp: r.total_dkp,
+          raidCount: r.raid_count,
+        }));
 
       res.json({
         discordId,
         displayName,
+        bio: gsUser?.bio || null,
         characters,
         earnedDkp: dkpRow ? Number(dkpRow.EarnedDkp) : 0,
         spentDkp: dkpRow ? Number(dkpRow.SpentDkp) : 0,
@@ -547,6 +550,31 @@ export function createWebServer(opts: WebServerOptions) {
       console.error('Failed to fetch member detail:', err);
       res.status(500).json({ error: 'Failed to fetch member details' });
     }
+  });
+
+  // ─── Profile ──────────────────────────────────────────────────────
+
+  app.post('/api/profile/bio', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const { bio } = req.body;
+    if (typeof bio !== 'string') {
+      return res.status(400).json({ error: 'Bio must be a string' });
+    }
+    if (bio.length > 300) {
+      return res.status(400).json({ error: 'Bio must be 300 characters or fewer' });
+    }
+
+    const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, {
+      where: { discordId: user.id },
+    });
+    if (!gsUser) return res.status(404).json({ error: 'User not found' });
+
+    gsUser.bio = bio.trim() || null;
+    await AppDataSource.manager.save(gsUser);
+
+    res.json({ ok: true, bio: gsUser.bio });
   });
 
   // ─── Command Execution (via WebSocket) ─────────────────────────────

@@ -17,6 +17,10 @@ export class GuildSpaceUser {
   @Column('text', { name: 'discord_username' })
   discordUsername: string;
 
+  /** Free-text bio / about me */
+  @Column('text', { name: 'bio', nullable: true })
+  bio: string | null;
+
   /** When they joined GuildSpace */
   @Column('timestamp', { name: 'created_at', default: () => 'NOW()' })
   createdAt: Date;
