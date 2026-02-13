@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button, Badge, Text, Input } from '../../ui';
 import { dropdown, dropdownItem } from '../../ui/recipes';
 import { useToonSearchQuery } from '../../hooks/useToonSearchQuery';
@@ -67,10 +68,12 @@ export default function CallRow({
             <div className="flex flex-wrap gap-0.5 mb-1">
               {call.attendees.map(a => (
                 <span key={a.characterName} className="inline-flex items-center gap-0.5">
-                  <Badge
-                    variant="count"
-                    style={a.characterClass ? { color: getClassColor(a.characterClass) } : undefined}
-                  >{a.characterName}</Badge>
+                  <Link to={`/roster/${a.discordId}`} className="no-underline hover:brightness-125 transition-all duration-fast">
+                    <Badge
+                      variant="count"
+                      style={a.characterClass ? { color: getClassColor(a.characterClass) } : undefined}
+                    >{a.characterName}</Badge>
+                  </Link>
                   {isOfficer && isActive && (
                     <button
                       className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red text-micro leading-none p-0"

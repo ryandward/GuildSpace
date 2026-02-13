@@ -301,10 +301,11 @@ function ReplyView({ data }: { data: ReplyData }) {
 
 // --- Chat bubble ---
 
+import { Link } from 'react-router-dom';
 import { CLASS_COLORS } from '../lib/classColors';
 
 function ChatBubble({ msg, isMe, isFirst, isLast, nameClass }: {
-  msg: { createdAt: string; displayName: string; content: string };
+  msg: { createdAt: string; displayName: string; content: string; userId: string };
   isMe: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -324,14 +325,15 @@ function ChatBubble({ msg, isMe, isFirst, isLast, nameClass }: {
           'flex items-center gap-1 mb-0.5',
           isMe ? 'flex-row-reverse' : 'flex-row',
         )}>
-          <span
-            className={cx(text({ variant: 'body' }), 'font-bold',
+          <Link
+            to={`/roster/${msg.userId}`}
+            className={cx(text({ variant: 'body' }), 'font-bold no-underline hover:brightness-125 transition-all duration-fast',
               !nameColor && (isMe ? 'text-accent' : 'text-text-secondary'),
             )}
             style={nameColor ? { color: nameColor } : undefined}
           >
             {msg.displayName}
-          </span>
+          </Link>
           <Text variant="caption">{formatTime(msg.createdAt)}</Text>
         </div>
       )}
