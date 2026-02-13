@@ -29,7 +29,7 @@ export default function CallRow({
   const [debouncedName, setDebouncedName] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const { data: suggestions } = useToonSearchQuery(debouncedName);
 
