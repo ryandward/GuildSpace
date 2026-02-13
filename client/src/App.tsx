@@ -7,6 +7,7 @@ import MemberDetailPage from './pages/MemberDetailPage';
 import AppShell from './layouts/AppShell';
 import RaidsPage from './pages/RaidsPage';
 import RaidEventPage from './pages/RaidEventPage';
+import BankPage from './pages/BankPage';
 import BottomTabs from './components/BottomTabs';
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/roster/:discordId" element={<MemberDetailPage />} />
         <Route path="/raids" element={<RaidsPage />} />
         <Route path="/raids/:eventId" element={<RaidEventPage />} />
+        <Route path="/bank" element={<BankPage />} />
         <Route path="/terminal" element={<AppShell />} />
         <Route path="*" element={<Navigate to="/roster" replace />} />
       </Routes>

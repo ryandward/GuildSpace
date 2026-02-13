@@ -23,6 +23,17 @@ const tabs = [
     ),
   },
   {
+    to: '/bank',
+    label: 'Bank',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="8" width="14" height="9" rx="1.5" />
+        <path d="M6 8V6a4 4 0 0 1 8 0v2" />
+        <circle cx="10" cy="12.5" r="1.5" />
+      </svg>
+    ),
+  },
+  {
     to: '/terminal',
     label: 'Terminal',
     icon: (

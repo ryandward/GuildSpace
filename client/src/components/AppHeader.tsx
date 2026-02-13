@@ -25,6 +25,12 @@ export default function AppHeader() {
             Raids
           </NavLink>
           <NavLink
+            to="/bank"
+            className={({ isActive }) => navLink({ active: isActive })}
+          >
+            Bank
+          </NavLink>
+          <NavLink
             to="/terminal"
             className={({ isActive }) => navLink({ active: isActive })}
           >

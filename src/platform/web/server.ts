@@ -30,6 +30,7 @@ import { RaidEvent } from '../../entities/RaidEvent.js';
 import { RaidCall } from '../../entities/RaidCall.js';
 import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
 import { Census } from '../../entities/Census.js';
+import { Bank } from '../../entities/Bank.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
 import type {
   PlatformCommand,
@@ -1242,6 +1243,36 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err) {
       console.error('Failed to process push:', err);
       res.status(500).json({ error: 'Failed to process push' });
+    }
+  });
+
+  // ─── Bank ───────────────────────────────────────────────────────────
+
+  app.get('/api/bank', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const rows = await AppDataSource.manager.query(
+        `SELECT name,
+                SUM(quantity)::int as "totalQuantity",
+                json_agg(json_build_object('banker', banker, 'location', location, 'quantity', quantity::int)) as "slots"
+         FROM bank
+         GROUP BY name
+         ORDER BY name`
+      ) as { name: string; totalQuantity: number; slots: { banker: string; location: string; quantity: number }[] }[];
+
+      const result = rows.map(row => ({
+        name: row.name,
+        totalQuantity: row.totalQuantity,
+        bankers: [...new Set(row.slots.map(s => s.banker))],
+        slots: row.slots,
+      }));
+
+      res.json(result);
+    } catch (err) {
+      console.error('Failed to fetch bank inventory:', err);
+      res.status(500).json({ error: 'Failed to fetch bank inventory' });
     }
   });
 
