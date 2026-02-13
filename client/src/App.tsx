@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import SetupPage from './pages/SetupPage';
 import RosterPage from './pages/RosterPage';
+import MemberDetailPage from './pages/MemberDetailPage';
 import AppShell from './layouts/AppShell';
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/roster" replace />} />
       <Route path="/roster" element={<RosterPage />} />
+      <Route path="/roster/:discordId" element={<MemberDetailPage />} />
       <Route path="/terminal" element={<AppShell />} />
       <Route path="*" element={<Navigate to="/roster" replace />} />
     </Routes>

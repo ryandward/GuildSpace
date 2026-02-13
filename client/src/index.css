@@ -247,7 +247,7 @@
   flex-direction: column;
   justify-content: flex-end;
   gap: calc(var(--space-unit) / 2);
-  padding: var(--space-unit) calc(var(--space-unit) * 1.25);
+  padding: var(--space-unit) calc(var(--space-unit) * 1.5);
   background: color-mix(in srgb, var(--cell-color) calc(var(--opacity-4) * 100%), var(--color-surface));
   border: 1px solid color-mix(in srgb, var(--cell-color) 10%, transparent);
   cursor: pointer;
@@ -284,7 +284,7 @@
   font-size: var(--font-size-caption);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--letter-spacing-overline);
   color: color-mix(in srgb, var(--cell-color) 80%, white);
   white-space: nowrap;
   overflow: hidden;
@@ -426,7 +426,7 @@
 
 /* ── Mobile overrides for treemap ─────────────────────── */
 
-@media (max-width: 700px) {
+@media (width < 48rem) {
   .treemap-count { font-size: var(--font-size-caption); }
   .treemap-label { font-size: var(--font-size-micro); }
 }

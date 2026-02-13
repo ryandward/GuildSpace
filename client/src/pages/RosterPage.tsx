@@ -4,8 +4,8 @@ import AppHeader from '../components/AppHeader';
 import { ClassChart, StatusChart, LevelChart } from '../components/roster/RosterFilters';
 import MemberList from '../components/roster/RosterTable';
 import type { RosterMember } from '../components/roster/RosterRow';
-import { Button, Card, Badge, Text, Input } from '../ui';
-import { text, badge } from '../ui/recipes';
+import { Card, Badge, Text, Input } from '../ui';
+import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 
 interface RosterData {
@@ -29,7 +29,7 @@ function CollapsibleCard({ id, title, count, collapsedPanels, onToggle, children
   return (
     <Card>
       <button
-        className="w-full flex items-center gap-1 py-1 px-2 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast"
+        className="w-full flex items-center gap-1 py-1 px-2 min-h-6 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast"
         onClick={() => onToggle(id)}
       >
         <span
@@ -60,7 +60,7 @@ export default function RosterPage() {
 
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState<string | null>(null);
-  const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set());
+  const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set(['stats']));
 
   const togglePanel = useCallback((id: string) => {
     setCollapsedPanels(prev => {
@@ -156,7 +156,7 @@ export default function RosterPage() {
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
       <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1 max-md:py-1.5 max-md:pb-5">
+        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-5">
           {error && <Text variant="error">{error}</Text>}
           {loading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
 

@@ -1,37 +1,22 @@
-import { phiStagger } from '../../utils/stagger';
-import { Badge, Text } from '../../ui';
-import { text, badge } from '../../ui/recipes';
+import { useNavigate } from 'react-router-dom';
+import { Text } from '../../ui';
+import { text } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
 }
 
-function statusColor(status: string): 'accent' | 'green' | 'yellow' | 'dim' {
-  switch (status.toLowerCase()) {
-    case 'main': return 'accent';
-    case 'alt': return 'green';
-    case 'bot': return 'yellow';
-    default: return 'dim';
-  }
-}
-
-const STATUS_ORDER: Record<string, number> = { Main: 0, Alt: 1, Bot: 2 };
-
-function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
-  return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
-}
-
-// Desktop: pip | name(120) | class(120) | lvl(32) | display-name(1fr) | DKP(56) | chevron(24)
-// Mobile:  pip | name(1fr)  | class(80)  | lvl(32) | DKP(48) | chevron(24)  — display-name hidden
-const ROW_GRID = 'grid grid-cols-[3px_120px_120px_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px_48px_24px] items-center gap-x-1.5';
-
+// Desktop: pip | name(1fr) | class(120) | lvl(32) | DKP(56) | arrow(48)
+// Mobile:  pip | name(1fr) | class(80)  | lvl(32) | DKP(48) | arrow(48)
+const ROW_GRID = 'grid grid-cols-[3px_minmax(0,1fr)_120px_32px_56px_48px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px_48px_48px] items-center gap-x-1.5';
 
 export interface RosterCharacter {
   name: string;
   class: string;
   level: number;
   status: string;
+  lastRaidDate: string | null;
 }
 
 export interface RosterMember {
@@ -45,78 +30,48 @@ export interface RosterMember {
   spentDkp: number;
 }
 
+function selectFeatured(member: RosterMember, classFilter: string | null): RosterCharacter {
+  let candidates = member.characters;
+
+  if (classFilter) {
+    const filtered = candidates.filter(c => c.class === classFilter);
+    if (filtered.length > 0) candidates = filtered;
+  } else {
+    const mains = candidates.filter(c => c.status === 'Main');
+    if (mains.length > 0) candidates = mains;
+  }
+
+  return [...candidates].sort((a, b) => {
+    if (b.level !== a.level) return b.level - a.level;
+    const aDate = a.lastRaidDate ? new Date(a.lastRaidDate).getTime() : 0;
+    const bDate = b.lastRaidDate ? new Date(b.lastRaidDate).getTime() : 0;
+    return bDate - aDate;
+  })[0];
+}
+
 interface Props {
   member: RosterMember;
   classFilter?: string | null;
-  expanded: boolean;
-  onToggle: () => void;
 }
 
-export default function RosterRow({ member, classFilter, expanded, onToggle }: Props) {
-  const featured = classFilter
-    ? member.characters.find(c => c.class === classFilter) || member.characters[0]
-    : member.characters.find(c => c.status === 'Main') || member.characters[0];
-
+export default function RosterRow({ member, classFilter }: Props) {
+  const navigate = useNavigate();
+  const featured = selectFeatured(member, classFilter ?? null);
   const netDkp = member.earnedDkp - member.spentDkp;
-  const alts = member.characters.filter(c => c !== featured).sort(sortByStatus);
-  const hasAlts = alts.length > 0;
-  const delays = expanded ? phiStagger(alts.length) : [];
 
   return (
     <div className="border-b border-border-subtle">
       <button
-        className={cx(ROW_GRID, 'w-full py-1 px-0.5 transition-colors duration-fast hover:bg-surface text-left cursor-pointer bg-transparent border-none')}
-        onClick={onToggle}
+        className={cx(ROW_GRID, 'w-full py-1 px-0.5 min-h-6 transition-colors duration-fast hover:bg-surface text-left cursor-pointer bg-transparent border-none')}
+        onClick={() => navigate(`/roster/${member.discordId}`)}
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
         <Text variant="body" className="font-semibold truncate">{featured?.name || member.displayName}</Text>
         <Text variant="label" className="truncate">{featured?.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
-        <Text variant="label" className="truncate max-md:hidden" style={{ opacity: 'var(--opacity-5)' }}>{member.displayName}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{netDkp}</span>
-        <span className="flex items-center justify-center">
-          {hasAlts ? (
-            <span
-              className="collapse-chevron text-text-dim text-caption"
-              data-expanded={expanded}
-            >
-              ›
-            </span>
-          ) : (
-            <span className="text-text-dim/20 text-caption">·</span>
-          )}
-        </span>
+        <span className="flex items-center justify-center text-text-dim text-caption">&rsaquo;</span>
       </button>
-
-      {hasAlts && (
-        <div className="collapse-container" data-expanded={expanded}>
-          <div className="collapse-inner bg-surface-2 rounded-sm" key={expanded ? 'open' : 'closed'}>
-            {alts.map((c, i) => (
-              <div
-                key={c.name}
-                className={cx(ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
-                style={{
-                  ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
-                  ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
-                }}
-              >
-                <span className={`w-0.5 h-1.5 rounded-full ${classToPip(c.class)}`} />
-                <Text variant="caption" className="text-text-secondary truncate pl-3">
-                  {c.name}
-                  <Badge variant="status" color={statusColor(c.status)} className="ml-1.5 md:hidden">{c.status}</Badge>
-                </Text>
-                <Text variant="label" className="text-nano truncate">{c.class}</Text>
-                <span className={cx(text({ variant: 'mono' }), 'text-micro text-text-dim text-center')}>{c.level}</span>
-                <span className="max-md:hidden">
-                  <Badge variant="status" color={statusColor(c.status)}>{c.status}</Badge>
-                </span>
-                <span className="max-md:hidden" />
-                <span className="max-md:hidden" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

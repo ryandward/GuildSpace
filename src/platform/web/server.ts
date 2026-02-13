@@ -23,6 +23,7 @@ import { GuildSpaceUser } from '../../entities/GuildSpaceUser.js';
 import { ChatMessage } from '../../entities/ChatMessage.js';
 import { ActiveToons } from '../../entities/ActiveToons.js';
 import { Dkp } from '../../entities/Dkp.js';
+import { Attendance } from '../../entities/Attendance.js';
 import type {
   PlatformCommand,
   CommandInteraction,
@@ -414,14 +415,18 @@ export function createWebServer(opts: WebServerOptions) {
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
     try {
-      const [toons, dkpRows, gsUsers] = await Promise.all([
+      const [toons, dkpRows, gsUsers, lastRaidRows] = await Promise.all([
         AppDataSource.manager.find(ActiveToons),
         AppDataSource.manager.find(Dkp),
         AppDataSource.manager.find(GuildSpaceUser),
+        AppDataSource.manager.query(
+          `SELECT name, MAX(date) as last_raid FROM attendance GROUP BY name`
+        ) as Promise<{ name: string; last_raid: string | null }[]>,
       ]);
 
       const dkpByDiscord = new Map(dkpRows.map(d => [d.DiscordId, d]));
       const gsUserByDiscord = new Map(gsUsers.map(u => [u.discordId, u]));
+      const lastRaidByName = new Map(lastRaidRows.map(r => [r.name, r.last_raid]));
 
       // Group characters by DiscordId
       const grouped = new Map<string, typeof toons>();
@@ -450,6 +455,7 @@ export function createWebServer(opts: WebServerOptions) {
             class: cls,
             level: Number(c.Level),
             status: c.Status,
+            lastRaidDate: lastRaidByName.get(c.Name) || null,
           };
         });
 
@@ -476,6 +482,69 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err) {
       console.error('Failed to fetch roster:', err);
       res.status(500).json({ error: 'Failed to fetch roster' });
+    }
+  });
+
+  // ─── Member Detail ──────────────────────────────────────────────────
+
+  app.get('/api/roster/:discordId', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const { discordId } = req.params;
+
+    try {
+      const [toons, dkpRow, gsUser, attendanceRows] = await Promise.all([
+        AppDataSource.manager.find(ActiveToons, { where: { DiscordId: discordId } }),
+        AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } }),
+        AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } }),
+        AppDataSource.manager.find(Attendance, {
+          where: { DiscordId: discordId },
+          order: { Date: 'DESC' },
+          take: 50,
+        }),
+      ]);
+
+      if (toons.length === 0) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+
+      // Get last raid date per character name
+      const lastRaidByName = new Map<string, string>();
+      for (const a of attendanceRows) {
+        if (a.Name && a.Date && !lastRaidByName.has(a.Name)) {
+          lastRaidByName.set(a.Name, a.Date.toISOString());
+        }
+      }
+
+      const displayName = gsUser?.displayName || dkpRow?.DiscordName || discordId;
+
+      const characters = toons.map(c => ({
+        name: c.Name,
+        class: c.CharacterClass,
+        level: Number(c.Level),
+        status: c.Status,
+        lastRaidDate: lastRaidByName.get(c.Name) || null,
+      }));
+
+      const recentAttendance = attendanceRows.map(a => ({
+        raid: a.Raid,
+        characterName: a.Name,
+        date: a.Date?.toISOString() || null,
+        modifier: a.Modifier ? Number(a.Modifier) : 0,
+      }));
+
+      res.json({
+        discordId,
+        displayName,
+        characters,
+        earnedDkp: dkpRow ? Number(dkpRow.EarnedDkp) : 0,
+        spentDkp: dkpRow ? Number(dkpRow.SpentDkp) : 0,
+        recentAttendance,
+      });
+    } catch (err) {
+      console.error('Failed to fetch member detail:', err);
+      res.status(500).json({ error: 'Failed to fetch member details' });
     }
   });
 

@@ -28,7 +28,7 @@ export const button = cva(
       },
       size: {
         xs: 'text-micro py-0.5 px-1 rounded-sm',
-        sm: 'text-caption py-0.5 px-1.5 rounded-sm',
+        sm: 'text-caption py-0.5 px-1.5 rounded-sm min-h-6',
         md: 'text-caption py-1 px-2 rounded-sm',
         lg: 'text-body py-1 px-3 rounded-sm',
         xl: 'text-body py-1.5 px-4 rounded-md font-bold',
@@ -56,7 +56,7 @@ export const input = cva(
         mono: 'bg-bg font-mono',
       },
       size: {
-        sm: 'text-caption py-0.5 px-1.5',
+        sm: 'text-caption py-0.5 px-1.5 min-h-6',
         md: 'text-caption py-1 px-1.5',
         lg: 'text-body py-1 px-2',
       },
@@ -136,9 +136,9 @@ export const text = cva('', {
       body: 'text-text font-body text-body',
       caption: 'text-text-dim font-body text-caption',
       secondary: 'text-text-secondary font-body text-body',
-      overline: 'text-text-dim font-body text-nano font-bold uppercase tracking-overline',
+      overline: 'text-text-dim font-body text-micro font-bold uppercase tracking-overline',
       mono: 'text-text font-mono text-caption tabular-nums',
-      label: 'text-text-dim font-body text-micro',
+      label: 'text-text-dim font-body text-caption',
       error: 'text-red font-body text-caption',
       system: 'text-text-dim font-body text-caption italic',
       command: 'text-text-secondary font-mono text-caption message-command',
@@ -175,7 +175,7 @@ export type HeadingVariants = VariantProps<typeof heading>;
 export const badge = cva('font-body font-bold', {
   variants: {
     variant: {
-      status: 'text-nano uppercase tracking-wide px-1 py-px rounded-sm bg-surface-2',
+      status: 'text-micro uppercase tracking-overline px-1 py-px rounded-sm bg-surface-2',
       count: 'bg-surface-2 text-micro py-px px-1 font-semibold rounded-sm normal-case',
       filter: 'bg-surface border border-border rounded-sm px-1 py-0.5 text-caption font-semibold normal-case',
     },
@@ -239,7 +239,7 @@ export type StatusDotVariants = VariantProps<typeof statusDot>;
 // ── PROGRESS TRACK ──────────────────────────────────────
 
 export const progressTrack = cva(
-  'flex bg-surface-2 gap-px overflow-hidden rounded-full h-0.5'
+  'flex bg-surface-2 gap-px overflow-hidden rounded-full h-1'
 );
 
 // ── MODAL OVERLAY ───────────────────────────────────────
