@@ -22,7 +22,7 @@ export function useRoleMutation(discordId: string | undefined) {
       queryClient.setQueryData<MemberDetail>(['roster', discordId], (old) =>
         old ? { ...old, isOfficer: result.isOfficer } : old,
       );
-      queryClient.invalidateQueries({ queryKey: ['roster'] });
+      queryClient.invalidateQueries({ queryKey: ['roster'], exact: true });
     },
   });
 }

@@ -583,8 +583,18 @@ export function createWebServer(opts: WebServerOptions) {
       return res.status(403).json({ error: 'Cannot modify your own role' });
     }
 
-    const target = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } });
-    if (!target) return res.status(404).json({ error: 'User not found' });
+    let target = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } });
+
+    // If the user hasn't logged into GuildSpace yet, create a stub row
+    if (!target) {
+      const dkpRow = await AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } });
+      if (!dkpRow) return res.status(404).json({ error: 'User not found' });
+
+      target = new GuildSpaceUser();
+      target.discordId = discordId;
+      target.displayName = dkpRow.DiscordName || discordId;
+      target.discordUsername = dkpRow.DiscordName || discordId;
+    }
 
     // Cannot modify other admins
     if (target.isAdmin) {
