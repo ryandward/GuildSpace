@@ -52,7 +52,7 @@ export const input = cva(
       variant: {
         default: 'bg-bg font-body placeholder:text-text-dim',
         surface: 'bg-surface-2 font-body placeholder:text-text-dim',
-        transparent: 'bg-transparent font-body placeholder:text-text-dim/40',
+        transparent: 'bg-transparent font-body placeholder:text-text-dim',
         mono: 'bg-bg font-mono',
       },
       size: {

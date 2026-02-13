@@ -71,7 +71,7 @@
 
   --color-text:           oklch(0.88 0.01 var(--surface-hue));
   --color-text-secondary: oklch(0.65 0.02 var(--surface-hue));
-  --color-text-dim:       oklch(0.45 0.02 var(--surface-hue));
+  --color-text-dim:       oklch(0.55 0.02 var(--surface-hue));
 
   /* Accent — derived from OKLCH axioms */
   --color-accent:       oklch(var(--accent-lightness) var(--accent-chroma) var(--accent-hue));
@@ -80,9 +80,9 @@
 
   /* Semantic */
   --color-green: #5aad72;
-  --color-red: #c4584a;
+  --color-red: #d4685a;
   --color-yellow: #e0b840;
-  --color-blue: #5b8dc6;
+  --color-blue: #6d9fd8;
 
   /* ═══════════════════════════════════════════════════════
      FONTS
@@ -253,20 +253,20 @@
 /* ── Pip color classes (data-driven, keep as unlayered CSS) */
 
 .pip-cleric { background: #f0c040; }
-.pip-warrior { background: #c79c6e; }
+.pip-warrior { background: #d4ad80; }
 .pip-wizard { background: #69ccf0; }
 .pip-magician { background: #40b8b0; }
 .pip-enchanter { background: #b490d0; }
-.pip-necromancer { background: #a330c9; }
-.pip-shadow-knight { background: #7b2ab0; }
+.pip-necromancer { background: #bf50e0; }
+.pip-shadow-knight { background: #9545d0; }
 .pip-rogue { background: #fff569; }
 .pip-ranger { background: #abd473; }
 .pip-druid { background: #ff7d0a; }
 .pip-monk { background: #00ff96; }
-.pip-bard { background: #e6005c; }
+.pip-bard { background: #f03070; }
 .pip-paladin { background: #f58cba; }
-.pip-shaman { background: #0070de; }
-.pip-warlock { background: #9482c9; }
+.pip-shaman { background: #2890f0; }
+.pip-warlock { background: #a898d8; }
 
 /* ── Treemap (custom CSS: color-mix, absolute positioning) */
 

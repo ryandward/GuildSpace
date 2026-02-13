@@ -1,20 +1,20 @@
 /** EverQuest class → hex color mapping. Single source of truth. */
 export const CLASS_COLORS: Record<string, string> = {
   'Cleric': '#f0c040',
-  'Warrior': '#c79c6e',
+  'Warrior': '#d4ad80',
   'Wizard': '#69ccf0',
   'Magician': '#40b8b0',
   'Enchanter': '#b490d0',
-  'Necromancer': '#a330c9',
-  'Shadow Knight': '#7b2ab0',
+  'Necromancer': '#bf50e0',
+  'Shadow Knight': '#9545d0',
   'Rogue': '#fff569',
   'Ranger': '#abd473',
   'Druid': '#ff7d0a',
   'Monk': '#00ff96',
-  'Bard': '#e6005c',
+  'Bard': '#f03070',
   'Paladin': '#f58cba',
-  'Shaman': '#0070de',
-  'Warlock': '#9482c9',
+  'Shaman': '#2890f0',
+  'Warlock': '#a898d8',
 };
 
 export function getClassColor(cls: string): string {
