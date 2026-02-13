@@ -55,8 +55,9 @@ function layoutStrip(
     return [{ label: items[0].label, value: items[0].value, x, y, w, h }];
   }
 
-  const isWide = w >= h;
-  const shortSide = isWide ? h : w;
+  // Lay strips horizontally: cells flow left-to-right, rows stack top-to-bottom.
+  // This prevents tall skinny columns in wide containers.
+  const shortSide = w;
   const strip = [items[0]];
   let stripTotal = items[0].area;
 
@@ -75,22 +76,14 @@ function layoutStrip(
 
   for (const item of strip) {
     const span = item.area / thickness;
-    if (isWide) {
-      results.push({ label: item.label, value: item.value, x, y: y + pos, w: thickness, h: span });
-    } else {
-      results.push({ label: item.label, value: item.value, x: x + pos, y, w: span, h: thickness });
-    }
+    results.push({ label: item.label, value: item.value, x: x + pos, y, w: span, h: thickness });
     pos += span;
   }
 
   const rest = items.slice(strip.length);
   if (rest.length === 0) return results;
 
-  if (isWide) {
-    return [...results, ...layoutStrip(rest, x + thickness, y, w - thickness, h)];
-  } else {
-    return [...results, ...layoutStrip(rest, x, y + thickness, w, h - thickness)];
-  }
+  return [...results, ...layoutStrip(rest, x, y + thickness, w, h - thickness)];
 }
 
 function computeTreemap(
