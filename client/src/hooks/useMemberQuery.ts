@@ -13,6 +13,8 @@ export interface MemberDetail {
   discordId: string;
   displayName: string;
   bio: string | null;
+  isOfficer: boolean;
+  isAdmin: boolean;
   characters: {
     name: string;
     class: string;

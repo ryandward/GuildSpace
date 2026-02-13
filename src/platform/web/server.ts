@@ -308,7 +308,8 @@ export function createWebServer(opts: WebServerOptions) {
       displayName: user.displayName,
       discordUsername: user.discordUsername,
       needsSetup: user.needsSetup || false,
-      isOfficer: gsUser?.isOfficer || false,
+      isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || false,
+      isAdmin: gsUser?.isAdmin || false,
     });
   });
 
@@ -551,6 +552,8 @@ export function createWebServer(opts: WebServerOptions) {
         discordId,
         displayName,
         bio: gsUser?.bio || null,
+        isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || false,
+        isAdmin: gsUser?.isAdmin || false,
         characters,
         earnedDkp: dkpRow ? Number(dkpRow.EarnedDkp) : 0,
         spentDkp: dkpRow ? Number(dkpRow.SpentDkp) : 0,
@@ -560,6 +563,38 @@ export function createWebServer(opts: WebServerOptions) {
       console.error('Failed to fetch member detail:', err);
       res.status(500).json({ error: 'Failed to fetch member details' });
     }
+  });
+
+  // ─── Role Management (admin only) ─────────────────────────────────
+
+  app.patch('/api/roster/:discordId/role', async (req, res) => {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const { discordId } = req.params;
+    const { isOfficer } = req.body;
+
+    if (typeof isOfficer !== 'boolean') {
+      return res.status(400).json({ error: 'isOfficer must be a boolean' });
+    }
+
+    // Cannot modify own role
+    if (discordId === admin.user.id) {
+      return res.status(403).json({ error: 'Cannot modify your own role' });
+    }
+
+    const target = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } });
+    if (!target) return res.status(404).json({ error: 'User not found' });
+
+    // Cannot modify other admins
+    if (target.isAdmin) {
+      return res.status(403).json({ error: 'Cannot modify another admin' });
+    }
+
+    target.isOfficer = isOfficer;
+    await AppDataSource.manager.save(target);
+
+    res.json({ ok: true, discordId, isOfficer });
   });
 
   // ─── Profile ──────────────────────────────────────────────────────
@@ -593,7 +628,15 @@ export function createWebServer(opts: WebServerOptions) {
     const user = await getUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
     const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
-    if (!gsUser?.isOfficer) { res.status(403).json({ error: 'Officer access required' }); return null; }
+    if (!gsUser?.isOfficer && !gsUser?.isAdmin) { res.status(403).json({ error: 'Officer access required' }); return null; }
+    return { user, gsUser };
+  }
+
+  async function requireAdmin(req: express.Request, res: express.Response): Promise<{ user: InteractionUser; gsUser: GuildSpaceUser } | null> {
+    const user = await getUser(req);
+    if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
+    const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+    if (!gsUser?.isAdmin) { res.status(403).json({ error: 'Admin access required' }); return null; }
     return { user, gsUser };
   }
 

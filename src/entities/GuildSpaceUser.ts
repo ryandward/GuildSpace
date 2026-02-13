@@ -25,6 +25,10 @@ export class GuildSpaceUser {
   @Column('boolean', { name: 'is_officer', default: false })
   isOfficer: boolean;
 
+  /** Whether this user is an admin (can manage officer roles) */
+  @Column('boolean', { name: 'is_admin', default: false })
+  isAdmin: boolean;
+
   /** Personal API key for companion app auth */
   @Column('text', { name: 'api_key', nullable: true })
   apiKey: string | null;

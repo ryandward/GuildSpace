@@ -3,9 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useMemberQuery } from '../hooks/useMemberQuery';
 import { useBioMutation } from '../hooks/useBioMutation';
+import { useRoleMutation } from '../hooks/useRoleMutation';
 import AppHeader from '../components/AppHeader';
 import CharacterCard from '../components/roster/CharacterCard';
-import { Text, Heading, Card, Button, Textarea } from '../ui';
+import { Text, Heading, Card, Button, Textarea, Badge } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 
@@ -18,12 +19,14 @@ export default function MemberDetailPage() {
   const { user: authUser } = useAuth();
   const { data, isLoading, error } = useMemberQuery(discordId);
   const bioMutation = useBioMutation(discordId);
+  const roleMutation = useRoleMutation(discordId);
 
   // Bio editing
   const [editingBio, setEditingBio] = useState(false);
   const [bioText, setBioText] = useState('');
 
   const isOwnProfile = authUser?.id === discordId;
+  const canManageRoles = authUser?.isAdmin && !isOwnProfile && !data?.isAdmin;
 
   const startEditBio = useCallback(() => {
     setBioText(data?.bio || '');
@@ -57,10 +60,37 @@ export default function MemberDetailPage() {
           {!isLoading && data && (
             <>
               {/* Header */}
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-baseline gap-2 flex-wrap">
                 <Heading level="heading">{data.displayName}</Heading>
+                {data.isAdmin && <Badge variant="status" color="accent">Admin</Badge>}
+                {data.isOfficer && !data.isAdmin && <Badge variant="status" color="yellow">Officer</Badge>}
                 <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{netDkp} DKP</span>
               </div>
+
+              {/* Officer role toggle (admin only) */}
+              {canManageRoles && (
+                <div>
+                  {data.isOfficer ? (
+                    <Button
+                      size="sm"
+                      intent="danger"
+                      disabled={roleMutation.isPending}
+                      onClick={() => roleMutation.mutate(false)}
+                    >
+                      {roleMutation.isPending ? 'Updating...' : 'Remove Officer'}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      intent="primary"
+                      disabled={roleMutation.isPending}
+                      onClick={() => roleMutation.mutate(true)}
+                    >
+                      {roleMutation.isPending ? 'Updating...' : 'Make Officer'}
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Bio */}
               {editingBio ? (
