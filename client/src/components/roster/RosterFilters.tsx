@@ -106,7 +106,7 @@ export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFi
   );
 
   return (
-    <div className="relative w-full aspect-treemap overflow-hidden rounded-md border border-border max-md:aspect-treemap-mobile" role="img" aria-label="Class composition">
+    <div className="relative w-full aspect-treemap overflow-hidden border border-border max-md:aspect-treemap-mobile" role="img" aria-label="Class composition">
       {nodes.map((node) => {
         const color = getClassColor(node.label);
         const lb = levelBreakdown[node.label];
