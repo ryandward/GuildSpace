@@ -20,6 +20,12 @@ export default function AppHeader() {
               Roster
             </NavLink>
             <NavLink
+              to="/raids"
+              className={({ isActive }) => navLink({ active: isActive })}
+            >
+              Raids
+            </NavLink>
+            <NavLink
               to="/terminal"
               className={({ isActive }) => navLink({ active: isActive })}
             >

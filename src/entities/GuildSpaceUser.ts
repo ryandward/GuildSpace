@@ -21,6 +21,14 @@ export class GuildSpaceUser {
   @Column('text', { name: 'bio', nullable: true })
   bio: string | null;
 
+  /** Whether this user can perform officer actions */
+  @Column('boolean', { name: 'is_officer', default: false })
+  isOfficer: boolean;
+
+  /** Personal API key for companion app auth */
+  @Column('text', { name: 'api_key', nullable: true })
+  apiKey: string | null;
+
   /** When they joined GuildSpace */
   @Column('timestamp', { name: 'created_at', default: () => 'NOW()' })
   createdAt: Date;

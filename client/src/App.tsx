@@ -5,6 +5,8 @@ import SetupPage from './pages/SetupPage';
 import RosterPage from './pages/RosterPage';
 import MemberDetailPage from './pages/MemberDetailPage';
 import AppShell from './layouts/AppShell';
+import RaidsPage from './pages/RaidsPage';
+import RaidEventPage from './pages/RaidEventPage';
 
 export default function App() {
   const { loading, token, user, needsSetup } = useAuth();
@@ -34,6 +36,8 @@ export default function App() {
       <Route path="/" element={<Navigate to="/roster" replace />} />
       <Route path="/roster" element={<RosterPage />} />
       <Route path="/roster/:discordId" element={<MemberDetailPage />} />
+      <Route path="/raids" element={<RaidsPage />} />
+      <Route path="/raids/:eventId" element={<RaidEventPage />} />
       <Route path="/terminal" element={<AppShell />} />
       <Route path="*" element={<Navigate to="/roster" replace />} />
     </Routes>

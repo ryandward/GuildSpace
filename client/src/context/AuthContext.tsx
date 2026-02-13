@@ -6,6 +6,7 @@ export interface User {
   displayName: string;
   discordUsername?: string;
   needsSetup?: boolean;
+  isOfficer?: boolean;
 }
 
 interface AuthState {

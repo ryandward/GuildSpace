@@ -24,6 +24,12 @@ import { ChatMessage } from '../../entities/ChatMessage.js';
 import { ActiveToons } from '../../entities/ActiveToons.js';
 import { Dkp } from '../../entities/Dkp.js';
 import { Attendance } from '../../entities/Attendance.js';
+import { Raids } from '../../entities/Raids.js';
+import { RaidEvent } from '../../entities/RaidEvent.js';
+import { RaidCall } from '../../entities/RaidCall.js';
+import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
+import { Census } from '../../entities/Census.js';
+import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
 import type {
   PlatformCommand,
   CommandInteraction,
@@ -293,12 +299,16 @@ export function createWebServer(opts: WebServerOptions) {
   app.get('/api/auth/me', async (req, res) => {
     const user = await getUser(req);
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, {
+      where: { discordId: user.id },
+    });
     res.json({
       id: user.id,
       username: user.username,
       displayName: user.displayName,
       discordUsername: user.discordUsername,
       needsSetup: user.needsSetup || false,
+      isOfficer: gsUser?.isOfficer || false,
     });
   });
 
@@ -575,6 +585,523 @@ export function createWebServer(opts: WebServerOptions) {
     await AppDataSource.manager.save(gsUser);
 
     res.json({ ok: true, bio: gsUser.bio });
+  });
+
+  // ─── Officer Helpers ─────────────────────────────────────────────────
+
+  async function requireOfficer(req: express.Request, res: express.Response): Promise<{ user: InteractionUser; gsUser: GuildSpaceUser } | null> {
+    const user = await getUser(req);
+    if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
+    const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+    if (!gsUser?.isOfficer) { res.status(403).json({ error: 'Officer access required' }); return null; }
+    return { user, gsUser };
+  }
+
+  async function getApiKeyUser(req: express.Request): Promise<GuildSpaceUser | null> {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return null;
+    const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { apiKey: token } });
+    return gsUser?.isOfficer ? gsUser : null;
+  }
+
+  // ─── Raid Templates ──────────────────────────────────────────────────
+
+  app.get('/api/raids/templates', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+      const raids = await AppDataSource.manager.find(Raids);
+      res.json(raids.map(r => ({ name: r.Raid, type: r.Type, modifier: Number(r.Modifier) })));
+    } catch (err) {
+      console.error('Failed to fetch raid templates:', err);
+      res.status(500).json({ error: 'Failed to fetch raid templates' });
+    }
+  });
+
+  // ─── Raid Events ──────────────────────────────────────────────────────
+
+  app.get('/api/raids/events', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+      const status = req.query.status as string | undefined;
+      const where = status ? { status } : {};
+      const events = await AppDataSource.manager.find(RaidEvent, {
+        where,
+        order: { createdAt: 'DESC' },
+      });
+
+      // Enrich with call/member counts
+      const result = await Promise.all(events.map(async (event) => {
+        const calls = await AppDataSource.manager.find(RaidCall, { where: { eventId: event.id } });
+        const totalDkp = calls.reduce((sum, c) => sum + c.modifier, 0);
+
+        // Count unique members across all calls
+        const memberIds = new Set<string>();
+        if (calls.length > 0) {
+          const callIds = calls.map(c => c.id);
+          const attendanceLinks = await AppDataSource.manager
+            .createQueryBuilder()
+            .select('rca.attendance_id', 'attendanceId')
+            .from(RaidCallAttendance, 'rca')
+            .where('rca.call_id IN (:...callIds)', { callIds })
+            .getRawMany() as { attendanceId: string }[];
+
+          if (attendanceLinks.length > 0) {
+            const attIds = attendanceLinks.map(a => a.attendanceId);
+            const attendanceRows = await AppDataSource.manager
+              .createQueryBuilder()
+              .select('a.discord_id', 'discordId')
+              .from(Attendance, 'a')
+              .where('a.id IN (:...attIds)', { attIds })
+              .getRawMany() as { discordId: string }[];
+            for (const row of attendanceRows) {
+              if (row.discordId) memberIds.add(row.discordId);
+            }
+          }
+        }
+
+        return {
+          id: event.id,
+          name: event.name,
+          status: event.status,
+          createdBy: event.createdBy,
+          createdAt: event.createdAt,
+          closedAt: event.closedAt,
+          callCount: calls.length,
+          totalDkp,
+          memberCount: memberIds.size,
+        };
+      }));
+
+      res.json(result);
+    } catch (err) {
+      console.error('Failed to fetch raid events:', err);
+      res.status(500).json({ error: 'Failed to fetch raid events' });
+    }
+  });
+
+  app.post('/api/raids/events', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Event name is required' });
+      }
+      const event = new RaidEvent();
+      event.name = name.trim();
+      event.createdBy = officer.user.id;
+      const saved = await AppDataSource.manager.save(event);
+      res.json(saved);
+    } catch (err) {
+      console.error('Failed to create raid event:', err);
+      res.status(500).json({ error: 'Failed to create raid event' });
+    }
+  });
+
+  app.get('/api/raids/events/:id', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (!event) return res.status(404).json({ error: 'Event not found' });
+
+      const calls = await AppDataSource.manager.find(RaidCall, {
+        where: { eventId },
+        order: { createdAt: 'ASC' },
+      });
+
+      // Build attendance matrix data
+      const gsUsers = await AppDataSource.manager.find(GuildSpaceUser);
+      const gsUserMap = new Map(gsUsers.map(u => [u.discordId, u]));
+      const dkpRows = await AppDataSource.manager.find(Dkp);
+      const dkpNameMap = new Map(dkpRows.map(d => [d.DiscordId, d.DiscordName]));
+      const activeToons = await AppDataSource.manager.find(ActiveToons);
+      const toonsByDiscord = new Map<string, typeof activeToons>();
+      for (const t of activeToons) {
+        let arr = toonsByDiscord.get(t.DiscordId);
+        if (!arr) { arr = []; toonsByDiscord.set(t.DiscordId, arr); }
+        arr.push(t);
+      }
+
+      // For each call, get its attendees
+      const callDetails = await Promise.all(calls.map(async (call) => {
+        const links = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId: call.id } });
+        const attendees: { characterName: string; discordId: string }[] = [];
+        const rejected: { name: string; reason: string }[] = [];
+
+        if (links.length > 0) {
+          const attIds = links.map(l => l.attendanceId);
+          const rows = await AppDataSource.manager
+            .createQueryBuilder()
+            .select(['a.name as name', 'a.discord_id as "discordId"'])
+            .from(Attendance, 'a')
+            .where('a.id IN (:...attIds)', { attIds })
+            .getRawMany() as { name: string; discordId: string }[];
+          for (const row of rows) {
+            attendees.push({ characterName: row.name, discordId: row.discordId });
+          }
+        }
+
+        return {
+          id: call.id,
+          raidName: call.raidName,
+          modifier: call.modifier,
+          recordedCount: attendees.length,
+          rejectedCount: 0,
+          createdBy: call.createdBy,
+          createdAt: call.createdAt,
+          attendees,
+        };
+      }));
+
+      // Build members matrix
+      const memberMap = new Map<string, { callsPresent: number[]; totalDkp: number }>();
+      for (const call of callDetails) {
+        for (const att of call.attendees) {
+          let member = memberMap.get(att.discordId);
+          if (!member) {
+            member = { callsPresent: [], totalDkp: 0 };
+            memberMap.set(att.discordId, member);
+          }
+          member.callsPresent.push(call.id);
+          member.totalDkp += call.modifier;
+        }
+      }
+
+      const members = Array.from(memberMap.entries()).map(([discordId, data]) => {
+        const gsUser = gsUserMap.get(discordId);
+        const toons = toonsByDiscord.get(discordId);
+        const mainToon = toons?.find(t => t.Status === 'Main');
+        return {
+          discordId,
+          displayName: gsUser?.displayName || dkpNameMap.get(discordId) || discordId,
+          characterClass: mainToon?.CharacterClass || toons?.[0]?.CharacterClass || null,
+          callsPresent: data.callsPresent,
+          totalDkp: data.totalDkp,
+        };
+      }).sort((a, b) => b.totalDkp - a.totalDkp);
+
+      res.json({
+        event: {
+          id: event.id,
+          name: event.name,
+          status: event.status,
+          createdBy: event.createdBy,
+          createdAt: event.createdAt,
+          closedAt: event.closedAt,
+        },
+        calls: callDetails,
+        members,
+      });
+    } catch (err) {
+      console.error('Failed to fetch raid event detail:', err);
+      res.status(500).json({ error: 'Failed to fetch event details' });
+    }
+  });
+
+  app.patch('/api/raids/events/:id', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (!event) return res.status(404).json({ error: 'Event not found' });
+
+      if (req.body.name !== undefined) {
+        event.name = String(req.body.name).trim();
+      }
+      if (req.body.status === 'closed' && event.status === 'active') {
+        event.status = 'closed';
+        event.closedAt = new Date();
+      }
+      await AppDataSource.manager.save(event);
+      res.json(event);
+    } catch (err) {
+      console.error('Failed to update raid event:', err);
+      res.status(500).json({ error: 'Failed to update event' });
+    }
+  });
+
+  // ─── Raid Calls ──────────────────────────────────────────────────────
+
+  app.post('/api/raids/events/:id/calls', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (!event) return res.status(404).json({ error: 'Event not found' });
+      if (event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
+
+      const { raidName, modifier, whoLog } = req.body;
+      if (!raidName || modifier === undefined || !whoLog) {
+        return res.status(400).json({ error: 'raidName, modifier, and whoLog are required' });
+      }
+
+      const mod = Number(modifier);
+      if (isNaN(mod)) return res.status(400).json({ error: 'modifier must be a number' });
+
+      // Process the /who log
+      const result = await processWhoLog(whoLog, raidName, mod);
+
+      // Create the call record
+      const call = new RaidCall();
+      call.eventId = eventId;
+      call.raidName = raidName;
+      call.modifier = mod;
+      call.whoLog = whoLog;
+      call.createdBy = officer.user.id;
+      const savedCall = await AppDataSource.manager.save(call);
+
+      // Link attendance records to this call
+      for (const rec of result.recorded) {
+        const link = new RaidCallAttendance();
+        link.callId = savedCall.id;
+        link.attendanceId = rec.attendanceId;
+        await AppDataSource.manager.save(link);
+      }
+
+      res.json({
+        call: {
+          id: savedCall.id,
+          raidName: savedCall.raidName,
+          modifier: savedCall.modifier,
+          createdAt: savedCall.createdAt,
+        },
+        recorded: result.recorded.length,
+        rejected: result.rejected.length,
+        rejectedPlayers: result.rejected,
+      });
+    } catch (err) {
+      console.error('Failed to add raid call:', err);
+      res.status(500).json({ error: 'Failed to add call' });
+    }
+  });
+
+  app.delete('/api/raids/events/:id/calls/:callId', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const callId = parseInt(req.params.callId, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+
+      // Get linked attendance records
+      const links = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId } });
+
+      if (links.length > 0) {
+        const attIds = links.map(l => l.attendanceId);
+        // Get discord IDs to reverse DKP
+        const attendanceRows = await AppDataSource.manager
+          .createQueryBuilder()
+          .select(['a.discord_id as "discordId"'])
+          .from(Attendance, 'a')
+          .where('a.id IN (:...attIds)', { attIds })
+          .getRawMany() as { discordId: string }[];
+
+        const uniqueDiscordIds = [...new Set(attendanceRows.map(r => r.discordId))];
+
+        // Reverse DKP for each affected member
+        for (const discordId of uniqueDiscordIds) {
+          await AppDataSource.manager
+            .createQueryBuilder()
+            .update(Dkp)
+            .set({ EarnedDkp: () => `earned_dkp - ${call.modifier}` })
+            .where('discord_id = :discordId', { discordId })
+            .execute();
+        }
+
+        // Delete attendance records
+        await AppDataSource.manager
+          .createQueryBuilder()
+          .delete()
+          .from(Attendance)
+          .where('id IN (:...attIds)', { attIds })
+          .execute();
+      }
+
+      // Delete the call (cascade deletes raid_call_attendance links)
+      await AppDataSource.manager.remove(call);
+
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to delete raid call:', err);
+      res.status(500).json({ error: 'Failed to delete call' });
+    }
+  });
+
+  // Manually add a character to a call
+  app.post('/api/raids/events/:id/calls/:callId/add', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const callId = parseInt(req.params.callId, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+
+      const { characterName } = req.body;
+      if (!characterName) return res.status(400).json({ error: 'characterName is required' });
+
+      const censusEntry = await AppDataSource.manager.findOne(Census, { where: { Name: characterName } });
+      if (!censusEntry?.DiscordId) return res.status(404).json({ error: 'Character not found in census' });
+
+      // Check if already in this call
+      const existingLinks = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId } });
+      if (existingLinks.length > 0) {
+        const attIds = existingLinks.map(l => l.attendanceId);
+        const existing = await AppDataSource.manager
+          .createQueryBuilder()
+          .select('a.discord_id', 'discordId')
+          .from(Attendance, 'a')
+          .where('a.id IN (:...attIds)', { attIds })
+          .andWhere('a.discord_id = :discordId', { discordId: censusEntry.DiscordId })
+          .getRawOne();
+        if (existing) return res.status(409).json({ error: 'Member already in this call' });
+      }
+
+      // Create attendance record
+      const attendance = new Attendance();
+      attendance.Date = new Date();
+      attendance.Raid = call.raidName;
+      attendance.Name = characterName;
+      attendance.DiscordId = censusEntry.DiscordId;
+      attendance.Modifier = call.modifier.toString();
+      const saved = await AppDataSource.manager.save(attendance);
+
+      // Update DKP
+      await AppDataSource.manager
+        .createQueryBuilder()
+        .update(Dkp)
+        .set({ EarnedDkp: () => `earned_dkp + ${call.modifier}` })
+        .where('discord_id = :discordId', { discordId: censusEntry.DiscordId })
+        .execute();
+
+      // Link to call
+      const link = new RaidCallAttendance();
+      link.callId = callId;
+      link.attendanceId = saved.Id;
+      await AppDataSource.manager.save(link);
+
+      res.json({ ok: true, characterName, discordId: censusEntry.DiscordId });
+    } catch (err) {
+      console.error('Failed to add character to call:', err);
+      res.status(500).json({ error: 'Failed to add character' });
+    }
+  });
+
+  // Remove a character from a call
+  app.delete('/api/raids/events/:id/calls/:callId/remove', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const callId = parseInt(req.params.callId, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+
+      const { characterName } = req.body;
+      if (!characterName) return res.status(400).json({ error: 'characterName is required' });
+
+      // Find the attendance record linked to this call for this character
+      const links = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId } });
+      if (links.length === 0) return res.status(404).json({ error: 'No attendance records for this call' });
+
+      const attIds = links.map(l => l.attendanceId);
+      const row = await AppDataSource.manager
+        .createQueryBuilder()
+        .select(['a.id as id', 'a.discord_id as "discordId"'])
+        .from(Attendance, 'a')
+        .where('a.id IN (:...attIds)', { attIds })
+        .andWhere('a.name = :name', { name: characterName })
+        .getRawOne() as { id: string; discordId: string } | undefined;
+
+      if (!row) return res.status(404).json({ error: 'Character not found in this call' });
+
+      // Reverse DKP
+      await AppDataSource.manager
+        .createQueryBuilder()
+        .update(Dkp)
+        .set({ EarnedDkp: () => `earned_dkp - ${call.modifier}` })
+        .where('discord_id = :discordId', { discordId: row.discordId })
+        .execute();
+
+      // Delete the attendance record (cascade removes the link)
+      await AppDataSource.manager
+        .createQueryBuilder()
+        .delete()
+        .from(Attendance)
+        .where('id = :id', { id: row.id })
+        .execute();
+
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to remove character from call:', err);
+      res.status(500).json({ error: 'Failed to remove character' });
+    }
+  });
+
+  // ─── Push Endpoint (companion app) ───────────────────────────────────
+
+  app.post('/api/raids/push', async (req, res) => {
+    const apiUser = await getApiKeyUser(req);
+    if (!apiUser) return res.status(401).json({ error: 'Invalid API key' });
+
+    try {
+      const activeEvent = await AppDataSource.manager.findOne(RaidEvent, { where: { status: 'active' } });
+      if (!activeEvent) return res.status(409).json({ error: 'No active raid event' });
+
+      const { raidName, modifier, whoLog } = req.body;
+      if (!raidName || modifier === undefined || !whoLog) {
+        return res.status(400).json({ error: 'raidName, modifier, and whoLog are required' });
+      }
+
+      const mod = Number(modifier);
+      if (isNaN(mod)) return res.status(400).json({ error: 'modifier must be a number' });
+
+      const result = await processWhoLog(whoLog, raidName, mod);
+
+      const call = new RaidCall();
+      call.eventId = activeEvent.id;
+      call.raidName = raidName;
+      call.modifier = mod;
+      call.whoLog = whoLog;
+      call.createdBy = apiUser.discordId;
+      const savedCall = await AppDataSource.manager.save(call);
+
+      for (const rec of result.recorded) {
+        const link = new RaidCallAttendance();
+        link.callId = savedCall.id;
+        link.attendanceId = rec.attendanceId;
+        await AppDataSource.manager.save(link);
+      }
+
+      res.json({
+        eventId: activeEvent.id,
+        callId: savedCall.id,
+        recorded: result.recorded.length,
+        rejected: result.rejected.length,
+      });
+    } catch (err) {
+      console.error('Failed to process push:', err);
+      res.status(500).json({ error: 'Failed to process push' });
+    }
+  });
+
+  // ─── API Key Generation ──────────────────────────────────────────────
+
+  app.post('/api/profile/api-key', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      officer.gsUser.apiKey = crypto.randomBytes(32).toString('hex');
+      await AppDataSource.manager.save(officer.gsUser);
+      res.json({ apiKey: officer.gsUser.apiKey });
+    } catch (err) {
+      console.error('Failed to generate API key:', err);
+      res.status(500).json({ error: 'Failed to generate API key' });
+    }
   });
 
   // ─── Command Execution (via WebSocket) ─────────────────────────────
