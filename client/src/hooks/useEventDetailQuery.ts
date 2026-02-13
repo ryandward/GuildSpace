@@ -23,6 +23,7 @@ export interface EventMember {
   displayName: string;
   callsPresent: number[];
   totalDkp: number;
+  hasGuildSpace: boolean;
 }
 
 export interface EventDetail {

@@ -33,6 +33,14 @@ export class GuildSpaceUser {
   @Column('boolean', { name: 'is_owner', default: false })
   isOwner: boolean;
 
+  /** When the officer role was granted */
+  @Column('timestamp', { name: 'officer_since', nullable: true })
+  officerSince: Date | null;
+
+  /** When the admin role was granted */
+  @Column('timestamp', { name: 'admin_since', nullable: true })
+  adminSince: Date | null;
+
   /** Personal API key for companion app auth */
   @Column('text', { name: 'api_key', nullable: true })
   apiKey: string | null;

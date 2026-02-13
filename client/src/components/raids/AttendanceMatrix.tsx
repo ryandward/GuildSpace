@@ -34,7 +34,10 @@ export default function AttendanceMatrix({ calls, members }: Props) {
             <tr key={member.discordId} className="border-b border-border-subtle hover:bg-surface-2 transition-colors duration-fast">
               <td className="py-1 px-2 whitespace-nowrap">
                 <Link to={`/roster/${member.discordId}`} className="no-underline">
-                  <Text variant="body" className="text-caption font-medium hover:text-accent transition-colors duration-fast">{member.displayName}</Text>
+                  <Text variant="body" className="text-caption font-medium hover:text-accent transition-colors duration-fast">
+                    {member.displayName}
+                    {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent ml-1 align-middle" title="GuildSpace member" />}
+                  </Text>
                 </Link>
               </td>
               {calls.map(call => {

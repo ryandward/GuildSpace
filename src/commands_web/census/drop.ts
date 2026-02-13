@@ -61,7 +61,7 @@ export const execute = async (interaction: ChatInputCommandInteraction) => {
     const name = _.capitalize(options.get('name')?.value as string);
     const discordId = interaction.user.id;
 
-    const toon = AppDataSource.manager.findOne(ActiveToons, {
+    const toon = await AppDataSource.manager.findOne(ActiveToons, {
       where: { DiscordId: discordId, Name: name },
     });
 

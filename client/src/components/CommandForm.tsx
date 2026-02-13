@@ -45,19 +45,8 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
 
   const fieldRefs = useRef<Record<string, HTMLInputElement | HTMLSelectElement | null>>({});
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const acGenerationRef = useRef(0); // tracks latest autocomplete request
   const formRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const firstOpt = command.options[0];
-    if (firstOpt) {
-      fieldRefs.current[firstOpt.name]?.focus();
-      if (firstOpt.autocomplete) {
-        triggerServerAutocomplete(firstOpt, '');
-      } else if (isCreateCommand && firstOpt.name === 'name') {
-        showClientAutocomplete('name', '');
-      }
-    }
-  }, [command, myToons]);
 
   const hideAutocomplete = useCallback(() => {
     setAcChoices([]);
@@ -112,8 +101,26 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     }
   }
 
+  // Focus first field on mount; .focus() triggers onFocus → handleFieldFocus
+  // which fires autocomplete, so we don't need to call it explicitly here.
+  // For create commands, we show client-side toon suggestions when myToons loads.
+  useEffect(() => {
+    const firstOpt = command.options[0];
+    if (!firstOpt) return;
+    fieldRefs.current[firstOpt.name]?.focus();
+    // Client autocomplete for create commands (myToons dependency)
+    if (isCreateCommand && firstOpt.name === 'name' && !firstOpt.autocomplete) {
+      showClientAutocomplete('name', '');
+    }
+    return () => {
+      clearTimeout(fetchTimerRef.current);
+      acGenerationRef.current++;
+    };
+  }, [command, myToons]);
+
   function triggerServerAutocomplete(opt: CommandOption, val: string) {
     clearTimeout(fetchTimerRef.current);
+    const gen = ++acGenerationRef.current;
     setAcField(opt.name);
     fetchTimerRef.current = setTimeout(async () => {
       try {
@@ -130,6 +137,8 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
           staleTime: 10 * 1000,
           gcTime: 30 * 1000,
         });
+        // Discard if a newer request has been made
+        if (gen !== acGenerationRef.current) return;
         if (choices.length > 0) {
           setAcChoices(choices);
           setAcSelected(0);
@@ -138,9 +147,9 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
           hideAutocomplete();
         }
       } catch {
-        hideAutocomplete();
+        if (gen === acGenerationRef.current) hideAutocomplete();
       }
-    }, val ? 100 : 0);
+    }, val ? 200 : 0);
   }
 
   function handleAutocompleteSelect(choice: AutocompleteChoice, optName: string) {

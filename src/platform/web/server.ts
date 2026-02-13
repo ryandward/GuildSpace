@@ -311,6 +311,7 @@ export function createWebServer(opts: WebServerOptions) {
       isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || gsUser?.isOwner || false,
       isAdmin: gsUser?.isAdmin || gsUser?.isOwner || false,
       isOwner: gsUser?.isOwner || false,
+      joinedAt: gsUser?.createdAt?.toISOString() || null,
     });
   });
 
@@ -480,6 +481,7 @@ export function createWebServer(opts: WebServerOptions) {
           mainLevel: mainChar ? Number(mainChar.Level) : (characters[0]?.level || null),
           earnedDkp: dkp ? Number(dkp.EarnedDkp) : 0,
           spentDkp: dkp ? Number(dkp.SpentDkp) : 0,
+          hasGuildSpace: !!gsUser,
         };
       });
 
@@ -556,6 +558,9 @@ export function createWebServer(opts: WebServerOptions) {
         isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || gsUser?.isOwner || false,
         isAdmin: gsUser?.isAdmin || gsUser?.isOwner || false,
         isOwner: gsUser?.isOwner || false,
+        officerSince: gsUser?.officerSince?.toISOString() || null,
+        adminSince: gsUser?.adminSince?.toISOString() || null,
+        joinedAt: gsUser?.createdAt?.toISOString() || null,
         characters,
         earnedDkp: dkpRow ? Number(dkpRow.EarnedDkp) : 0,
         spentDkp: dkpRow ? Number(dkpRow.SpentDkp) : 0,
@@ -609,11 +614,18 @@ export function createWebServer(opts: WebServerOptions) {
       target.discordUsername = dkpRow.DiscordName || discordId;
     }
 
-    if (typeof isOfficer === 'boolean') target.isOfficer = isOfficer;
+    if (typeof isOfficer === 'boolean') {
+      target.isOfficer = isOfficer;
+      target.officerSince = isOfficer ? (target.officerSince ?? new Date()) : null;
+    }
     if (typeof isAdmin === 'boolean') {
       target.isAdmin = isAdmin;
+      target.adminSince = isAdmin ? (target.adminSince ?? new Date()) : null;
       // Admin implies officer
-      if (isAdmin) target.isOfficer = true;
+      if (isAdmin) {
+        target.isOfficer = true;
+        target.officerSince = target.officerSince ?? new Date();
+      }
     }
 
     await AppDataSource.manager.save(target);
@@ -846,6 +858,7 @@ export function createWebServer(opts: WebServerOptions) {
           displayName: gsUser?.displayName || dkpNameMap.get(discordId) || discordId,
           callsPresent: data.callsPresent,
           totalDkp: data.totalDkp,
+          hasGuildSpace: !!gsUser,
         };
       }).sort((a, b) => b.totalDkp - a.totalDkp);
 

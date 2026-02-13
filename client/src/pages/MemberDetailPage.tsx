@@ -14,6 +14,11 @@ function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
 }
 
+function formatDate(iso: string | null | undefined): string | undefined {
+  if (!iso) return undefined;
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export default function MemberDetailPage() {
   const { discordId } = useParams<{ discordId: string }>();
   const { user: authUser } = useAuth();
@@ -64,9 +69,14 @@ export default function MemberDetailPage() {
               <div className="flex items-baseline gap-2 flex-wrap">
                 <Heading level="heading">{data.displayName}</Heading>
                 {data.isOwner && <Badge variant="status" className="bg-accent text-bg font-bold">Owner</Badge>}
-                {data.isAdmin && !data.isOwner && <Badge variant="status" className="bg-transparent border border-accent text-accent">Admin</Badge>}
-                {data.isOfficer && !data.isAdmin && !data.isOwner && <Badge variant="status" color="yellow">Officer</Badge>}
+                {data.isAdmin && !data.isOwner && (
+                  <Badge variant="status" className="bg-transparent border border-accent text-accent" title={data.adminSince ? `Since ${formatDate(data.adminSince)}` : undefined}>Admin</Badge>
+                )}
+                {data.isOfficer && !data.isAdmin && !data.isOwner && (
+                  <Badge variant="status" color="yellow" title={data.officerSince ? `Since ${formatDate(data.officerSince)}` : undefined}>Officer</Badge>
+                )}
                 <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{netDkp} DKP</span>
+                {data.joinedAt && <Text variant="caption">Joined {formatDate(data.joinedAt)}</Text>}
               </div>
 
               {/* Role management */}

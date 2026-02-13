@@ -28,6 +28,7 @@ export interface RosterMember {
   mainLevel: number | null;
   earnedDkp: number;
   spentDkp: number;
+  hasGuildSpace: boolean;
 }
 
 function selectFeatured(member: RosterMember, classFilter: string | null): RosterCharacter {
@@ -66,7 +67,10 @@ export default function RosterRow({ member, classFilter }: Props) {
         onClick={() => navigate(`/roster/${member.discordId}`)}
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
-        <Text variant="body" className="font-semibold truncate">{featured?.name || member.displayName}</Text>
+        <Text variant="body" className="font-semibold truncate">
+          {featured?.name || member.displayName}
+          {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent ml-1 align-middle" title="GuildSpace member" />}
+        </Text>
         <Text variant="label" className="truncate">{featured?.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{netDkp}</span>
