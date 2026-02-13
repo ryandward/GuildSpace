@@ -305,7 +305,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
               type="text"
               className={classes + ' w-full'}
               value={fieldState.value}
-              placeholder={opt.description}
               autoComplete="off"
               onFocus={() => handleFieldFocus(opt)}
               onChange={(e) => handleFieldChange(opt, e.target.value)}
@@ -327,7 +326,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
             type="number"
             className={classes + ' max-w-15'}
             value={fieldState.value}
-            placeholder={opt.description}
             min={opt.minValue}
             max={opt.maxValue}
             onChange={(e) => setFieldValue(opt.name, e.target.value)}
@@ -366,7 +364,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
           type="text"
           className={classes}
           value={fieldState.value}
-          placeholder={opt.description}
           autoComplete="off"
           onChange={(e) => setFieldValue(opt.name, e.target.value)}
           onKeyDown={(e) => handleKeyDown(e, opt, idx)}
