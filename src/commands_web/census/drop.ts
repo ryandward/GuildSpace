@@ -47,7 +47,6 @@ export async function autocomplete(interaction: AutocompleteInteraction) {
       await interaction.respond(toons.map(toon => ({
         name: toon.Name,
         value: toon.Name,
-        metadata: { level: Number(toon.Level), class: toon.CharacterClass, status: toon.Status },
       })));
     }
   }

@@ -77,35 +77,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     });
   }
 
-  function applyMetadata(metadata: Record<string, string | number>) {
-    setFields(prev => {
-      const next = { ...prev };
-      for (const opt of command.options) {
-        if (metadata[opt.name] != null) {
-          next[opt.name] = { value: String(metadata[opt.name]), prefilledBy: 'autocomplete' };
-        }
-      }
-      return next;
-    });
-  }
-
-  function applyToonToSiblings(toon: ToonInfo) {
-    setFields(prev => {
-      const next = { ...prev };
-      for (const opt of command.options) {
-        if (opt.name === 'name') continue;
-        if (opt.name === 'level' && toon.level != null) {
-          next[opt.name] = { value: String(toon.level), prefilledBy: 'autocomplete' };
-        } else if (opt.name === 'class' && toon.class) {
-          next[opt.name] = { value: toon.class, prefilledBy: 'autocomplete' };
-        } else if (opt.name === 'status' && toon.status) {
-          next[opt.name] = { value: toon.status, prefilledBy: 'autocomplete' };
-        }
-      }
-      return next;
-    });
-  }
-
   function showClientAutocomplete(optName: string, val: string) {
     if (myToons.length === 0) return;
     const lower = val.toLowerCase();
@@ -116,7 +87,6 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
       setAcChoices(filtered.map(t => ({
         name: t.name,
         value: t.name,
-        metadata: { level: t.level, class: t.class, status: t.status },
       })));
       setAcSelected(0);
       setAcField(optName);
@@ -141,14 +111,7 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
   }
 
   function handleAutocompleteSelect(choice: AutocompleteChoice, optName: string) {
-    if (isCreateCommand && optName === 'name') {
-      setFieldValue(optName, choice.value);
-      const toon = myToons.find(t => t.name === choice.value);
-      if (toon) applyToonToSiblings(toon);
-    } else {
-      setFieldValue(optName, choice.value);
-      if (choice.metadata) applyMetadata(choice.metadata);
-    }
+    setFieldValue(optName, choice.value);
     hideAutocomplete();
     const idx = command.options.findIndex(o => o.name === optName);
     const nextOpt = command.options[idx + 1];
@@ -308,15 +271,10 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
                 {acChoices.map((c, i) => (
                   <div
                     key={`${c.value}-${i}`}
-                    className={dropdownItem({ selected: i === acSelected }) + ' flex justify-between items-center'}
+                    className={dropdownItem({ selected: i === acSelected })}
                     onMouseDown={() => handleAutocompleteSelect(c, opt.name)}
                   >
-                    <span>{c.name}</span>
-                    {c.metadata && (
-                      <span className={text({ variant: 'caption' })}>
-                        Lv{c.metadata.level} {c.metadata.class}
-                      </span>
-                    )}
+                    {c.name}
                   </div>
                 ))}
               </div>
