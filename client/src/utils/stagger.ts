@@ -1,12 +1,10 @@
-const PHI = 1.618034;
-
 /**
- * Generate phi-scaled stagger delays for N items.
- * Produces organic deceleration: 0, 30, 79, 157, 284ms
- * instead of linear 0, 30, 60, 90, 120ms.
+ * Generate linear stagger delays for N items, capped to a total window.
+ * All items appear within `windowMs` regardless of count.
  */
-export function phiStagger(count: number, baseMs = 15): number[] {
+export function phiStagger(count: number, windowMs = 120): number[] {
+  if (count <= 1) return [0];
   return Array.from({ length: count }, (_, i) =>
-    i === 0 ? 0 : Math.round(baseMs * (Math.pow(PHI, i) - 1) / (PHI - 1))
+    Math.round((i / (count - 1)) * windowMs)
   );
 }
