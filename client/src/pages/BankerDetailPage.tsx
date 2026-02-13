@@ -99,7 +99,7 @@ export default function BankerDetailPage() {
                     {historyLoading && (
                       <Text variant="caption" className="text-center py-4 block">Loading...</Text>
                     )}
-                    {!historyLoading && history && history.length === 0 && (
+                    {!historyLoading && (!history || history.length === 0) && (
                       <Text variant="caption" className="text-center py-4 block">No imports yet</Text>
                     )}
                     {history?.map(record => (
