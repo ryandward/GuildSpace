@@ -374,12 +374,7 @@
 /* ── Chat background ─────────────────────────────────── */
 
 .chat-bg {
-  background:
-    radial-gradient(
-      ellipse at 50% 100%,
-      oklch(calc(var(--lum-bg) + var(--lum-step) * 0.5) var(--surface-chroma) var(--surface-hue)) 0%,
-      var(--color-bg) 70%
-    );
+  background: var(--color-surface);
 }
 
 /* ── Chat bubbles ────────────────────────────────────── */
