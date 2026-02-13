@@ -22,9 +22,9 @@ function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
   return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
 }
 
-// Fixed columns: no auto → identical positions across all independent row grids.
-// 3px pip (decorative stroke), 96px class (12×8, fits "Shadow Knight"), rest on 8px grid.
-const ROW_GRID = 'grid grid-cols-[3px_minmax(0,2fr)_96px_32px_minmax(0,3fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] items-center gap-x-1.5';
+// All fixed or fr — identical column positions across independent row grids.
+// 3px pip (decorative stroke); name 120px (15×8), class 120px (15×8); display-name 1fr absorbs rest.
+const ROW_GRID = 'grid grid-cols-[3px_120px_120px_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] items-center gap-x-1.5';
 
 export interface RosterCharacter {
   name: string;
