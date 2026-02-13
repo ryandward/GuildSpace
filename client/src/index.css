@@ -221,6 +221,33 @@
     flex-direction: column;
     height: 100vh;
   }
+
+  /* ── Scrollbar — thin, token-driven ──────────────────── */
+
+  /* Firefox / standards */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-surface-3) transparent;
+  }
+
+  /* WebKit (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: var(--space-unit);  /* 8px */
+    height: var(--space-unit);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-surface-3);
+    border-radius: var(--radius-full);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-dim);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 /* ── Pip color classes (data-driven, keep as unlayered CSS) */
