@@ -572,10 +572,10 @@ export function createWebServer(opts: WebServerOptions) {
     if (!admin) return;
 
     const { discordId } = req.params;
-    const { isOfficer } = req.body;
+    const { isOfficer, isAdmin } = req.body;
 
-    if (typeof isOfficer !== 'boolean') {
-      return res.status(400).json({ error: 'isOfficer must be a boolean' });
+    if (typeof isOfficer !== 'boolean' && typeof isAdmin !== 'boolean') {
+      return res.status(400).json({ error: 'isOfficer or isAdmin must be a boolean' });
     }
 
     // Cannot modify own role
@@ -596,15 +596,16 @@ export function createWebServer(opts: WebServerOptions) {
       target.discordUsername = dkpRow.DiscordName || discordId;
     }
 
-    // Cannot modify other admins
-    if (target.isAdmin) {
-      return res.status(403).json({ error: 'Cannot modify another admin' });
+    if (typeof isOfficer === 'boolean') target.isOfficer = isOfficer;
+    if (typeof isAdmin === 'boolean') {
+      target.isAdmin = isAdmin;
+      // Admin implies officer
+      if (isAdmin) target.isOfficer = true;
     }
 
-    target.isOfficer = isOfficer;
     await AppDataSource.manager.save(target);
 
-    res.json({ ok: true, discordId, isOfficer });
+    res.json({ ok: true, discordId, isOfficer: target.isOfficer, isAdmin: target.isAdmin });
   });
 
   // ─── Profile ──────────────────────────────────────────────────────

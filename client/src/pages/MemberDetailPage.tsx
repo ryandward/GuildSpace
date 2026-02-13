@@ -67,15 +67,15 @@ export default function MemberDetailPage() {
                 <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{netDkp} DKP</span>
               </div>
 
-              {/* Officer role toggle (admin only) */}
+              {/* Role management (admin only) */}
               {canManageRoles && (
-                <div>
+                <div className="flex gap-1.5">
                   {data.isOfficer ? (
                     <Button
                       size="sm"
                       intent="danger"
                       disabled={roleMutation.isPending}
-                      onClick={() => roleMutation.mutate(false)}
+                      onClick={() => roleMutation.mutate({ isOfficer: false })}
                     >
                       {roleMutation.isPending ? 'Updating...' : 'Remove Officer'}
                     </Button>
@@ -84,9 +84,28 @@ export default function MemberDetailPage() {
                       size="sm"
                       intent="primary"
                       disabled={roleMutation.isPending}
-                      onClick={() => roleMutation.mutate(true)}
+                      onClick={() => roleMutation.mutate({ isOfficer: true })}
                     >
                       {roleMutation.isPending ? 'Updating...' : 'Make Officer'}
+                    </Button>
+                  )}
+                  {data.isAdmin ? (
+                    <Button
+                      size="sm"
+                      intent="danger"
+                      disabled={roleMutation.isPending}
+                      onClick={() => roleMutation.mutate({ isAdmin: false })}
+                    >
+                      {roleMutation.isPending ? 'Updating...' : 'Remove Admin'}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      intent="ghost"
+                      disabled={roleMutation.isPending}
+                      onClick={() => roleMutation.mutate({ isAdmin: true })}
+                    >
+                      {roleMutation.isPending ? 'Updating...' : 'Make Admin'}
                     </Button>
                   )}
                 </div>
