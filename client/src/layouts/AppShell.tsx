@@ -48,8 +48,8 @@ export default function AppShell() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
-      <div className="flex-1 overflow-y-auto flex flex-col relative z-0 chat-bg">
-        <div className="max-w-terminal mx-auto w-full flex-1 flex flex-col">
+      <div className="flex-1 overflow-y-auto flex flex-col relative z-0">
+        <div className="max-w-terminal mx-auto w-full flex-1 flex flex-col chat-bg">
           <MessageList classMap={classMap} />
         </div>
       </div>
