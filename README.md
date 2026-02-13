@@ -133,6 +133,19 @@ The database stores everything an EverQuest guild needs to operate:
 - **GuildSpaceUser** — Discord identity → display name mapping
 - **ChatMessage** — real-time chat messages
 
+## Roster page
+
+The roster page is the first real page in GuildSpace — browse the full guild census without typing a command.
+
+The centerpiece is a **squarified treemap** showing guild class composition at a glance, Kibana-style. Each cell is sized proportionally to the number of characters of that class. Click a cell to filter the roster table below it. The treemap uses:
+
+- **Squarified layout algorithm** — optimizes aspect ratios so cells stay readable at any count
+- **R₂ phase distribution** — ambient glow pulses on active cells are staggered using quasi-random sequences so they never synchronize
+- **φ³ animation timing** — pulse duration derived from the golden ratio, making near-sync between any two cells take the longest possible time
+- **OKLCH class colors** — perceptually uniform so no class visually dominates
+
+Alongside the treemap, status and level breakdowns show Main/Alt/Bot distribution and the percentage of characters at max level.
+
 ## Design system
 
 The frontend design system is mathematically derived from a small set of axioms. Every value traces to a named constant, perceptual threshold, or mathematical derivation — nothing is arbitrary.
