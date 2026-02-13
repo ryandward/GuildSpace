@@ -19,7 +19,7 @@ export default function MemberList({ members, classFilter }: Props) {
   }, []);
 
   return (
-    <div className="grid grid-cols-[3px_auto_auto_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] gap-x-1.5">
+    <div className="flex flex-col">
       {members.map(m => (
         <RosterRow
           key={m.discordId}

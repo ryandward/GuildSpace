@@ -22,6 +22,9 @@ function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
   return (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3);
 }
 
+// Fixed columns: no auto → identical positions across all independent row grids.
+// 3px pip (decorative stroke), 96px class (12×8, fits "Shadow Knight"), rest on 8px grid.
+const ROW_GRID = 'grid grid-cols-[3px_minmax(0,2fr)_96px_32px_minmax(0,3fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_32px_48px_24px] items-center gap-x-1.5';
 
 export interface RosterCharacter {
   name: string;
@@ -59,9 +62,9 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
   const delays = expanded ? phiStagger(alts.length) : [];
 
   return (
-    <div className="col-span-full grid grid-cols-subgrid border-b border-border-subtle">
+    <div className="border-b border-border-subtle">
       <button
-        className="col-span-full grid grid-cols-subgrid items-center w-full py-1 px-0.5 transition-colors duration-fast hover:bg-surface text-left cursor-pointer bg-transparent border-none"
+        className={cx(ROW_GRID, 'w-full py-1 px-0.5 transition-colors duration-fast hover:bg-surface text-left cursor-pointer bg-transparent border-none')}
         onClick={onToggle}
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
@@ -85,12 +88,12 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
       </button>
 
       {hasAlts && (
-        <div className="collapse-container col-span-full grid-cols-subgrid" data-expanded={expanded}>
-          <div className="collapse-inner col-span-full grid grid-cols-subgrid bg-surface-2 rounded-sm" key={expanded ? 'open' : 'closed'}>
+        <div className="collapse-container" data-expanded={expanded}>
+          <div className="collapse-inner bg-surface-2 rounded-sm" key={expanded ? 'open' : 'closed'}>
             {alts.map((c, i) => (
               <div
                 key={c.name}
-                className="col-span-full grid grid-cols-subgrid items-center py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter"
+                className={cx(ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
                 style={{
                   ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
                   ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
@@ -101,7 +104,7 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
                   {c.name}
                   <Badge variant="status" color={statusColor(c.status)} className="ml-1.5 md:hidden">{c.status}</Badge>
                 </Text>
-                <Text variant="label" className="text-nano max-md:hidden">{c.class}</Text>
+                <Text variant="label" className="text-nano truncate max-md:hidden">{c.class}</Text>
                 <span className={cx(text({ variant: 'mono' }), 'text-micro text-text-dim text-center')}>{c.level}</span>
                 <span className="max-md:hidden">
                   <Badge variant="status" color={statusColor(c.status)}>{c.status}</Badge>
