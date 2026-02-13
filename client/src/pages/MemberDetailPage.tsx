@@ -26,7 +26,7 @@ export default function MemberDetailPage() {
   const [bioText, setBioText] = useState('');
 
   const isOwnProfile = authUser?.id === discordId;
-  const canManageRoles = authUser?.isAdmin && !isOwnProfile && !data?.isAdmin;
+  const canManageRoles = authUser?.isAdmin && !isOwnProfile;
 
   const startEditBio = useCallback(() => {
     setBioText(data?.bio || '');
