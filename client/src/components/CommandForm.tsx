@@ -77,6 +77,23 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     });
   }
 
+  function applyToonToSiblings(toon: ToonInfo) {
+    setFields(prev => {
+      const next = { ...prev };
+      for (const opt of command.options) {
+        if (opt.name === 'name') continue;
+        if (opt.name === 'level' && toon.level != null) {
+          next[opt.name] = { value: String(toon.level), prefilledBy: 'autocomplete' };
+        } else if (opt.name === 'class' && toon.class) {
+          next[opt.name] = { value: toon.class, prefilledBy: 'autocomplete' };
+        } else if (opt.name === 'status' && toon.status) {
+          next[opt.name] = { value: toon.status, prefilledBy: 'autocomplete' };
+        }
+      }
+      return next;
+    });
+  }
+
   function showClientAutocomplete(optName: string, val: string) {
     if (myToons.length === 0) return;
     const lower = val.toLowerCase();
@@ -112,6 +129,10 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
 
   function handleAutocompleteSelect(choice: AutocompleteChoice, optName: string) {
     setFieldValue(optName, choice.value);
+    if (isCreateCommand && optName === 'name') {
+      const toon = myToons.find(t => t.name === choice.value);
+      if (toon) applyToonToSiblings(toon);
+    }
     hideAutocomplete();
     const idx = command.options.findIndex(o => o.name === optName);
     const nextOpt = command.options[idx + 1];
