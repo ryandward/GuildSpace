@@ -272,7 +272,8 @@
   position: absolute;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
   gap: calc(var(--space-unit) / 2);
   padding: var(--space-unit) calc(var(--space-unit) * 1.5);
   background: color-mix(in srgb, var(--cell-color) calc(var(--opacity-4) * 100%), var(--color-surface));
@@ -316,6 +317,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
   line-height: 1;
 }
 
@@ -325,6 +327,7 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--cell-color);
+  text-align: center;
   line-height: 1;
 }
 
