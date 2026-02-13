@@ -184,6 +184,7 @@ export const badge = cva('font-body font-bold', {
       green: 'text-green',
       yellow: 'text-yellow',
       red: 'text-red',
+      blue: 'text-blue',
       dim: 'text-text-dim',
       default: 'text-text-dim',
     },

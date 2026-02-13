@@ -6,11 +6,11 @@ function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
 }
 
-function statusColor(status: string): 'accent' | 'green' | 'yellow' | 'dim' {
+function statusColor(status: string): 'accent' | 'green' | 'blue' | 'dim' {
   switch (status.toLowerCase()) {
     case 'main': return 'accent';
     case 'alt': return 'green';
-    case 'bot': return 'yellow';
+    case 'bot': return 'blue';
     default: return 'dim';
   }
 }
