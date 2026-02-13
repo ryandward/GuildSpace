@@ -248,22 +248,32 @@
   justify-content: flex-end;
   padding: var(--space-unit) calc(var(--space-unit) * 1.25);
   background: color-mix(in srgb, var(--cell-color) calc(var(--opacity-4) * 100%), var(--color-surface));
-  border: 1px solid var(--color-bg);
+  border: 1px solid color-mix(in srgb, var(--cell-color) 10%, transparent);
   cursor: pointer;
   overflow: hidden;
   transition: background var(--duration-fast) var(--ease-standard),
               border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard),
               opacity var(--duration-normal) var(--ease-standard);
 }
 
 .treemap-cell:hover {
-  background: color-mix(in srgb, var(--cell-color) 28%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--cell-color) 40%, transparent);
+  background: color-mix(in srgb, var(--cell-color) 30%, var(--color-surface));
+  border-color: var(--cell-color);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--cell-color) 30%, transparent),
+              inset 0 0 20px color-mix(in srgb, var(--cell-color) 8%, transparent);
+  z-index: 1;
+  transform: scale(1.02);
 }
 
 .treemap-cell.active {
-  background: color-mix(in srgb, var(--cell-color) 32%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--cell-color) 50%, transparent);
+  background: color-mix(in srgb, var(--cell-color) 35%, var(--color-surface));
+  border-color: var(--cell-color);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--cell-color) 40%, transparent),
+              inset 0 0 30px color-mix(in srgb, var(--cell-color) 10%, transparent);
+  z-index: 2;
+  transform: scale(1.03);
 }
 
 .treemap-cell.dimmed {
