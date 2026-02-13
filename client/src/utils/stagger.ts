@@ -5,7 +5,7 @@ const PHI = 1.618034;
  * Gaps between items follow the golden ratio (each gap ~1.618x the previous),
  * but the total duration is always `windowMs` regardless of count.
  */
-export function phiStagger(count: number, windowMs = 120): number[] {
+export function phiStagger(count: number, windowMs = 400): number[] {
   if (count <= 1) return [0];
 
   // Raw phi-scaled positions: 0, 1, φ+1, φ²+φ+1, ...
