@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { r2Phase } from '../../utils/phase';
 import { text, progressTrack } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
 
@@ -111,7 +110,6 @@ function computeTreemap(
 // Virtual space matches CSS aspect-ratio: 2/1
 const VW = 1000;
 const VH = 500;
-const PULSE_DURATION = 8472; // ms, matching CSS phi-cubed
 
 /* ── ClassChart (Treemap) ────────────────────────────────── */
 
@@ -137,25 +135,23 @@ export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFi
 
   return (
     <div className="relative w-full aspect-treemap overflow-hidden rounded-md border border-border max-md:aspect-treemap-mobile" role="img" aria-label="Class composition">
-      {nodes.map((node, cellIndex) => {
+      {nodes.map((node) => {
         const color = getClassColor(node.label);
         const lb = levelBreakdown[node.label];
         const maxLvl = lb ? lb.max : 0;
         const isActive = classFilter === node.label;
         const isDimmed = classFilter !== null && !isActive;
-        const [pulsePhase] = r2Phase(cellIndex);
 
         return (
           <button
             key={node.label}
-            className={`treemap-cell${isActive ? ' active treemap-cell--active' : ''}${isDimmed ? ' dimmed' : ''}`}
+            className={`treemap-cell${isActive ? ' active' : ''}${isDimmed ? ' dimmed' : ''}`}
             style={{
               left: `${(node.x / VW) * 100}%`,
               top: `${(node.y / VH) * 100}%`,
               width: `${(node.w / VW) * 100}%`,
               height: `${(node.h / VH) * 100}%`,
               '--cell-color': color,
-              animationDelay: isActive ? `${Math.round(pulsePhase * PULSE_DURATION)}ms` : undefined,
             } as React.CSSProperties}
             onClick={() => onClassFilterChange(isActive ? null : node.label)}
             title={`${node.label}: ${node.value} characters (${maxLvl} at 60)`}
