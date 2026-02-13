@@ -5,6 +5,7 @@ import { authFetch } from '../lib/api';
 export interface CallAttendee {
   characterName: string;
   discordId: string;
+  characterClass: string | null;
 }
 
 export interface CallDetail {
@@ -21,6 +22,7 @@ export interface CallDetail {
 export interface EventMember {
   discordId: string;
   displayName: string;
+  mainClass: string | null;
   callsPresent: number[];
   totalDkp: number;
   hasGuildSpace: boolean;

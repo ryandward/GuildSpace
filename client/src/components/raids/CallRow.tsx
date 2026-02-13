@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Badge, Text, Input } from '../../ui';
 import type { CallDetail } from '../../hooks/useEventDetailQuery';
+import { getClassColor } from '../../lib/classColors';
 
 interface Props {
   call: CallDetail;
@@ -48,7 +49,10 @@ export default function CallRow({
             <div className="flex flex-wrap gap-0.5 mb-1">
               {call.attendees.map(a => (
                 <span key={a.characterName} className="inline-flex items-center gap-0.5">
-                  <Badge variant="count">{a.characterName}</Badge>
+                  <Badge
+                    variant="count"
+                    style={a.characterClass ? { color: getClassColor(a.characterClass) } : undefined}
+                  >{a.characterName}</Badge>
                   {isOfficer && isActive && (
                     <button
                       className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red text-micro leading-none p-0"

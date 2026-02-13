@@ -801,15 +801,19 @@ export function createWebServer(opts: WebServerOptions) {
       });
 
       // Build attendance matrix data
-      const gsUsers = await AppDataSource.manager.find(GuildSpaceUser);
+      const [gsUsers, dkpRows, allToons] = await Promise.all([
+        AppDataSource.manager.find(GuildSpaceUser),
+        AppDataSource.manager.find(Dkp),
+        AppDataSource.manager.find(ActiveToons),
+      ]);
       const gsUserMap = new Map(gsUsers.map(u => [u.discordId, u]));
-      const dkpRows = await AppDataSource.manager.find(Dkp);
       const dkpNameMap = new Map(dkpRows.map(d => [d.DiscordId, d.DiscordName]));
+      const toonClassMap = new Map(allToons.map(t => [t.Name, t.CharacterClass]));
 
       // For each call, get its attendees
       const callDetails = await Promise.all(calls.map(async (call) => {
         const links = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId: call.id } });
-        const attendees: { characterName: string; discordId: string }[] = [];
+        const attendees: { characterName: string; discordId: string; characterClass: string | null }[] = [];
         const rejected: { name: string; reason: string }[] = [];
 
         if (links.length > 0) {
@@ -821,7 +825,7 @@ export function createWebServer(opts: WebServerOptions) {
             .where('a.id IN (:...attIds)', { attIds })
             .getRawMany() as { name: string; discordId: string }[];
           for (const row of rows) {
-            attendees.push({ characterName: row.name, discordId: row.discordId });
+            attendees.push({ characterName: row.name, discordId: row.discordId, characterClass: toonClassMap.get(row.name) || null });
           }
         }
 
@@ -851,11 +855,22 @@ export function createWebServer(opts: WebServerOptions) {
         }
       }
 
+      // Build discordId → main class (prefer Main status, then first toon)
+      const toonsByDiscord = new Map<string, typeof allToons>();
+      for (const t of allToons) {
+        let arr = toonsByDiscord.get(t.DiscordId);
+        if (!arr) { arr = []; toonsByDiscord.set(t.DiscordId, arr); }
+        arr.push(t);
+      }
+
       const members = Array.from(memberMap.entries()).map(([discordId, data]) => {
         const gsUser = gsUserMap.get(discordId);
+        const toons = toonsByDiscord.get(discordId);
+        const mainToon = toons?.find(t => t.Status === 'Main') || toons?.[0];
         return {
           discordId,
           displayName: gsUser?.displayName || dkpNameMap.get(discordId) || discordId,
+          mainClass: mainToon?.CharacterClass || null,
           callsPresent: data.callsPresent,
           totalDkp: data.totalDkp,
           hasGuildSpace: !!gsUser,
