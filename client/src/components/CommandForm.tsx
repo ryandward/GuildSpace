@@ -104,16 +104,17 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     }
   }
 
-  // Focus first field on mount; .focus() triggers onFocus → handleFieldFocus
-  // which fires autocomplete, so we don't need to call it explicitly here.
-  // For create commands, we show client-side toon suggestions when myToons loads.
+  // Focus first field on mount and trigger autocomplete explicitly.
+  // .focus() doesn't reliably fire React's synthetic onFocus in all cases,
+  // so we call the autocomplete functions directly as well.
   useEffect(() => {
     const firstOpt = command.options[0];
     if (!firstOpt) return;
     fieldRefs.current[firstOpt.name]?.focus();
-    // Client autocomplete for create commands (myToons dependency)
     if (isCreateCommand && firstOpt.name === 'name' && !firstOpt.autocomplete) {
       showClientAutocomplete('name', '');
+    } else if (firstOpt.autocomplete) {
+      triggerServerAutocomplete(firstOpt, '');
     }
     return () => {
       clearTimeout(fetchTimerRef.current);
