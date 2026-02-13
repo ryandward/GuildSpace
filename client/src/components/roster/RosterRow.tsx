@@ -26,9 +26,6 @@ function sortByStatus(a: RosterCharacter, b: RosterCharacter): number {
 // Mobile:  pip | name(1fr)  | class(80)  | lvl(32) | DKP(48) | chevron(24)  — display-name hidden
 const ROW_GRID = 'grid grid-cols-[3px_120px_120px_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px_48px_24px] items-center gap-x-1.5';
 
-// Alt rows: same desktop grid, tighter mobile (no DKP/chevron placeholders)
-// Mobile:  pip | name+badge(1fr) | class(80) | lvl(32)
-const ALT_GRID = 'grid grid-cols-[3px_120px_120px_32px_minmax(0,1fr)_56px_24px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px] items-center gap-x-1.5';
 
 export interface RosterCharacter {
   name: string;
@@ -97,7 +94,7 @@ export default function RosterRow({ member, classFilter, expanded, onToggle }: P
             {alts.map((c, i) => (
               <div
                 key={c.name}
-                className={cx(ALT_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
+                className={cx(ROW_GRID, 'py-0.5 px-0.5 transition-colors duration-fast hover:bg-surface-3 animate-alt-row-enter')}
                 style={{
                   ...(classFilter && c.class === classFilter ? { backgroundColor: 'color-mix(in oklch, var(--color-accent) calc(var(--opacity-2) * 100%), transparent)' } : {}),
                   ...(expanded ? { animationDelay: `${delays[i]}ms` } : {}),
