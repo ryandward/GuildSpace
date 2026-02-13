@@ -20,3 +20,21 @@ export const CLASS_COLORS: Record<string, string> = {
 export function getClassColor(cls: string): string {
   return CLASS_COLORS[cls] || '#8888aa';
 }
+
+/**
+ * Pick the most-recently-raided character's class from a list of characters.
+ * Falls back to Main status, then first character.
+ */
+export function getMostRecentClass(
+  characters: { class: string; lastRaidDate: string | null; status?: string }[]
+): string | undefined {
+  if (!characters.length) return undefined;
+  let best: typeof characters[number] | null = null;
+  for (const c of characters) {
+    if (!c.lastRaidDate) continue;
+    if (!best || !best.lastRaidDate || c.lastRaidDate > best.lastRaidDate) best = c;
+  }
+  return best?.class
+    || characters.find(c => c.status === 'Main')?.class
+    || characters[0]?.class;
+}

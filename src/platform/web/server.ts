@@ -164,6 +164,33 @@ export function createWebServer(opts: WebServerOptions) {
   const staticDir = existsSync(clientDist) ? clientDist : legacyPublic;
   app.use(express.static(staticDir));
 
+  // ─── Shared Helpers ──────────────────────────────────────────────
+
+  /** Fetch name → last raid date map. Used by roster, member detail, and event detail. */
+  async function fetchLastRaidByName(): Promise<Map<string, string | null>> {
+    const rows = await AppDataSource.manager.query(
+      `SELECT name, MAX(date) as last_raid FROM attendance GROUP BY name`
+    ) as { name: string; last_raid: string | null }[];
+    return new Map(rows.map(r => [r.name, r.last_raid]));
+  }
+
+  /** Pick the most-recently-raided toon for a user. Falls back to Main, then first. */
+  function pickMostRecentToon<T extends { Name: string; Status: string }>(
+    toons: T[],
+    lastRaidByName: Map<string, string | null>,
+  ): T | undefined {
+    let best: T | undefined;
+    let bestDate: string | null = null;
+    for (const t of toons) {
+      const rd = lastRaidByName.get(t.Name) ?? null;
+      if (rd && (!bestDate || rd > bestDate)) {
+        bestDate = rd;
+        best = t;
+      }
+    }
+    return best || toons.find(t => t.Status === 'Main') || toons[0];
+  }
+
   // ─── Auth (Discord OAuth2) ───────────────────────────────────────
 
   const TOKEN_SECRET = process.env.DISCORD_CLIENT_SECRET || 'fallback-secret';
@@ -428,18 +455,15 @@ export function createWebServer(opts: WebServerOptions) {
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
     try {
-      const [toons, dkpRows, gsUsers, lastRaidRows] = await Promise.all([
+      const [toons, dkpRows, gsUsers, lastRaidByName] = await Promise.all([
         AppDataSource.manager.find(ActiveToons),
         AppDataSource.manager.find(Dkp),
         AppDataSource.manager.find(GuildSpaceUser),
-        AppDataSource.manager.query(
-          `SELECT name, MAX(date) as last_raid FROM attendance GROUP BY name`
-        ) as Promise<{ name: string; last_raid: string | null }[]>,
+        fetchLastRaidByName(),
       ]);
 
       const dkpByDiscord = new Map(dkpRows.map(d => [d.DiscordId, d]));
       const gsUserByDiscord = new Map(gsUsers.map(u => [u.discordId, u]));
-      const lastRaidByName = new Map(lastRaidRows.map(r => [r.name, r.last_raid]));
 
       // Group characters by DiscordId
       const grouped = new Map<string, typeof toons>();
@@ -508,28 +532,23 @@ export function createWebServer(opts: WebServerOptions) {
     const { discordId } = req.params;
 
     try {
-      const [toons, dkpRow, gsUser, dkpByCharRows, lastRaidRows] = await Promise.all([
+      const [toons, dkpRow, gsUser, dkpByCharRows] = await Promise.all([
         AppDataSource.manager.find(ActiveToons, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } }),
         AppDataSource.manager.query(
           `SELECT name, COALESCE(SUM(modifier), 0)::int as total_dkp, COUNT(*)::int as raid_count, MAX(date) as last_raid
            FROM attendance WHERE discord_id = $1 GROUP BY name
-           HAVING COALESCE(SUM(modifier), 0) > 0
            ORDER BY MAX(date) DESC NULLS LAST`,
           [discordId]
         ) as Promise<{ name: string; total_dkp: number; raid_count: number; last_raid: string | null }[]>,
-        AppDataSource.manager.query(
-          `SELECT name, MAX(date) as last_raid FROM attendance WHERE discord_id = $1 GROUP BY name`,
-          [discordId]
-        ) as Promise<{ name: string; last_raid: string | null }[]>,
       ]);
 
       if (toons.length === 0) {
         return res.status(404).json({ error: 'Member not found' });
       }
 
-      const lastRaidByName = new Map(lastRaidRows.map(r => [r.name, r.last_raid]));
+      const lastRaidByName = new Map(dkpByCharRows.map(r => [r.name, r.last_raid]));
       const displayName = gsUser?.displayName || dkpRow?.DiscordName || discordId;
 
       const characters = toons.map(c => ({
@@ -543,7 +562,7 @@ export function createWebServer(opts: WebServerOptions) {
       // Per-character DKP breakdown — only include active characters
       const charClassMap = new Map(toons.map(c => [c.Name, c.CharacterClass]));
       const dkpByCharacter = dkpByCharRows
-        .filter(r => charClassMap.has(r.name))
+        .filter(r => charClassMap.has(r.name) && r.total_dkp > 0)
         .map(r => ({
           name: r.name,
           class: charClassMap.get(r.name)!,
@@ -801,18 +820,15 @@ export function createWebServer(opts: WebServerOptions) {
       });
 
       // Build attendance matrix data
-      const [gsUsers, dkpRows, allToons, lastRaidRows] = await Promise.all([
+      const [gsUsers, dkpRows, allToons, lastRaidByName] = await Promise.all([
         AppDataSource.manager.find(GuildSpaceUser),
         AppDataSource.manager.find(Dkp),
         AppDataSource.manager.find(ActiveToons),
-        AppDataSource.manager.query(
-          `SELECT name, MAX(date) as last_raid FROM attendance GROUP BY name`
-        ) as Promise<{ name: string; last_raid: string | null }[]>,
+        fetchLastRaidByName(),
       ]);
       const gsUserMap = new Map(gsUsers.map(u => [u.discordId, u]));
       const dkpNameMap = new Map(dkpRows.map(d => [d.DiscordId, d.DiscordName]));
       const toonClassMap = new Map(allToons.map(t => [t.Name, t.CharacterClass]));
-      const lastRaidByName = new Map(lastRaidRows.map(r => [r.name, r.last_raid]));
 
       // For each call, get its attendees
       const callDetails = await Promise.all(calls.map(async (call) => {
@@ -870,18 +886,7 @@ export function createWebServer(opts: WebServerOptions) {
       const members = Array.from(memberMap.entries()).map(([discordId, data]) => {
         const gsUser = gsUserMap.get(discordId);
         const toons = toonsByDiscord.get(discordId);
-        let mainToon: typeof allToons[number] | undefined;
-        if (toons) {
-          let bestDate: string | null = null;
-          for (const t of toons) {
-            const rd = lastRaidByName.get(t.Name) ?? null;
-            if (rd && (!bestDate || rd > bestDate)) {
-              bestDate = rd;
-              mainToon = t;
-            }
-          }
-          if (!mainToon) mainToon = toons.find(t => t.Status === 'Main') || toons[0];
-        }
+        const mainToon = toons ? pickMostRecentToon(toons, lastRaidByName) : undefined;
         return {
           discordId,
           displayName: gsUser?.displayName || dkpNameMap.get(discordId) || discordId,

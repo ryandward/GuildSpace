@@ -9,7 +9,7 @@ import CharacterCard from '../components/roster/CharacterCard';
 import { Text, Heading, Card, Button, Textarea, Badge } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
-import { getClassColor } from '../lib/classColors';
+import { getClassColor, getMostRecentClass } from '../lib/classColors';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
@@ -48,13 +48,7 @@ export default function MemberDetailPage() {
 
   const netDkp = data ? data.earnedDkp - data.spentDkp : 0;
   const nameColor = useMemo(() => {
-    if (!data?.characters.length) return undefined;
-    let best: { class: string; lastRaidDate: string | null } | null = null;
-    for (const c of data.characters) {
-      if (!c.lastRaidDate) continue;
-      if (!best || !best.lastRaidDate || c.lastRaidDate > best.lastRaidDate) best = c;
-    }
-    const cls = best?.class || data.characters.find(c => c.status === 'Main')?.class || data.characters[0]?.class;
+    const cls = getMostRecentClass(data?.characters ?? []);
     return cls ? getClassColor(cls) : undefined;
   }, [data]);
   const maxDkp = useMemo(() => {

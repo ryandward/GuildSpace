@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useRosterQuery } from '../hooks/useRosterQuery';
+import { getMostRecentClass } from '../lib/classColors';
 import AppHeader from '../components/AppHeader';
 import MessageList from '../components/MessageList';
 import CommandInput from '../components/CommandInput';
@@ -10,18 +11,11 @@ export default function AppShell() {
   const { modal } = useSocket();
   const { data: rosterData } = useRosterQuery();
 
-  // Map discordId → class of most recently raided character
   const classMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const m of rosterData?.members ?? []) {
-      let best: { class: string; lastRaidDate: string | null } | null = null;
-      for (const c of m.characters) {
-        if (!c.lastRaidDate) continue;
-        if (!best || !best.lastRaidDate || c.lastRaidDate > best.lastRaidDate) {
-          best = c;
-        }
-      }
-      if (best) map.set(m.discordId, best.class);
+      const cls = getMostRecentClass(m.characters);
+      if (cls) map.set(m.discordId, cls);
     }
     return map;
   }, [rosterData]);
