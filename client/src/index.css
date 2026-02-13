@@ -254,26 +254,21 @@
   transition: background var(--duration-fast) var(--ease-standard),
               border-color var(--duration-fast) var(--ease-standard),
               box-shadow var(--duration-fast) var(--ease-standard),
-              transform var(--duration-fast) var(--ease-standard),
               opacity var(--duration-normal) var(--ease-standard);
 }
 
 .treemap-cell:hover {
-  background: color-mix(in srgb, var(--cell-color) 30%, var(--color-surface));
+  background: color-mix(in srgb, var(--cell-color) 28%, var(--color-surface));
   border-color: var(--cell-color);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--cell-color) 30%, transparent),
-              inset 0 0 20px color-mix(in srgb, var(--cell-color) 8%, transparent);
+  box-shadow: var(--shadow-md);
   z-index: 1;
-  transform: scale(1.02);
 }
 
 .treemap-cell.active {
-  background: color-mix(in srgb, var(--cell-color) 35%, var(--color-surface));
+  background: color-mix(in srgb, var(--cell-color) 32%, var(--color-surface));
   border-color: var(--cell-color);
-  box-shadow: 0 0 24px color-mix(in srgb, var(--cell-color) 40%, transparent),
-              inset 0 0 30px color-mix(in srgb, var(--cell-color) 10%, transparent);
+  box-shadow: var(--shadow-lg);
   z-index: 2;
-  transform: scale(1.03);
 }
 
 .treemap-cell.dimmed {
