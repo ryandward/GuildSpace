@@ -1501,7 +1501,25 @@ export function createWebServer(opts: WebServerOptions) {
         // Track online presence
         const prev = onlineUsers.get(user.id) ?? 0;
         onlineUsers.set(user.id, prev + 1);
-        if (prev === 0) emitPresenceUpdate();
+        if (prev === 0) {
+          // New unique user — broadcast to everyone
+          emitPresenceUpdate();
+        } else {
+          // Already tracked (reconnect or second tab) — send current state to this socket only
+          const onlineIds = Array.from(onlineUsers.keys());
+          let currentTotalMembers = 0;
+          try {
+            const result = await AppDataSource.manager.query(
+              `SELECT COUNT(DISTINCT discord_id) as count FROM active_toons`
+            ) as { count: string }[];
+            currentTotalMembers = Number(result[0]?.count ?? 0);
+          } catch { /* ignore */ }
+          socket.emit('presenceUpdate', {
+            onlineCount: onlineIds.length,
+            onlineIds,
+            totalMembers: currentTotalMembers,
+          });
+        }
 
         // Send recent chat history
         try {
