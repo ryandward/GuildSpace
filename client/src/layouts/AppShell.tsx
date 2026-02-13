@@ -48,13 +48,13 @@ export default function AppShell() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
-      <div className="flex-1 overflow-y-auto flex flex-col relative z-0">
-        <div className="max-w-terminal mx-auto w-full flex-1 flex flex-col chat-bg">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-0">
+        <div className="max-w-terminal mx-auto w-full flex-1 flex flex-col overflow-hidden chat-bg">
           <MessageList classMap={classMap} />
+          <div className="px-2 pb-2 pt-1">
+            <CommandInput />
+          </div>
         </div>
-      </div>
-      <div className="max-w-terminal mx-auto w-full px-2 pb-2">
-        <CommandInput />
       </div>
       {modal && <Modal />}
     </div>

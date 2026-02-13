@@ -364,7 +364,7 @@ function SystemMessage({ content, variant }: { content: string; variant: 'system
   };
 
   return (
-    <div className="self-center max-w-message animate-fade-in">
+    <div className="self-center animate-fade-in">
       <Text variant={variantMap[variant]} className={cx('block', variant === 'loading' && 'loading')}>
         {content}
       </Text>
@@ -384,7 +384,7 @@ export default function MessageList({ classMap }: { classMap?: Map<string, strin
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto py-2 px-2.5 flex flex-col">
+    <div className="flex-1 overflow-y-auto py-2 px-2 flex flex-col">
       {messages.map((msg, i) => {
         switch (msg.type) {
           case 'system':
