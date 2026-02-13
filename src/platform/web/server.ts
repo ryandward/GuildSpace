@@ -930,6 +930,10 @@ export function createWebServer(opts: WebServerOptions) {
         event.status = 'closed';
         event.closedAt = new Date();
       }
+      if (req.body.status === 'active' && event.status === 'closed') {
+        event.status = 'active';
+        event.closedAt = null;
+      }
       await AppDataSource.manager.save(event);
       res.json(event);
     } catch (err) {

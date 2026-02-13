@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEventDetailQuery } from '../hooks/useEventDetailQuery';
 import { useRaidTemplatesQuery } from '../hooks/useRaidTemplatesQuery';
-import { useAddCallMutation, useDeleteCallMutation, useCloseEventMutation, useAddCharacterMutation, useRemoveCharacterMutation } from '../hooks/useRaidMutations';
+import { useAddCallMutation, useDeleteCallMutation, useCloseEventMutation, useReopenEventMutation, useAddCharacterMutation, useRemoveCharacterMutation } from '../hooks/useRaidMutations';
 import type { AddCallResult } from '../hooks/useRaidMutations';
 import AppHeader from '../components/AppHeader';
 import AddCallForm from '../components/raids/AddCallForm';
@@ -20,6 +20,7 @@ export default function RaidEventPage() {
   const addCall = useAddCallMutation(Number(eventId));
   const deleteCall = useDeleteCallMutation(Number(eventId));
   const closeEvent = useCloseEventMutation(Number(eventId));
+  const reopenEvent = useReopenEventMutation(Number(eventId));
   const addCharacter = useAddCharacterMutation(Number(eventId));
   const removeCharacter = useRemoveCharacterMutation(Number(eventId));
 
@@ -89,6 +90,16 @@ export default function RaidEventPage() {
                       </>
                     )}
                   </div>
+                )}
+                {isOfficer && !isActive && (
+                  <Button
+                    intent="primary"
+                    size="sm"
+                    onClick={() => reopenEvent.mutate()}
+                    disabled={reopenEvent.isPending}
+                  >
+                    {reopenEvent.isPending ? 'Reopening...' : 'Reopen Event'}
+                  </Button>
                 )}
               </div>
 

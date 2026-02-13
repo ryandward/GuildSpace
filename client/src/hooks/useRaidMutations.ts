@@ -35,6 +35,23 @@ export function useCloseEventMutation(eventId: number) {
   });
 }
 
+export function useReopenEventMutation(eventId: number) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      authFetch(token!, `/api/raids/events/${eventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
+      queryClient.invalidateQueries({ queryKey: ['raidEvents'] });
+    },
+  });
+}
+
 interface AddCallParams {
   raidName: string;
   modifier: number;
