@@ -371,6 +371,17 @@
 .readout-dot.status-bot { background: var(--color-yellow); }
 .readout-dot.status-probationary { background: var(--color-text-dim); }
 
+/* ── Chat bubbles ────────────────────────────────────── */
+
+.bubble-self {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 10%, var(--color-border-subtle));
+}
+.bubble-other {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border-subtle);
+}
+
 /* ── Keyframes ────────────────────────────────────────── */
 
 @keyframes fadeIn {

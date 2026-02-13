@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket, type AppMessage, type ReplyData, type Embed, type EmbedField, type Component, type ComponentRow } from '../context/SocketContext';
 import { Button, Card, Badge, Text } from '../ui';
-import { text, embedCard, input, badge, heading, progressTrack, card } from '../ui/recipes';
+import { text, embedCard, input, badge, heading, card } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 
 const emojiMap: Record<string, string> = {
@@ -65,6 +65,32 @@ function statusBadgeColor(status: string): 'accent' | 'green' | 'yellow' | 'dim'
     case 'bot': return 'yellow';
     default: return 'dim';
   }
+}
+
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// --- Bubble corner radius helper ---
+
+function bubbleRadius(isMe: boolean, isFirst: boolean, isLast: boolean): string {
+  // Base: all corners lg (12px). Connecting sides get sm (4px).
+  // Incoming (left): left side flattens between grouped messages
+  // Outgoing (right): right side flattens between grouped messages
+  let tl = 'rounded-tl-lg';
+  let tr = 'rounded-tr-lg';
+  let bl = 'rounded-bl-lg';
+  let br = 'rounded-br-lg';
+
+  if (isMe) {
+    if (!isFirst) tr = 'rounded-tr-sm';
+    if (!isLast) br = 'rounded-br-sm';
+  } else {
+    if (!isFirst) tl = 'rounded-tl-sm';
+    if (!isLast) bl = 'rounded-bl-sm';
+  }
+
+  return `${tl} ${tr} ${bl} ${br}`;
 }
 
 // --- Sub-components ---
@@ -264,7 +290,7 @@ function ComponentsView({ components, interactionId }: { components: (ComponentR
 
 function ReplyView({ data }: { data: ReplyData }) {
   return (
-    <div className="max-w-message animate-fade-in">
+    <div className="max-w-message animate-fade-in self-center">
       {data.content && <Text variant="body" className="whitespace-pre-wrap block">{cleanText(data.content)}</Text>}
       {data.embeds?.map((embed, i) => <EmbedView key={i} embed={embed} />)}
       {data.components && <ComponentsView components={data.components} interactionId={data.interactionId} />}
@@ -272,33 +298,64 @@ function ReplyView({ data }: { data: ReplyData }) {
   );
 }
 
-function ChatMessageView({ msg, isMe }: { msg: { createdAt: string; displayName: string; content: string }; isMe: boolean }) {
-  const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+// --- Chat bubble ---
+
+function ChatBubble({ msg, isMe, isFirst, isLast }: {
+  msg: { createdAt: string; displayName: string; content: string };
+  isMe: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  const radius = bubbleRadius(isMe, isFirst, isLast);
+
   return (
-    <div className="max-w-message animate-fade-in">
-      <Text variant="caption">{time}</Text>{' '}
-      <Text variant="body" className={`font-bold ${isMe ? 'text-green' : 'text-accent'}`}>{msg.displayName}</Text>{' '}
-      <Text variant="body">{msg.content}</Text>
+    <div className={cx(
+      'flex flex-col max-w-[75%] animate-fade-in',
+      isMe ? 'self-end items-end' : 'self-start items-start',
+      isFirst ? 'mt-1.5' : 'mt-px',
+    )}>
+      {isFirst && (
+        <div className={cx(
+          'flex items-baseline gap-1 mb-0.5',
+          isMe ? 'flex-row-reverse' : 'flex-row',
+        )}>
+          <Text variant="body" className={cx('font-bold text-caption', isMe ? 'text-accent' : 'text-text-secondary')}>
+            {msg.displayName}
+          </Text>
+          <Text variant="caption">{formatTime(msg.createdAt)}</Text>
+        </div>
+      )}
+      <div className={cx(
+        'px-1.5 py-1',
+        radius,
+        isMe ? 'bubble-self' : 'bubble-other',
+      )}>
+        <Text variant="body" className="whitespace-pre-wrap break-words">{msg.content}</Text>
+      </div>
     </div>
   );
 }
 
-function MessageView({ msg, userId }: { msg: AppMessage; userId?: string }) {
-  switch (msg.type) {
-    case 'system':
-      return <Text variant="system" className="max-w-message animate-fade-in block">{msg.content}</Text>;
-    case 'command':
-      return <Text variant="command" className="max-w-message animate-fade-in block">{msg.content}</Text>;
-    case 'error':
-      return <Text variant="error" className="max-w-message animate-fade-in block">{msg.content}</Text>;
-    case 'loading':
-      return <Text variant="system" className="max-w-message animate-fade-in loading block">{msg.content}</Text>;
-    case 'chat':
-      return <ChatMessageView msg={msg.msg} isMe={userId === msg.msg.userId} />;
-    case 'reply':
-      return <ReplyView data={msg.data} />;
-  }
+// --- System-style messages (centered) ---
+
+function SystemMessage({ content, variant }: { content: string; variant: 'system' | 'command' | 'error' | 'loading' }) {
+  const variantMap = {
+    system: 'system' as const,
+    command: 'command' as const,
+    error: 'error' as const,
+    loading: 'system' as const,
+  };
+
+  return (
+    <div className="self-center max-w-message animate-fade-in">
+      <Text variant={variantMap[variant]} className={cx('block', variant === 'loading' && 'loading')}>
+        {content}
+      </Text>
+    </div>
+  );
 }
+
+// --- Main list ---
 
 export default function MessageList() {
   const { messages } = useSocket();
@@ -310,10 +367,35 @@ export default function MessageList() {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto py-2 px-2.5 flex flex-col gap-1.5">
-      {messages.map(msg => (
-        <MessageView key={msg.id} msg={msg} userId={user?.id} />
-      ))}
+    <div className="flex-1 overflow-y-auto py-2 px-2.5 flex flex-col">
+      {messages.map((msg, i) => {
+        switch (msg.type) {
+          case 'system':
+          case 'error':
+          case 'loading':
+            return <SystemMessage key={msg.id} content={msg.content} variant={msg.type} />;
+          case 'command':
+            return <SystemMessage key={msg.id} content={msg.content} variant="command" />;
+          case 'reply':
+            return <ReplyView key={msg.id} data={msg.data} />;
+          case 'chat': {
+            const isMe = user?.id === msg.msg.userId;
+            const prev = messages[i - 1];
+            const next = messages[i + 1];
+            const isFirst = !prev || prev.type !== 'chat' || prev.msg.userId !== msg.msg.userId;
+            const isLast = !next || next.type !== 'chat' || next.msg.userId !== msg.msg.userId;
+            return (
+              <ChatBubble
+                key={msg.id}
+                msg={msg.msg}
+                isMe={isMe}
+                isFirst={isFirst}
+                isLast={isLast}
+              />
+            );
+          }
+        }
+      })}
       <div ref={bottomRef} />
     </div>
   );
