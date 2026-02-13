@@ -1,39 +1,20 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { useAuth } from '../context/AuthContext';
+import { useRosterQuery } from '../hooks/useRosterQuery';
 import AppHeader from '../components/AppHeader';
 import MessageList from '../components/MessageList';
 import CommandInput from '../components/CommandInput';
 import Modal from '../components/Modal';
 
-interface RosterChar {
-  class: string;
-  lastRaidDate: string | null;
-}
-
-interface RosterMember {
-  discordId: string;
-  characters: RosterChar[];
-}
-
 export default function AppShell() {
   const { modal } = useSocket();
-  const { token } = useAuth();
-  const [roster, setRoster] = useState<RosterMember[]>([]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetch('/api/roster', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.members) setRoster(data.members); })
-      .catch(() => {});
-  }, [token]);
+  const { data: rosterData } = useRosterQuery();
 
   // Map discordId → class of most recently raided character
   const classMap = useMemo(() => {
     const map = new Map<string, string>();
-    for (const m of roster) {
-      let best: RosterChar | null = null;
+    for (const m of rosterData?.members ?? []) {
+      let best: { class: string; lastRaidDate: string | null } | null = null;
       for (const c of m.characters) {
         if (!c.lastRaidDate) continue;
         if (!best || !best.lastRaidDate || c.lastRaidDate > best.lastRaidDate) {
@@ -43,7 +24,7 @@ export default function AppShell() {
       if (best) map.set(m.discordId, best.class);
     }
     return map;
-  }, [roster]);
+  }, [rosterData]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">

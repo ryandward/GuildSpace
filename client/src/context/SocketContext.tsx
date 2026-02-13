@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import { useAuth, type User } from './AuthContext';
+import { useAuth } from './AuthContext';
+import { useCommandsQuery } from '../hooks/useCommandsQuery';
 
 export interface Command {
   name: string;
@@ -113,8 +114,6 @@ interface SocketContextValue {
   sendChat: (content: string) => void;
   submitModal: (modalId: string, fields: Record<string, string>) => void;
   sendComponentInteraction: (parentInteractionId: string, customId: string, values?: string[]) => void;
-  fetchAutocomplete: (cmdName: string, optionName: string, value: string) => Promise<AutocompleteChoice[]>;
-  fetchMyToons: () => Promise<ToonInfo[]>;
   showHelp: () => void;
 }
 
@@ -140,20 +139,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const { token, user } = useAuth();
   const socketRef = useRef<Socket | null>(null);
   const [connected, setConnected] = useState(false);
-  const [commands, setCommands] = useState<Command[]>([]);
   const [messages, setMessages] = useState<AppMessage[]>([]);
   const [modal, setModal] = useState<ModalData | null>(null);
 
-  // Load commands when user is available
-  useEffect(() => {
-    if (!user) return;
-    fetch('/api/commands')
-      .then(res => res.json())
-      .then((cmds: Command[]) => {
-        setCommands(cmds);
-      })
-      .catch(console.error);
-  }, [user]);
+  const { data: commands = [] } = useCommandsQuery(!!user);
 
   // Connect socket when user + token are ready
   useEffect(() => {
@@ -282,37 +271,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     }]);
   }
 
-  async function fetchAutocomplete(cmdName: string, optionName: string, value: string): Promise<AutocompleteChoice[]> {
-    try {
-      const res = await fetch(`/api/commands/${cmdName}/autocomplete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          options: { [optionName]: value },
-          focused: { name: optionName, value },
-        }),
-      });
-      return await res.json();
-    } catch {
-      return [];
-    }
-  }
-
-  async function fetchMyToons(): Promise<ToonInfo[]> {
-    try {
-      const res = await fetch('/api/toons/mine', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      return await res.json();
-    } catch {
-      return [];
-    }
-  }
-
   return (
     <SocketContext.Provider value={{
       socket: socketRef.current,
@@ -325,8 +283,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       sendChat,
       submitModal: submitModalFn,
       sendComponentInteraction,
-      fetchAutocomplete,
-      fetchMyToons,
       showHelp,
     }}>
       {children}

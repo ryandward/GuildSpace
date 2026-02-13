@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react';
-import { useSocket, type Command, type CommandOption, type AutocompleteChoice, type ToonInfo } from '../context/SocketContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
+import { authFetch } from '../lib/api';
+import { useMyToonsQuery } from '../hooks/useMyToonsQuery';
+import type { Command, CommandOption, AutocompleteChoice, ToonInfo } from '../context/SocketContext';
 import { Button } from '../ui';
 import { Input, Select } from '../ui/Input';
 import { dropdown, dropdownItem, text, input as inputRecipe } from '../ui/recipes';
@@ -17,7 +21,13 @@ interface FieldState {
 }
 
 export default function CommandForm({ command, onExecute, onCancel }: CommandFormProps) {
-  const { fetchAutocomplete, fetchMyToons } = useSocket();
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+
+  const nameOpt = command.options.find(o => o.name === 'name');
+  const isCreateCommand = nameOpt && !nameOpt.autocomplete;
+
+  const { data: myToons = [] } = useMyToonsQuery(!!isCreateCommand);
 
   const [fields, setFields] = useState<Record<string, FieldState>>(() => {
     const init: Record<string, FieldState> = {};
@@ -31,21 +41,11 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
   const [acSelected, setAcSelected] = useState(-1);
   const [acField, setAcField] = useState<string | null>(null);
 
-  const [myToons, setMyToons] = useState<ToonInfo[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const fieldRefs = useRef<Record<string, HTMLInputElement | HTMLSelectElement | null>>({});
   const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const formRef = useRef<HTMLDivElement>(null);
-
-  const nameOpt = command.options.find(o => o.name === 'name');
-  const isCreateCommand = nameOpt && !nameOpt.autocomplete;
-
-  useEffect(() => {
-    if (isCreateCommand) {
-      fetchMyToons().then(setMyToons);
-    }
-  }, [isCreateCommand]);
 
   useEffect(() => {
     const firstOpt = command.options[0];
@@ -116,12 +116,28 @@ export default function CommandForm({ command, onExecute, onCancel }: CommandFor
     clearTimeout(fetchTimerRef.current);
     setAcField(opt.name);
     fetchTimerRef.current = setTimeout(async () => {
-      const choices = await fetchAutocomplete(command.name, opt.name, val);
-      if (choices.length > 0) {
-        setAcChoices(choices);
-        setAcSelected(0);
-        setAcField(opt.name);
-      } else {
+      try {
+        const choices = await queryClient.fetchQuery({
+          queryKey: ['autocomplete', command.name, opt.name, val],
+          queryFn: () => authFetch<AutocompleteChoice[]>(token!, `/api/commands/${command.name}/autocomplete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              options: { [opt.name]: val },
+              focused: { name: opt.name, value: val },
+            }),
+          }),
+          staleTime: 10 * 1000,
+          gcTime: 30 * 1000,
+        });
+        if (choices.length > 0) {
+          setAcChoices(choices);
+          setAcSelected(0);
+          setAcField(opt.name);
+        } else {
+          hideAutocomplete();
+        }
+      } catch {
         hideAutocomplete();
       }
     }, val ? 100 : 0);

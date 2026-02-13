@@ -1,21 +1,11 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useState, useMemo, useCallback } from 'react';
+import { useRosterQuery } from '../hooks/useRosterQuery';
 import AppHeader from '../components/AppHeader';
 import { ClassChart, StatusChart, LevelChart } from '../components/roster/RosterFilters';
 import MemberList from '../components/roster/RosterTable';
-import type { RosterMember } from '../components/roster/RosterRow';
 import { Card, Badge, Text, Input } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
-
-interface RosterData {
-  members: RosterMember[];
-  summary: {
-    totalMembers: number;
-    totalCharacters: number;
-    classCounts: Record<string, number>;
-  };
-}
 
 function CollapsibleCard({ id, title, count, collapsedPanels, onToggle, children }: {
   id: string;
@@ -53,10 +43,7 @@ function CollapsibleCard({ id, title, count, collapsedPanels, onToggle, children
 }
 
 export default function RosterPage() {
-  const { token } = useAuth();
-  const [data, setData] = useState<RosterData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error } = useRosterQuery();
 
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState<string | null>(null);
@@ -70,27 +57,6 @@ export default function RosterPage() {
       return next;
     });
   }, []);
-
-  async function fetchRoster() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/roster', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to fetch roster');
-      const json: RosterData = await res.json();
-      setData(json);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch roster');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchRoster();
-  }, [token]);
 
   const allChars = useMemo(() => {
     if (!data) return [];
@@ -157,10 +123,10 @@ export default function RosterPage() {
       <AppHeader />
       <div className="flex-1 overflow-y-auto relative z-0">
         <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-5">
-          {error && <Text variant="error">{error}</Text>}
-          {loading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
+          {error && <Text variant="error">{error instanceof Error ? error.message : 'Failed to fetch roster'}</Text>}
+          {isLoading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
 
-          {!loading && data && (
+          {!isLoading && data && (
             <>
               {/* Treemap */}
               <ClassChart

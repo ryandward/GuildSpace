@@ -1,6 +1,8 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useMemberQuery } from '../hooks/useMemberQuery';
+import { useBioMutation } from '../hooks/useBioMutation';
 import AppHeader from '../components/AppHeader';
 import CharacterCard from '../components/roster/CharacterCard';
 import { Text, Heading, Card, Button, Textarea } from '../ui';
@@ -11,92 +13,28 @@ function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
 }
 
-interface CharacterDkp {
-  name: string;
-  class: string;
-  totalDkp: number;
-  raidCount: number;
-}
-
-interface MemberDetail {
-  discordId: string;
-  displayName: string;
-  bio: string | null;
-  characters: {
-    name: string;
-    class: string;
-    level: number;
-    status: string;
-    lastRaidDate: string | null;
-  }[];
-  earnedDkp: number;
-  spentDkp: number;
-  dkpByCharacter: CharacterDkp[];
-}
-
 export default function MemberDetailPage() {
   const { discordId } = useParams<{ discordId: string }>();
-  const { token, user: authUser } = useAuth();
-  const [data, setData] = useState<MemberDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user: authUser } = useAuth();
+  const { data, isLoading, error } = useMemberQuery(discordId);
+  const bioMutation = useBioMutation(discordId);
 
   // Bio editing
   const [editingBio, setEditingBio] = useState(false);
   const [bioText, setBioText] = useState('');
-  const [bioSaving, setBioSaving] = useState(false);
 
   const isOwnProfile = authUser?.id === discordId;
-
-  useEffect(() => {
-    if (!discordId) return;
-
-    async function fetchMember() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/roster/${discordId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Failed to fetch member');
-        const json: MemberDetail = await res.json();
-        setData(json);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch member');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchMember();
-  }, [discordId, token]);
 
   const startEditBio = useCallback(() => {
     setBioText(data?.bio || '');
     setEditingBio(true);
   }, [data?.bio]);
 
-  const saveBio = useCallback(async () => {
-    setBioSaving(true);
-    try {
-      const res = await fetch('/api/profile/bio', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ bio: bioText }),
-      });
-      if (!res.ok) throw new Error('Failed to save bio');
-      const json = await res.json();
-      setData(prev => prev ? { ...prev, bio: json.bio } : prev);
-      setEditingBio(false);
-    } catch {
-      // keep editor open on failure
-    } finally {
-      setBioSaving(false);
-    }
-  }, [token, bioText]);
+  const saveBio = useCallback(() => {
+    bioMutation.mutate(bioText, {
+      onSuccess: () => setEditingBio(false),
+    });
+  }, [bioMutation, bioText]);
 
   const netDkp = data ? data.earnedDkp - data.spentDkp : 0;
   const maxDkp = useMemo(() => {
@@ -113,10 +51,10 @@ export default function MemberDetailPage() {
             <Text variant="caption" className="hover:text-accent transition-colors duration-fast">&lsaquo; Back to roster</Text>
           </Link>
 
-          {error && <Text variant="error">{error}</Text>}
-          {loading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
+          {error && <Text variant="error">{error instanceof Error ? error.message : 'Failed to fetch member'}</Text>}
+          {isLoading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
 
-          {!loading && data && (
+          {!isLoading && data && (
             <>
               {/* Header */}
               <div className="flex items-baseline gap-2">
@@ -138,8 +76,8 @@ export default function MemberDetailPage() {
                     className="w-full resize-none"
                   />
                   <div className="flex items-center gap-1">
-                    <Button size="sm" onClick={saveBio} disabled={bioSaving}>
-                      {bioSaving ? 'Saving...' : 'Save'}
+                    <Button size="sm" onClick={saveBio} disabled={bioMutation.isPending}>
+                      {bioMutation.isPending ? 'Saving...' : 'Save'}
                     </Button>
                     <Button size="sm" intent="ghost" onClick={() => setEditingBio(false)}>Cancel</Button>
                     <Text variant="caption" className="ml-auto">{bioText.length}/300</Text>

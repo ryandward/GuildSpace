@@ -63,9 +63,34 @@ Shared database helpers and validators live in `src/commands/census/census_funct
 
 TypeORM entities mapping to PostgreSQL tables/views. Key entities: `Census`, `Dkp`, `Attendance`, `Items`, `Bank`, `Raids`, `GuildSpaceUser`, `ChatMessage`. TypeORM uses decorators (`experimentalDecorators` and `emitDecoratorMetadata` are enabled in tsconfig).
 
-### Frontend
+### Frontend (`client/`)
 
-`src/platform/web/public/index.html` — monolithic vanilla JS single-page app. Communicates via Socket.IO and renders command responses (embeds, buttons, modals, select menus) plus a real-time chat panel.
+React 19 + TypeScript SPA built with Vite. Located in `client/` with its own `package.json`. Key libraries: React Router, Socket.IO client, Tailwind CSS v4, class-variance-authority.
+
+**Contexts:**
+- `AuthContext` — Discord OAuth token management, user setup flow. Not managed by TanStack Query.
+- `SocketContext` — Socket.IO connection, real-time events (chat, command replies, modals). Exposes `commands` (sourced from `useCommandsQuery`), `executeCommand`, `sendChat`, etc.
+
+**Data Fetching (TanStack Query):**
+
+All REST data fetching uses `@tanstack/react-query`. The `QueryClientProvider` wraps the app in `main.tsx`. Defaults: `staleTime: 2min`, `gcTime: 10min`, `retry: 1`, `refetchOnWindowFocus: true`.
+
+- `lib/queryClient.ts` — singleton `QueryClient` with defaults
+- `lib/api.ts` — `authFetch<T>(token, url, init?)` helper that adds Bearer header and throws `ApiError` on failure
+
+Custom hooks in `hooks/`:
+
+| Hook | Query Key | Endpoint | staleTime | Notes |
+|---|---|---|---|---|
+| `useRosterQuery` | `['roster']` | `GET /api/roster` | 2 min | Shared by AppShell (classMap) and RosterPage |
+| `useMemberQuery(id)` | `['roster', id]` | `GET /api/roster/:id` | 1 min | Member detail page |
+| `useBioMutation(id)` | — | `POST /api/profile/bio` | — | Optimistic cache update + invalidation |
+| `useCommandsQuery(enabled)` | `['commands']` | `GET /api/commands` | 10 min | No auth header; consumed by SocketContext |
+| `useMyToonsQuery(enabled)` | `['toons', 'mine']` | `GET /api/toons/mine` | 30 sec | CommandForm prefill for create commands |
+
+Autocomplete requests use `queryClient.fetchQuery` with key `['autocomplete', cmd, opt, value]` (10s stale, 30s gc).
+
+**What stays outside TanStack Query:** Auth flows (token bootstrap in AuthContext), Socket.IO real-time events (chat messages, command responses, modals).
 
 ## Command Port Status
 
@@ -119,3 +144,4 @@ Currently there are **no data-access REST endpoints** — all data flows through
 - Error messages shown to users should use plain language with no implementation details (see commit c271b73).
 - All imports use `.js` extensions (ESM requirement even for TypeScript source files).
 - SQL migrations in `src/migrations/` are numbered `001_`, `002_`, etc. and run in alphabetical order on startup.
+- All REST data fetching in the client uses TanStack Query hooks — never raw `useState` + `useEffect` + `fetch()`. New data endpoints should get a custom hook in `client/src/hooks/` using `authFetch` from `client/src/lib/api.ts`.
