@@ -529,14 +529,16 @@ export function getDemoResponse(url: string, method: string): unknown | null {
     const m = getMembers().find(m => m.discordId === id);
     if (!m) return null;
 
-    // Build dkpByCharacter — weight toward Main, random split for alts
-    const weights = m.characters.map(c => c.status === 'Main' ? 3 + rand() * 2 : 0.5 + rand());
-    const totalWeight = weights.reduce((s, w) => s + w, 0);
+    // Build dkpByCharacter — raid count drives DKP (more raids = more DKP)
+    const raidCounts = m.characters.map(c =>
+      c.status === 'Main' ? randInt(20, 50) : randInt(2, 15)
+    );
+    const totalRaids = raidCounts.reduce((s, r) => s + r, 0);
     const dkpByCharacter = m.characters.map((c, i) => ({
       name: c.name,
       class: c.class,
-      totalDkp: Math.round(m.earnedDkp * weights[i] / totalWeight),
-      raidCount: Math.round((c.status === 'Main' ? randInt(15, 45) : randInt(3, 20)) * weights[i] / totalWeight * 2),
+      totalDkp: Math.round(m.earnedDkp * raidCounts[i] / totalRaids),
+      raidCount: raidCounts[i],
     }));
 
     return {
