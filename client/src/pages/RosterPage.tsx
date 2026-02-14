@@ -61,9 +61,12 @@ export default function RosterPage() {
   }, []);
 
   // Treemap data uses pre-class filter so the treemap stays stable when clicking a class
+  // When status filter is active, narrow to matching characters (not all chars of matching members)
   const preClassChars = useMemo(() => {
-    return filteredPreClass.flatMap(m => m.characters);
-  }, [filteredPreClass]);
+    const chars = filteredPreClass.flatMap(m => m.characters);
+    if (statusFilter.size === 0) return chars;
+    return chars.filter(c => statusFilter.has(c.status));
+  }, [filteredPreClass, statusFilter]);
 
   // Stats data uses post-class-filter characters
   const filteredClassChars = useMemo(() => {

@@ -121,10 +121,13 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
   const filtered = useMemo(() => {
     let result = filteredPreClass;
 
-    // Class filter (applied after pre-class so treemap can use pre-class data)
+    // Class filter — when combined with status filter, require BOTH on the same character
     if (classFilter) {
       result = result.filter(m =>
-        m.characters.some(c => c.class === classFilter)
+        m.characters.some(c =>
+          c.class === classFilter &&
+          (statusFilter.size === 0 || statusFilter.has(c.status))
+        )
       );
     }
 
@@ -152,7 +155,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
       }
       return sortDirection === 'asc' ? cmp : -cmp;
     });
-  }, [filteredPreClass, classFilter, sortField, sortDirection]);
+  }, [filteredPreClass, classFilter, statusFilter, sortField, sortDirection]);
 
   return {
     classFilter, setClassFilter,
