@@ -20,6 +20,13 @@ export const ROLE_LABEL: Record<BadgeRole, string> = {
   officer: 'Officer',
 };
 
+const RANK: Record<Role, number> = { member: 0, officer: 1, admin: 2, owner: 3 };
+
+/** True if caller strictly outranks target. */
+export function outranks(caller: Role, target: Role): boolean {
+  return RANK[caller] > RANK[target];
+}
+
 /** Get the "since" date for a role, if tracked. */
 export function roleSince(role: Role, data: { officerSince?: string | null; adminSince?: string | null }): string | null {
   if (role === 'admin') return data.adminSince ?? null;

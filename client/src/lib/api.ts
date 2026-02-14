@@ -20,6 +20,13 @@ export async function authFetch<T>(token: string, url: string, init?: RequestIni
       Authorization: `Bearer ${token}`,
     },
   });
-  if (!res.ok) throw new ApiError(res.status, `Request failed: ${res.statusText}`);
+  if (!res.ok) {
+    let message = `Request failed: ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.error) message = body.error;
+    } catch { /* ignore parse failures */ }
+    throw new ApiError(res.status, message);
+  }
   return res.json();
 }

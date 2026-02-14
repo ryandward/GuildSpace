@@ -35,20 +35,31 @@ interface Props {
   level: number;
   status: string;
   lastRaidDate: string | null;
+  onEdit?: () => void;
 }
 
 export default function CharacterCard(props: Props) {
   const lastRaid = props.lastRaidDate ? timeAgo(props.lastRaidDate) : null;
 
   return (
-    <div className={cx(card(), 'flex flex-col')}>
+    <div className={cx(card(), 'flex flex-col hover:bg-surface-2 transition-colors duration-fast')}>
       <span className={`h-0.5 w-full ${classToPip(props.class)}`} />
       <div className="flex items-center gap-1.5 px-2 pt-1.5">
         <Text variant="body" className="font-semibold">{props.name}</Text>
         <span className={cx(badge({ variant: 'status', color: statusColor(props.status) }))}>{props.status}</span>
-        {lastRaid && (
-          <Text variant="caption" className="ml-auto shrink-0">{lastRaid}</Text>
-        )}
+        <div className="ml-auto flex items-center gap-1.5">
+          {props.onEdit && (
+            <button
+              className="bg-transparent border-none cursor-pointer p-0"
+              onClick={props.onEdit}
+            >
+              <Text variant="caption" className="hover:text-accent transition-colors duration-fast">Edit</Text>
+            </button>
+          )}
+          {lastRaid && (
+            <Text variant="caption" className="shrink-0">{lastRaid}</Text>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-2 px-2 pb-1.5">
         <Text variant="label">{props.class}</Text>

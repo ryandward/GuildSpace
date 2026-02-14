@@ -689,6 +689,106 @@ export function createWebServer(opts: WebServerOptions) {
     res.json({ ok: true, discordId, isOfficer: target.isOfficer, isAdmin: target.isAdmin });
   });
 
+  // ─── Character Management ─────────────────────────────────────────
+
+  const RANK_MAP: Record<string, number> = { member: 0, officer: 1, admin: 2, owner: 3 };
+
+  /** Check if caller can manage characters for target discordId. Returns caller info or sends error. */
+  async function requireCharacterAccess(
+    req: express.Request, res: express.Response, targetDiscordId: string
+  ): Promise<{ user: InteractionUser; callerGsUser: GuildSpaceUser | null } | null> {
+    const user = await getUser(req);
+    if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
+
+    // Self-service: always allowed
+    if (user.id === targetDiscordId) {
+      const callerGsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+      return { user, callerGsUser };
+    }
+
+    // Managing someone else: caller must outrank target
+    const callerGsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+    const targetGsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: targetDiscordId } });
+
+    const callerRole = callerGsUser?.isOwner ? 'owner'
+      : callerGsUser?.hasAdminAccess ? 'admin'
+      : callerGsUser?.hasOfficerAccess ? 'officer'
+      : 'member';
+    const targetRole = targetGsUser?.isOwner ? 'owner'
+      : targetGsUser?.hasAdminAccess ? 'admin'
+      : targetGsUser?.hasOfficerAccess ? 'officer'
+      : 'member';
+
+    if (RANK_MAP[callerRole] <= RANK_MAP[targetRole]) {
+      res.status(403).json({ error: 'You do not have permission to manage this member\'s characters' });
+      return null;
+    }
+
+    return { user, callerGsUser };
+  }
+
+  // Create or update a character
+  app.put('/api/roster/:discordId/characters/:name', async (req, res) => {
+    const { discordId, name } = req.params;
+    const access = await requireCharacterAccess(req, res, discordId);
+    if (!access) return;
+
+    try {
+      const { class: charClass, level, status } = req.body;
+      if (!charClass || level == null || !status) {
+        return res.status(400).json({ error: 'class, level, and status are required' });
+      }
+      if (!['Main', 'Alt', 'Bot'].includes(status)) {
+        return res.status(400).json({ error: 'Status must be Main, Alt, or Bot' });
+      }
+
+      const result = await (await import('../../commands/census/census_functions.js')).declareOrUpdate(
+        discordId, status, name, Number(level), charClass,
+      );
+
+      // Ensure the user has a DKP row (new members get 5 starter DKP)
+      await (await import('../../commands/census/census_functions.js')).insertUser(discordId);
+
+      res.json({ ok: true, name, class: charClass, level: Number(level), status, message: result.message });
+    } catch (err: any) {
+      const msg = err?.message?.replace(/:x:\s*/g, '') || 'Failed to save character';
+      res.status(400).json({ error: msg });
+    }
+  });
+
+  // Drop a character (set status to 'Dropped')
+  app.delete('/api/roster/:discordId/characters/:name', async (req, res) => {
+    const { discordId, name } = req.params;
+    const access = await requireCharacterAccess(req, res, discordId);
+    if (!access) return;
+
+    try {
+      const existing = await AppDataSource.manager.findOne(Census, { where: { Name: name, DiscordId: discordId } });
+      if (!existing) {
+        return res.status(404).json({ error: 'Character not found' });
+      }
+
+      // Guard: can't drop last Main
+      if (existing.Status === 'Main') {
+        const mainCount = await AppDataSource.manager.count(ActiveToons, {
+          where: { DiscordId: discordId, Status: 'Main' },
+        });
+        if (mainCount <= 1) {
+          return res.status(400).json({ error: 'Cannot drop your only Main character' });
+        }
+      }
+
+      existing.Status = 'Dropped';
+      existing.Time = new Date();
+      await AppDataSource.manager.save(existing);
+
+      res.json({ ok: true, name });
+    } catch (err: any) {
+      console.error('Failed to drop character:', err);
+      res.status(500).json({ error: 'Failed to drop character' });
+    }
+  });
+
   // ─── Profile ──────────────────────────────────────────────────────
 
   app.post('/api/profile/bio', async (req, res) => {

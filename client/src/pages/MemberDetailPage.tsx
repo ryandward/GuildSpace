@@ -5,12 +5,15 @@ import { useSocket } from '../context/SocketContext';
 import { useMemberQuery } from '../hooks/useMemberQuery';
 import { useBioMutation } from '../hooks/useBioMutation';
 import { useRoleMutation } from '../hooks/useRoleMutation';
+import { useCharacterMutations } from '../hooks/useCharacterMutations';
 import CharacterCard from '../components/roster/CharacterCard';
+import CharacterEditModal from '../components/roster/CharacterEditModal';
 import MemberName from '../components/MemberName';
 import { Text, Card, Button, Textarea } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getMostRecentClass } from '../lib/classColors';
+import { outranks } from '../lib/roles';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
@@ -28,14 +31,21 @@ export default function MemberDetailPage() {
   const { data, isLoading, error } = useMemberQuery(discordId);
   const bioMutation = useBioMutation(discordId);
   const roleMutation = useRoleMutation(discordId);
+  const { save: saveMutation, drop: dropMutation } = useCharacterMutations(discordId);
 
   // Bio editing
   const [editingBio, setEditingBio] = useState(false);
   const [bioText, setBioText] = useState('');
 
+  // Character editing
+  const [editingCharacter, setEditingCharacter] = useState<{ name: string; class: string; level: number; status: string } | 'new' | null>(null);
+  const [charError, setCharError] = useState<string | null>(null);
+
   const isOwnProfile = authUser?.id === discordId;
   const canToggleOfficer = (authUser?.isOwner || authUser?.isAdmin) && !isOwnProfile && !data?.isOwner;
   const canToggleAdmin = authUser?.isOwner && !isOwnProfile && !data?.isOwner;
+  const canManageCharacters = isOwnProfile ||
+    (authUser?.role && data?.role && outranks(authUser.role, data.role));
 
   const startEditBio = useCallback(() => {
     setBioText(data?.bio || '');
@@ -192,7 +202,18 @@ export default function MemberDetailPage() {
               </Card>
 
               {/* Characters */}
-              <Text variant="overline" className="mt-1">Characters</Text>
+              <div className="flex items-center justify-between mt-1">
+                <Text variant="overline">Characters</Text>
+                {canManageCharacters && (
+                  <Button
+                    size="xs"
+                    intent="ghost"
+                    onClick={() => { setCharError(null); setEditingCharacter('new'); }}
+                  >
+                    + Add
+                  </Button>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                 {[...data.characters].sort((a, b) => {
                   const aDate = a.lastRaidDate ? new Date(a.lastRaidDate).getTime() : 0;
@@ -212,9 +233,32 @@ export default function MemberDetailPage() {
                     level={c.level}
                     status={c.status}
                     lastRaidDate={c.lastRaidDate}
+                    onEdit={canManageCharacters ? () => { setCharError(null); setEditingCharacter(c); } : undefined}
                   />
                 ))}
               </div>
+
+              <CharacterEditModal
+                isOpen={editingCharacter !== null}
+                onClose={() => setEditingCharacter(null)}
+                character={editingCharacter === 'new' ? null : editingCharacter}
+                isPending={saveMutation.isPending || dropMutation.isPending}
+                error={charError}
+                onSave={(charData) => {
+                  setCharError(null);
+                  saveMutation.mutate(charData, {
+                    onSuccess: () => setEditingCharacter(null),
+                    onError: (err) => setCharError(err instanceof Error ? err.message : 'Failed to save'),
+                  });
+                }}
+                onDrop={(name) => {
+                  setCharError(null);
+                  dropMutation.mutate(name, {
+                    onSuccess: () => setEditingCharacter(null),
+                    onError: (err) => setCharError(err instanceof Error ? err.message : 'Failed to drop'),
+                  });
+                }}
+              />
 
               {/* DKP by Character — horizontal bar chart */}
               {data.dkpByCharacter.length > 0 && (
