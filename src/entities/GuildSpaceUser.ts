@@ -48,4 +48,14 @@ export class GuildSpaceUser {
   /** When they joined GuildSpace */
   @Column('timestamp', { name: 'created_at', default: () => 'NOW()' })
   createdAt: Date;
+
+  /** True if this user has officer-level access or above */
+  get hasOfficerAccess(): boolean {
+    return this.isOfficer || this.isAdmin || this.isOwner;
+  }
+
+  /** True if this user has admin-level access or above */
+  get hasAdminAccess(): boolean {
+    return this.isAdmin || this.isOwner;
+  }
 }

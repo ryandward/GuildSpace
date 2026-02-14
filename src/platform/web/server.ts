@@ -343,8 +343,8 @@ export function createWebServer(opts: WebServerOptions) {
       displayName: user.displayName,
       discordUsername: user.discordUsername,
       needsSetup: user.needsSetup || false,
-      isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || gsUser?.isOwner || false,
-      isAdmin: gsUser?.isAdmin || gsUser?.isOwner || false,
+      isOfficer: gsUser?.hasOfficerAccess || false,
+      isAdmin: gsUser?.hasAdminAccess || false,
       isOwner: gsUser?.isOwner || false,
       joinedAt: gsUser?.createdAt?.toISOString() || null,
     });
@@ -540,8 +540,8 @@ export function createWebServer(opts: WebServerOptions) {
           earnedDkp: dkp ? Number(dkp.EarnedDkp) : 0,
           spentDkp: dkp ? Number(dkp.SpentDkp) : 0,
           hasGuildSpace: !!gsUser,
-          isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || gsUser?.isOwner || false,
-          isAdmin: gsUser?.isAdmin || gsUser?.isOwner || false,
+          isOfficer: gsUser?.hasOfficerAccess || false,
+          isAdmin: gsUser?.hasAdminAccess || false,
           isOwner: gsUser?.isOwner || false,
         };
       });
@@ -616,8 +616,8 @@ export function createWebServer(opts: WebServerOptions) {
         discordId,
         displayName,
         bio: gsUser?.bio || null,
-        isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || gsUser?.isOwner || false,
-        isAdmin: gsUser?.isAdmin || gsUser?.isOwner || false,
+        isOfficer: gsUser?.hasOfficerAccess || false,
+        isAdmin: gsUser?.hasAdminAccess || false,
         isOwner: gsUser?.isOwner || false,
         officerSince: gsUser?.officerSince?.toISOString() || null,
         adminSince: gsUser?.adminSince?.toISOString() || null,
@@ -725,7 +725,7 @@ export function createWebServer(opts: WebServerOptions) {
     const user = await getUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
     const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
-    if (!gsUser?.isOfficer && !gsUser?.isAdmin && !gsUser?.isOwner) { res.status(403).json({ error: 'Officer access required' }); return null; }
+    if (!gsUser?.hasOfficerAccess) { res.status(403).json({ error: 'Officer access required' }); return null; }
     return { user, gsUser };
   }
 
@@ -733,7 +733,7 @@ export function createWebServer(opts: WebServerOptions) {
     const user = await getUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated' }); return null; }
     const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
-    if (!gsUser?.isAdmin && !gsUser?.isOwner) { res.status(403).json({ error: 'Admin access required' }); return null; }
+    if (!gsUser?.hasAdminAccess) { res.status(403).json({ error: 'Admin access required' }); return null; }
     return { user, gsUser };
   }
 
