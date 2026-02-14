@@ -78,7 +78,7 @@ export type InputVariants = VariantProps<typeof input>;
 // ── CARD ────────────────────────────────────────────────
 
 export const card = cva(
-  'bg-surface border border-border rounded-md',
+  'bg-surface border border-border rounded-md overflow-hidden',
   {
     variants: {
       elevated: {
