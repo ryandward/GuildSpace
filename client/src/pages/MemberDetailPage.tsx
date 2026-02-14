@@ -20,18 +20,6 @@ function formatDate(iso: string | null | undefined): string | undefined {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-type Role = 'owner' | 'admin' | 'officer';
-
-const ROLE_COLOR = { owner: 'accent', admin: 'red', officer: 'blue' } as const;
-const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', officer: 'Officer' } as const;
-
-function highestRole(data: { isOwner: boolean; isAdmin: boolean; isOfficer: boolean }): Role | null {
-  if (data.isOwner) return 'owner';
-  if (data.isAdmin) return 'admin';
-  if (data.isOfficer) return 'officer';
-  return null;
-}
-
 export default function MemberDetailPage() {
   const { discordId } = useParams<{ discordId: string }>();
   const { user: authUser } = useAuth();
