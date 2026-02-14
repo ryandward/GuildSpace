@@ -44,7 +44,9 @@ export default function App() {
         <Route path="/raids/:eventId" element={<RaidEventPage />} />
         <Route path="/bank" element={<BankPage />} />
         <Route path="/bank/:banker" element={<BankerDetailPage />} />
-        <Route path="/terminal" element={<AppShell />} />
+        <Route path="/chat" element={<AppShell />} />
+        <Route path="/chat/:channelName" element={<AppShell />} />
+        <Route path="/terminal" element={<Navigate to="/chat" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/roster" replace />} />
     </Routes>

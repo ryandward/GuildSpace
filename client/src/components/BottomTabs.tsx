@@ -36,13 +36,13 @@ const tabs = [
     ),
   },
   {
-    to: '/terminal',
-    label: 'Terminal',
+    to: '/chat',
+    label: 'Chat',
     icon: (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="3" width="16" height="14" rx="2" />
-        <path d="M5.5 8l3 2-3 2" />
-        <path d="M10.5 12h4" />
+        <path d="M4 4h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H7l-4 3V6a2 2 0 0 1 2-2z" />
+        <path d="M7 9h6" />
+        <path d="M7 12h4" />
       </svg>
     ),
   },
@@ -51,7 +51,7 @@ const tabs = [
 export default function BottomTabs() {
   const { isDemo } = useAuth();
   const { ref: navRef, style: indicatorStyle } = useSlidingIndicator<HTMLElement>();
-  const visibleTabs = isDemo ? tabs.filter(t => t.to !== '/terminal') : tabs;
+  const visibleTabs = isDemo ? tabs.filter(t => t.to !== '/chat') : tabs;
 
   return (
     <nav ref={navRef} className="fixed bottom-0 inset-x-0 z-dropdown bg-surface border-t border-border flex md:hidden relative">

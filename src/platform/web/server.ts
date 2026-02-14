@@ -22,6 +22,7 @@ import { fileURLToPath } from 'url';
 import { AppDataSource } from '../../app_data.js';
 import { GuildSpaceUser } from '../../entities/GuildSpaceUser.js';
 import { ChatMessage } from '../../entities/ChatMessage.js';
+import { ChatChannel } from '../../entities/ChatChannel.js';
 import { ActiveToons } from '../../entities/ActiveToons.js';
 import { Dkp } from '../../entities/Dkp.js';
 import { Attendance } from '../../entities/Attendance.js';
@@ -692,6 +693,10 @@ export function createWebServer(opts: WebServerOptions) {
   // ─── Character Management ─────────────────────────────────────────
 
   const RANK_MAP: Record<string, number> = { member: 0, officer: 1, admin: 2, owner: 3 };
+
+  function meetsMinRole(userRole: string, minRole: string): boolean {
+    return (RANK_MAP[userRole] ?? 0) >= (RANK_MAP[minRole] ?? 0);
+  }
 
   /** Check if caller can manage characters for target discordId. Returns caller info or sends error. */
   async function requireCharacterAccess(
@@ -1881,6 +1886,93 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  // ─── Chat Channels ─────────────────────────────────────────────────
+
+  /** Compute a user's role string from their GuildSpaceUser record. */
+  function getUserRole(gsUser: GuildSpaceUser | null): string {
+    if (!gsUser) return 'member';
+    if (gsUser.isOwner) return 'owner';
+    if (gsUser.hasAdminAccess) return 'admin';
+    if (gsUser.hasOfficerAccess) return 'officer';
+    return 'member';
+  }
+
+  app.get('/api/chat/channels', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+      const role = getUserRole(gsUser);
+      const channels = await AppDataSource.manager.find(ChatChannel, { order: { createdAt: 'ASC' } });
+      const accessible = channels.filter(ch => meetsMinRole(role, ch.minRole));
+      res.json(accessible);
+    } catch (err) {
+      console.error('Failed to fetch chat channels:', err);
+      res.status(500).json({ error: 'Failed to fetch channels' });
+    }
+  });
+
+  app.post('/api/chat/channels', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+
+    try {
+      const { name, displayName, minRole } = req.body;
+      if (!name || !displayName) {
+        return res.status(400).json({ error: 'name and displayName are required' });
+      }
+
+      const slug = String(name).toLowerCase().replace(/[^a-z0-9-]/g, '');
+      if (!slug || slug.length < 2 || slug.length > 32) {
+        return res.status(400).json({ error: 'Channel name must be 2-32 lowercase alphanumeric characters' });
+      }
+
+      const role = minRole && RANK_MAP[minRole] !== undefined ? minRole : 'member';
+
+      const existing = await AppDataSource.manager.findOne(ChatChannel, { where: { name: slug } });
+      if (existing) {
+        return res.status(409).json({ error: 'A channel with that name already exists' });
+      }
+
+      const channel = new ChatChannel();
+      channel.name = slug;
+      channel.displayName = String(displayName).trim();
+      channel.minRole = role;
+      channel.createdBy = officer.user.id;
+      const saved = await AppDataSource.manager.save(channel);
+      res.json(saved);
+    } catch (err) {
+      console.error('Failed to create chat channel:', err);
+      res.status(500).json({ error: 'Failed to create channel' });
+    }
+  });
+
+  app.delete('/api/chat/channels/:name', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+
+    try {
+      const { name } = req.params;
+      if (name === 'general') {
+        return res.status(403).json({ error: 'Cannot delete the General channel' });
+      }
+
+      const channel = await AppDataSource.manager.findOne(ChatChannel, { where: { name } });
+      if (!channel) {
+        return res.status(404).json({ error: 'Channel not found' });
+      }
+
+      // Delete associated messages
+      await AppDataSource.manager.delete(ChatMessage, { channel: name });
+      await AppDataSource.manager.remove(channel);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to delete chat channel:', err);
+      res.status(500).json({ error: 'Failed to delete channel' });
+    }
+  });
+
   // ─── Online Presence Tracking ──────────────────────────────────────
 
   const onlineUsers = new Map<string, number>(); // discordId → connection count
@@ -1939,7 +2031,22 @@ export function createWebServer(opts: WebServerOptions) {
 
       if (user) {
         sessionUser = user;
-        socket.join('channel:general');
+
+        // Join all accessible channel rooms
+        try {
+          const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+          const role = getUserRole(gsUser);
+          const channels = await AppDataSource.manager.find(ChatChannel, { order: { createdAt: 'ASC' } });
+          for (const ch of channels) {
+            if (meetsMinRole(role, ch.minRole)) {
+              socket.join(`channel:${ch.name}`);
+            }
+          }
+        } catch {
+          // Fallback: at least join general
+          socket.join('channel:general');
+        }
+
         socket.emit('authOk', user);
 
         // Track online presence
@@ -1962,14 +2069,14 @@ export function createWebServer(opts: WebServerOptions) {
           });
         }
 
-        // Send recent chat history
+        // Send recent chat history for general channel
         try {
           const history = await AppDataSource.manager.find(ChatMessage, {
             where: { channel: 'general' },
             order: { createdAt: 'ASC' },
             take: 100,
           });
-          socket.emit('chatHistory', history);
+          socket.emit('chatHistory', { channel: 'general', messages: history });
         } catch (err) {
           console.error('Failed to load chat history:', err);
         }
@@ -2087,22 +2194,57 @@ export function createWebServer(opts: WebServerOptions) {
 
     // ─── Chat Messages ──────────────────────────────────────────────
 
+    socket.on('requestChannelHistory', async (data: { channel: string }) => {
+      if (!sessionUser) return;
+      const channelName = data.channel;
+      if (!channelName) return;
+
+      try {
+        // Validate channel exists and user has access
+        const channel = await AppDataSource.manager.findOne(ChatChannel, { where: { name: channelName } });
+        if (!channel) return;
+        const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: sessionUser.id } });
+        const role = getUserRole(gsUser);
+        if (!meetsMinRole(role, channel.minRole)) return;
+
+        const history = await AppDataSource.manager.find(ChatMessage, {
+          where: { channel: channelName },
+          order: { createdAt: 'ASC' },
+          take: 100,
+        });
+        socket.emit('chatHistory', { channel: channelName, messages: history });
+      } catch (err) {
+        console.error('Failed to load channel history:', err);
+      }
+    });
+
     socket.on('chatMessage', async (data: { content: string; channel?: string }) => {
       if (!sessionUser) return;
       const content = data.content?.trim();
       if (!content) return;
 
-      const channel = data.channel || 'general';
+      const channelName = data.channel || 'general';
+
+      // Validate channel exists and user has access
+      try {
+        const channel = await AppDataSource.manager.findOne(ChatChannel, { where: { name: channelName } });
+        if (!channel) return;
+        const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: sessionUser.id } });
+        const role = getUserRole(gsUser);
+        if (!meetsMinRole(role, channel.minRole)) return;
+      } catch {
+        return;
+      }
 
       const msg = new ChatMessage();
-      msg.channel = channel;
+      msg.channel = channelName;
       msg.userId = sessionUser.id;
       msg.displayName = sessionUser.displayName || sessionUser.username;
       msg.content = content;
 
       try {
         const saved = await AppDataSource.manager.save(msg);
-        io.to(`channel:${channel}`).emit('newMessage', saved);
+        io.to(`channel:${channelName}`).emit('newMessage', saved);
       } catch (err) {
         console.error('Failed to save chat message:', err);
       }

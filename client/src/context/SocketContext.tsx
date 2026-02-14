@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { useCommandsQuery } from '../hooks/useCommandsQuery';
@@ -108,6 +108,7 @@ interface SocketContextValue {
   connected: boolean;
   commands: Command[];
   messages: AppMessage[];
+  activeChannel: string;
   modal: ModalData | null;
   onlineCount: number;
   onlineIds: string[];
@@ -115,6 +116,7 @@ interface SocketContextValue {
   closeModal: () => void;
   executeCommand: (name: string, options: Record<string, unknown>) => void;
   sendChat: (content: string) => void;
+  switchChannel: (channel: string) => void;
   submitModal: (modalId: string, fields: Record<string, string>) => void;
   sendComponentInteraction: (parentInteractionId: string, customId: string, values?: string[]) => void;
   showHelp: () => void;
@@ -144,13 +146,47 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const hasConnectedOnce = useRef(false);
   const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [connected, setConnected] = useState(false);
-  const [messages, setMessages] = useState<AppMessage[]>([]);
+  const [messagesByChannel, setMessagesByChannel] = useState<Map<string, AppMessage[]>>(new Map());
+  const [activeChannel, setActiveChannel] = useState('general');
+  const loadedChannels = useRef(new Set<string>());
+  const activeChannelRef = useRef(activeChannel);
+  activeChannelRef.current = activeChannel;
+  // Track which channel each interaction was executed in
+  const interactionChannelMap = useRef(new Map<string, string>());
   const [modal, setModal] = useState<ModalData | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const [onlineIds, setOnlineIds] = useState<string[]>([]);
   const [totalMembers, setTotalMembers] = useState(0);
 
   const { data: commands = [] } = useCommandsQuery(!!user);
+
+  /** Add messages to a specific channel's array */
+  const addToChannel = useCallback((channel: string, msgs: AppMessage[]) => {
+    setMessagesByChannel(prev => {
+      const next = new Map(prev);
+      const existing = next.get(channel) || [];
+      next.set(channel, [...existing, ...msgs]);
+      return next;
+    });
+  }, []);
+
+  /** Update messages in a specific channel using a transform function */
+  const updateChannel = useCallback((channel: string, fn: (prev: AppMessage[]) => AppMessage[]) => {
+    setMessagesByChannel(prev => {
+      const next = new Map(prev);
+      const existing = next.get(channel) || [];
+      next.set(channel, fn(existing));
+      return next;
+    });
+  }, []);
+
+  /** Find which channel an interaction belongs to, defaulting to active */
+  const channelForInteraction = useCallback((interactionId?: string): string => {
+    if (interactionId) {
+      return interactionChannelMap.current.get(interactionId) ?? activeChannelRef.current;
+    }
+    return activeChannelRef.current;
+  }, []);
 
   // Connect socket when user + token are ready (skip in demo mode)
   useEffect(() => {
@@ -169,7 +205,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     sock.on('disconnect', () => {
-      // Delay showing "Reconnecting" to avoid flashing on brief blips
       disconnectTimer.current = setTimeout(() => {
         setConnected(false);
       }, 2000);
@@ -178,7 +213,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     sock.on('authOk', () => {
       if (!hasConnectedOnce.current) {
         hasConnectedOnce.current = true;
-        setMessages(prev => [...prev, {
+        addToChannel('general', [{
           type: 'system',
           content: 'Connected. Type / to see available commands.',
           id: nextId(),
@@ -187,15 +222,18 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     sock.on('authError', (err: { error: string }) => {
-      setMessages(prev => [...prev, { type: 'error', content: 'Socket auth failed: ' + err.error, id: nextId() }]);
+      const ch = activeChannelRef.current;
+      addToChannel(ch, [{ type: 'error', content: 'Socket auth failed: ' + err.error, id: nextId() }]);
     });
 
     sock.on('reply', (data: ReplyData) => {
-      setMessages(prev => [...prev, { type: 'reply', data, id: nextId(), interactionId: data.interactionId }]);
+      const ch = channelForInteraction(data.interactionId);
+      addToChannel(ch, [{ type: 'reply', data, id: nextId(), interactionId: data.interactionId }]);
     });
 
     sock.on('editReply', (data: ReplyData) => {
-      setMessages(prev => {
+      const ch = channelForInteraction(data.interactionId);
+      updateChannel(ch, prev => {
         const idx = prev.findIndex(m => 'interactionId' in m && m.interactionId === data.interactionId);
         if (idx >= 0) {
           const updated = [...prev];
@@ -207,7 +245,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     sock.on('deferReply', (data: { interactionId: string }) => {
-      setMessages(prev => [...prev, {
+      const ch = channelForInteraction(data.interactionId);
+      addToChannel(ch, [{
         type: 'loading',
         content: 'Thinking...',
         id: nextId(),
@@ -216,11 +255,13 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     sock.on('deleteReply', (data: { interactionId: string }) => {
-      setMessages(prev => prev.filter(m => !('interactionId' in m && m.interactionId === data.interactionId)));
+      const ch = channelForInteraction(data.interactionId);
+      updateChannel(ch, prev => prev.filter(m => !('interactionId' in m && m.interactionId === data.interactionId)));
     });
 
     sock.on('followUp', (data: ReplyData) => {
-      setMessages(prev => [...prev, { type: 'reply', data, id: nextId() }]);
+      const ch = channelForInteraction(data.interactionId);
+      addToChannel(ch, [{ type: 'reply', data, id: nextId() }]);
     });
 
     sock.on('showModal', (data: ModalData) => {
@@ -228,18 +269,27 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     sock.on('error', (data: { error: string }) => {
-      setMessages(prev => [...prev, { type: 'error', content: data.error, id: nextId() }]);
+      const ch = activeChannelRef.current;
+      addToChannel(ch, [{ type: 'error', content: data.error, id: nextId() }]);
     });
 
-    sock.on('chatHistory', (msgs: ChatMsg[]) => {
-      setMessages(prev => [
-        ...prev,
-        ...msgs.map(msg => ({ type: 'chat' as const, msg, id: nextId() })),
-      ]);
+    sock.on('chatHistory', (payload: { channel: string; messages: ChatMsg[] } | ChatMsg[]) => {
+      // Handle both new { channel, messages } shape and legacy ChatMsg[] array
+      let channel: string;
+      let msgs: ChatMsg[];
+      if (Array.isArray(payload)) {
+        channel = 'general';
+        msgs = payload;
+      } else {
+        channel = payload.channel;
+        msgs = payload.messages;
+      }
+      loadedChannels.current.add(channel);
+      addToChannel(channel, msgs.map(msg => ({ type: 'chat' as const, msg, id: nextId() })));
     });
 
     sock.on('newMessage', (msg: ChatMsg) => {
-      setMessages(prev => [...prev, { type: 'chat', msg, id: nextId() }]);
+      addToChannel(msg.channel, [{ type: 'chat', msg, id: nextId() }]);
     });
 
     sock.on('presenceUpdate', (data: { onlineCount: number; onlineIds: string[]; totalMembers: number }) => {
@@ -253,14 +303,18 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       sock.disconnect();
       socketRef.current = null;
     };
-  }, [token, user]);
+  }, [token, user, addToChannel, updateChannel, channelForInteraction]);
 
   function executeCommand(name: string, options: Record<string, unknown>) {
     const sock = socketRef.current;
     if (!sock) return;
 
     const interactionId = nextInteractionId();
-    setMessages(prev => [...prev, {
+    const ch = activeChannelRef.current;
+    // Track which channel this interaction was executed in
+    interactionChannelMap.current.set(interactionId, ch);
+
+    addToChannel(ch, [{
       type: 'command',
       content: `/${name}${Object.entries(options).map(([k, v]) => ` ${v}`).join('')}`,
       id: nextId(),
@@ -270,11 +324,19 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }
 
   function sendChat(content: string) {
-    socketRef.current?.emit('chatMessage', { content });
+    socketRef.current?.emit('chatMessage', { content, channel: activeChannelRef.current });
+  }
+
+  function switchChannel(channel: string) {
+    setActiveChannel(channel);
+    if (!loadedChannels.current.has(channel)) {
+      socketRef.current?.emit('requestChannelHistory', { channel });
+    }
   }
 
   function submitModalFn(modalId: string, fields: Record<string, string>) {
     const interactionId = nextInteractionId();
+    interactionChannelMap.current.set(interactionId, activeChannelRef.current);
     socketRef.current?.emit('submitModal', { interactionId, modalId, fields });
     setModal(null);
   }
@@ -291,12 +353,18 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   function showHelp() {
     const lines = commands.map(c => `  /${c.name} — ${c.description}`).join('\n');
-    setMessages(prev => [...prev, {
+    const ch = activeChannelRef.current;
+    addToChannel(ch, [{
       type: 'system',
       content: `Available commands:\n${lines}`,
       id: nextId(),
     }]);
   }
+
+  // Compute messages for the active channel — MessageList sees a flat array
+  const messages = useMemo(() => {
+    return messagesByChannel.get(activeChannel) || [];
+  }, [messagesByChannel, activeChannel]);
 
   return (
     <SocketContext.Provider value={{
@@ -304,6 +372,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       connected,
       commands,
       messages,
+      activeChannel,
       modal,
       onlineCount,
       onlineIds,
@@ -311,6 +380,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       closeModal: () => setModal(null),
       executeCommand,
       sendChat,
+      switchChannel,
       submitModal: submitModalFn,
       sendComponentInteraction,
       showHelp,

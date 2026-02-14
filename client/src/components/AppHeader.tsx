@@ -36,10 +36,10 @@ export default function AppHeader() {
           </NavLink>
           {!isDemo && (
             <NavLink
-              to="/terminal"
+              to="/chat"
               className={({ isActive }) => navLink({ active: isActive })}
             >
-              Terminal
+              Chat
             </NavLink>
           )}
           {indicatorStyle && (
