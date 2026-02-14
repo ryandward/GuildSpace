@@ -9,6 +9,7 @@ import { Text, Heading, Card, Button, Textarea, Badge } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getClassColor, getMostRecentClass } from '../lib/classColors';
+import { highestRole, ROLE_COLOR, ROLE_LABEL } from '../lib/roles';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');

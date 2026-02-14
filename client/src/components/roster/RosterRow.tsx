@@ -3,30 +3,12 @@ import { Badge, Text } from '../../ui';
 import { text } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getClassColor, getClassShort } from '../../lib/classColors';
+import { highestRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
 import { timeAgo } from '../../utils/timeAgo';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
 }
-
-function highestRole(member: RosterMember): 'owner' | 'admin' | 'officer' | null {
-  if (member.isOwner) return 'owner';
-  if (member.isAdmin) return 'admin';
-  if (member.isOfficer) return 'officer';
-  return null;
-}
-
-const ROLE_COLOR = {
-  owner: 'accent',
-  admin: 'red',
-  officer: 'blue',
-} as const;
-
-const ROLE_LABEL = {
-  owner: 'Owner',
-  admin: 'Admin',
-  officer: 'Officer',
-} as const;
 
 // Desktop: pip | name(1fr) | class(120) | lvl(32) | DKP(56) | lastRaid(72) | arrow(48)
 // Mobile:  pip | name(1fr) | class(80)  | lvl(32) | DKP(48) | arrow(48)
