@@ -36,7 +36,7 @@ export default function AttendanceMatrix({ calls, members }: Props) {
               <td className="py-1 px-2 whitespace-nowrap">
                 <Link to={`/roster/${member.discordId}`} className="no-underline">
                   <span
-                    className="font-body text-caption font-medium hover:brightness-125 transition-all duration-fast"
+                    className="font-body text-caption font-medium hover:brightness-125 transition-[color,filter] duration-fast"
                     style={member.mainClass ? { color: getClassColor(member.mainClass) } : undefined}
                   >
                     {member.displayName}

@@ -492,7 +492,7 @@
 
 .loading::after {
   content: ' ';
-  animation: pulse 1s ease-in-out infinite;
+  animation: pulse var(--duration-slower) var(--ease-standard) infinite;
 }
 
 /* ── Field tooltip (CSS-only, design-token driven) ───── */

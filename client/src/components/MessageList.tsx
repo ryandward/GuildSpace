@@ -327,7 +327,7 @@ function ChatBubble({ msg, isMe, isFirst, isLast, nameClass }: {
         )}>
           <Link
             to={`/roster/${msg.userId}`}
-            className={cx(text({ variant: 'body' }), 'font-bold no-underline hover:brightness-125 transition-all duration-fast',
+            className={cx(text({ variant: 'body' }), 'font-bold no-underline hover:brightness-125 transition-[color,filter] duration-fast',
               !nameColor && (isMe ? 'text-accent' : 'text-text-secondary'),
             )}
             style={nameColor ? { color: nameColor } : undefined}

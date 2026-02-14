@@ -41,7 +41,12 @@ export default function CallRow({
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging,
-  } = useSortable({ id: call.id, disabled: !sortable, animateLayoutChanges });
+  } = useSortable({
+    id: call.id,
+    disabled: !sortable,
+    animateLayoutChanges,
+    transition: { duration: 124, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
+  });
   const [expanded, setExpanded] = useState(false);
   const [addName, setAddName] = useState('');
   const [debouncedName, setDebouncedName] = useState('');
@@ -58,7 +63,7 @@ export default function CallRow({
   useEffect(() => {
     clearTimeout(debounceRef.current);
     if (addName.trim().length > 0) {
-      debounceRef.current = setTimeout(() => setDebouncedName(addName.trim()), 150);
+      debounceRef.current = setTimeout(() => setDebouncedName(addName.trim()), 125);
     } else {
       setDebouncedName('');
     }
@@ -138,7 +143,7 @@ export default function CallRow({
             <div className="flex flex-wrap gap-0.5 mb-1">
               {call.attendees.map(a => (
                 <span key={a.characterName} className="inline-flex items-center gap-0.5">
-                  <Link to={`/roster/${a.discordId}`} className="no-underline hover:brightness-125 transition-all duration-fast">
+                  <Link to={`/roster/${a.discordId}`} className="no-underline hover:brightness-125 transition-[color,filter] duration-fast">
                     <Badge
                       variant="count"
                       style={a.characterClass ? { color: getClassColor(a.characterClass) } : undefined}
@@ -255,7 +260,7 @@ export default function CallRow({
                       setSelectedIdx(0);
                     }}
                     onFocus={() => setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 125)}
                     onKeyDown={(e) => {
                       if (!showSuggestions || !suggestions?.length) return;
                       if (e.key === 'ArrowDown') {

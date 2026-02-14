@@ -114,7 +114,7 @@ export function LevelChart({ levelDist }: LevelChartProps) {
         <span className={cx(text({ variant: 'body' }), 'font-bold text-green')}>{pct}%</span>
       </div>
       <div className={cx(progressTrack(), 'mb-1')}>
-        <span className="h-full bg-green transition-all duration-slow" style={{ width: `${pct}%` }} />
+        <span className="h-full bg-green transition-[width] duration-slow" style={{ width: `${pct}%` }} />
       </div>
       <div className={cx(text({ variant: 'label' }), 'flex flex-wrap gap-x-1.5 gap-y-0.5')}>
         <span className="flex items-center gap-0.5">{levelDist.level60} max</span>

@@ -232,7 +232,7 @@ export default function MemberDetailPage() {
                         </div>
                         <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${classToPip(c.class)} transition-all duration-slow`}
+                            className={`h-full rounded-full ${classToPip(c.class)} transition-[width] duration-slow`}
                             style={{ width: `${(c.totalDkp / maxDkp) * 100}%` }}
                           />
                         </div>
