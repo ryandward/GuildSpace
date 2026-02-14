@@ -14,7 +14,6 @@
 import { ILike, Not, In } from 'typeorm';
 import express from 'express';
 import crypto from 'crypto';
-import { existsSync } from 'fs';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import path from 'path';
@@ -163,10 +162,7 @@ export function createWebServer(opts: WebServerOptions) {
 
   app.use(express.json());
 
-  // Serve Vite-built client in production, fall back to legacy public/
-  const clientDist = path.join(process.cwd(), 'client', 'dist');
-  const legacyPublic = path.join(process.cwd(), 'src', 'platform', 'web', 'public');
-  const staticDir = existsSync(clientDist) ? clientDist : legacyPublic;
+  const staticDir = path.join(process.cwd(), 'client', 'dist');
   app.use(express.static(staticDir));
 
   // ─── Shared Helpers ──────────────────────────────────────────────
