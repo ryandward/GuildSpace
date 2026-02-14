@@ -263,6 +263,12 @@
     border: 2px solid var(--color-bg);
     cursor: pointer;
     pointer-events: auto;
+    transition: transform var(--duration-fast) var(--ease-standard),
+                box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .range-thumb::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 3px oklch(var(--accent-lightness) var(--accent-chroma) var(--accent-hue) / 0.25);
   }
   .range-thumb::-moz-range-thumb {
     width: 14px;
@@ -272,6 +278,12 @@
     border: 2px solid var(--color-bg);
     cursor: pointer;
     pointer-events: auto;
+    transition: transform var(--duration-fast) var(--ease-standard),
+                box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .range-thumb::-moz-range-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 3px oklch(var(--accent-lightness) var(--accent-chroma) var(--accent-hue) / 0.25);
   }
   .range-thumb::-webkit-slider-runnable-track {
     background: transparent;
@@ -318,7 +330,11 @@
   transition: background var(--duration-fast) var(--ease-standard),
               border-color var(--duration-fast) var(--ease-standard),
               box-shadow var(--duration-fast) var(--ease-standard),
-              opacity var(--duration-normal) var(--ease-standard);
+              opacity var(--duration-normal) var(--ease-standard),
+              left var(--duration-slow) var(--ease-decelerate),
+              top var(--duration-slow) var(--ease-decelerate),
+              width var(--duration-slow) var(--ease-decelerate),
+              height var(--duration-slow) var(--ease-decelerate);
 }
 
 .treemap-cell:hover {
