@@ -80,7 +80,7 @@ export default function RosterRow({ member, classFilter, classAbbreviations, onl
   return (
     <div className="border-b border-border-subtle">
       <button
-        className={cx(ROW_GRID, 'w-full py-1 px-0.5 min-h-6 transition-colors duration-fast hover:bg-surface-2 text-left cursor-pointer bg-transparent border-none')}
+        className={cx(ROW_GRID, 'w-full py-1 px-2 min-h-6 transition-colors duration-fast hover:bg-surface-2 text-left cursor-pointer bg-transparent border-none')}
         onClick={() => navigate(`/roster/${member.discordId}`)}
       >
         <span
