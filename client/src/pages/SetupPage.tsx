@@ -30,7 +30,9 @@ export default function SetupPage() {
     <div className="flex flex-col items-center justify-center flex-1 gap-2">
       <img src="/logo.svg" alt="GuildSpace" className="w-10 h-auto mb-1" />
       <Heading level="heading" className="mb-1">Welcome to GuildSpace</Heading>
-      <Text variant="secondary" className="mb-2">Choose your name</Text>
+      <Text variant="secondary" className="text-center max-w-40 mb-2">
+        Pick a name your guildmates will recognize — your main's name, your Discord nickname, anything but a number.
+      </Text>
       <Input
         variant="surface"
         size="lg"
