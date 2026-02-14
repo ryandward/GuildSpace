@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const me: User = await res.json();
 
       if (me.needsSetup) {
-        setState({ token: tkn, user: null, loading: false, needsSetup: true, isDemo: false });
+        setState({ token: tkn, user: me, loading: false, needsSetup: true, isDemo: false });
         return;
       }
 
