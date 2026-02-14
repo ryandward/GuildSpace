@@ -61,10 +61,15 @@ export class GuildSpaceUser {
 
   /** Serializable role flags for API responses. Null-safe via static method. */
   static roleFlags(user: GuildSpaceUser | null | undefined) {
+    const role = user?.isOwner ? 'owner'
+      : user?.hasAdminAccess ? 'admin'
+      : user?.hasOfficerAccess ? 'officer'
+      : 'member';
     return {
       isOfficer: user?.hasOfficerAccess || false,
       isAdmin: user?.hasAdminAccess || false,
       isOwner: user?.isOwner || false,
+      role,
     };
   }
 }

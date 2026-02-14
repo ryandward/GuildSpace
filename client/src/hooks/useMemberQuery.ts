@@ -16,6 +16,7 @@ export interface MemberDetail {
   isOfficer: boolean;
   isAdmin: boolean;
   isOwner: boolean;
+  role: 'owner' | 'admin' | 'officer' | 'member';
   officerSince: string | null;
   adminSince: string | null;
   joinedAt: string | null;

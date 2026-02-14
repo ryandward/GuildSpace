@@ -9,7 +9,7 @@ import { Text, Heading, Card, Button, Textarea, Badge } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getClassColor, getMostRecentClass } from '../lib/classColors';
-import { highestRole, roleSince, ROLE_COLOR, ROLE_LABEL } from '../lib/roles';
+import { isBadgeRole, roleSince, ROLE_COLOR, ROLE_LABEL } from '../lib/roles';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
@@ -72,11 +72,9 @@ export default function MemberDetailPage() {
               <div className="flex flex-col gap-0.5 py-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Heading level="display" as="h1" style={nameColor ? { color: nameColor } : undefined}>{data.displayName}</Heading>
-                  {(() => {
-                    const role = highestRole(data);
-                    if (!role) return null;
-                    const since = roleSince(role, data);
-                    return <Badge variant="status" color={ROLE_COLOR[role]} title={since ? `Since ${formatDate(since)}` : undefined}>{ROLE_LABEL[role]}</Badge>;
+                  {isBadgeRole(data.role) && (() => {
+                    const since = roleSince(data.role, data);
+                    return <Badge variant="status" color={ROLE_COLOR[data.role]} title={since ? `Since ${formatDate(since)}` : undefined}>{ROLE_LABEL[data.role]}</Badge>;
                   })()}
                 </div>
                 <div className="flex items-baseline gap-3">

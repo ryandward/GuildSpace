@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Badge, Text } from '../../ui';
 import type { CallDetail, EventMember } from '../../hooks/useEventDetailQuery';
 import { getClassColor } from '../../lib/classColors';
-import { highestRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
+import { isBadgeRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
 
 interface Props {
   calls: CallDetail[];
@@ -42,10 +42,7 @@ export default function AttendanceMatrix({ calls, members }: Props) {
                   >
                     {member.displayName}
                     {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent shrink-0" title="GuildSpace member" />}
-                    {(() => {
-                      const role = highestRole(member);
-                      return role ? <Badge variant="count" color={ROLE_COLOR[role]}>{ROLE_LABEL[role]}</Badge> : null;
-                    })()}
+                    {isBadgeRole(member.role) && <Badge variant="count" color={ROLE_COLOR[member.role]}>{ROLE_LABEL[member.role]}</Badge>}
                   </span>
                 </Link>
               </td>

@@ -3,7 +3,7 @@ import { Badge, Text } from '../../ui';
 import { text } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getClassColor, getClassShort } from '../../lib/classColors';
-import { highestRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
+import { isBadgeRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
 import { timeAgo } from '../../utils/timeAgo';
 
 // Desktop: name(1fr) | class(120) | lvl(32) | DKP(56) | lastRaid(72) | arrow(48)
@@ -31,6 +31,7 @@ export interface RosterMember {
   isOfficer: boolean;
   isAdmin: boolean;
   isOwner: boolean;
+  role: 'owner' | 'admin' | 'officer' | 'member';
 }
 
 function selectFeatured(member: RosterMember, classFilter: string | null): RosterCharacter {
@@ -74,7 +75,7 @@ export default function RosterRow({ member, classFilter, classAbbreviations, onl
   const featured = selectFeatured(member, classFilter ?? null);
   const netDkp = member.earnedDkp - member.spentDkp;
   const lastRaid = getMostRecentRaid(member);
-  const role = highestRole(member);
+  const role = member.role;
   const isOnline = onlineIds?.has(member.discordId) ?? false;
 
   return (
@@ -93,7 +94,7 @@ export default function RosterRow({ member, classFilter, classAbbreviations, onl
             : member.hasGuildSpace
               ? <span className="inline-block size-1 rounded-full bg-accent shrink-0" title="GuildSpace member" />
               : null}
-          {role && <Badge variant="count" color={ROLE_COLOR[role]}>{ROLE_LABEL[role]}</Badge>}
+          {isBadgeRole(role) && <Badge variant="count" color={ROLE_COLOR[role]}>{ROLE_LABEL[role]}</Badge>}
         </span>
         <Text variant="label" className="truncate">{featured ? getClassShort(featured.class, classAbbreviations) : ''}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>

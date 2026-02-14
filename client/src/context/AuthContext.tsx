@@ -11,6 +11,7 @@ export interface User {
   isOfficer?: boolean;
   isAdmin?: boolean;
   isOwner?: boolean;
+  role?: 'owner' | 'admin' | 'officer' | 'member';
 }
 
 interface AuthState {

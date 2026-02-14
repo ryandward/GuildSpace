@@ -188,6 +188,7 @@ interface DemoMember {
   earnedDkp: number;
   spentDkp: number;
   hasGuildSpace: boolean;
+  role: 'owner' | 'admin' | 'officer' | 'member';
 }
 
 function generateDate(daysAgo: number): string {
@@ -246,6 +247,7 @@ function generateMembers(): DemoMember[] {
       displayName,
       bio,
       isOfficer, isAdmin, isOwner,
+      role: isOwner ? 'owner' as const : isAdmin ? 'admin' as const : isOfficer ? 'officer' as const : 'member' as const,
       officerSince: isOfficer ? generateDate(randInt(60, 300)) : null,
       adminSince: isAdmin || isOwner ? generateDate(randInt(100, 350)) : null,
       joinedAt,
@@ -522,6 +524,7 @@ export function getDemoResponse(url: string, method: string): unknown | null {
         isOfficer: m.isOfficer,
         isAdmin: m.isAdmin || m.isOwner,
         isOwner: m.isOwner,
+        role: m.role,
       })),
       summary: {
         totalMembers: members.length,

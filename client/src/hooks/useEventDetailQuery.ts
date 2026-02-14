@@ -29,6 +29,7 @@ export interface EventMember {
   isOfficer: boolean;
   isAdmin: boolean;
   isOwner: boolean;
+  role: 'owner' | 'admin' | 'officer' | 'member';
 }
 
 export interface EventDetail {
