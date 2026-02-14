@@ -37,7 +37,7 @@ function shuffle<T>(arr: T[]): T[] {
 const CLASSES = [
   'Cleric', 'Warrior', 'Wizard', 'Magician', 'Enchanter',
   'Necromancer', 'Shadow Knight', 'Rogue', 'Ranger', 'Druid',
-  'Monk', 'Bard', 'Paladin', 'Shaman', 'Warlock',
+  'Monk', 'Bard', 'Paladin', 'Shaman',
 ];
 
 const NAME_PREFIXES = [
@@ -501,6 +501,13 @@ export function getDemoResponse(url: string, method: string): unknown | null {
         totalChars++;
       }
     }
+    const classAbbreviations: Record<string, string> = {
+      Cleric: 'CLR', Warrior: 'WAR', Wizard: 'WIZ',
+      Magician: 'MAG', Enchanter: 'ENC', Necromancer: 'NEC',
+      'Shadow Knight': 'SK', Rogue: 'ROG', Ranger: 'RNG',
+      Druid: 'DRU', Monk: 'MNK', Bard: 'BRD',
+      Paladin: 'PAL', Shaman: 'SHM',
+    };
     return {
       members: members.map(m => ({
         discordId: m.discordId,
@@ -519,6 +526,7 @@ export function getDemoResponse(url: string, method: string): unknown | null {
         totalCharacters: totalChars,
         classCounts,
       },
+      classAbbreviations,
     };
   }
 

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { text, progressTrack } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
-import { getClassColor } from '../../lib/classColors';
+import { getClassColor, getClassShort } from '../../lib/classColors';
 import { computeTreemap, VW, VH } from '../../lib/treemap';
 
 /* ── ClassChart (Treemap) ────────────────────────────────── */
@@ -11,9 +11,10 @@ interface ClassChartProps {
   levelBreakdown: Record<string, { max: number; total: number }>;
   classFilter: string | null;
   onClassFilterChange: (value: string | null) => void;
+  classAbbreviations?: Record<string, string>;
 }
 
-export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFilterChange }: ClassChartProps) {
+export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFilterChange, classAbbreviations }: ClassChartProps) {
   const items = useMemo(() =>
     Object.entries(classCounts)
       .map(([label, value]) => ({ label, value }))
@@ -49,7 +50,7 @@ export function ClassChart({ classCounts, levelBreakdown, classFilter, onClassFi
             onClick={() => onClassFilterChange(isActive ? null : node.label)}
             title={`${node.label}: ${node.value} characters (${maxLvl} at 60)`}
           >
-            <span className="treemap-label">{node.label}</span>
+            <span className="treemap-label">{getClassShort(node.label, classAbbreviations)}</span>
             <span className="treemap-count">{node.value}</span>
           </button>
         );

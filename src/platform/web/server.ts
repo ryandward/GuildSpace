@@ -33,6 +33,7 @@ import { Census } from '../../entities/Census.js';
 import { Bank } from '../../entities/Bank.js';
 import { BankImport } from '../../entities/BankImport.js';
 import { Trash } from '../../entities/Trash.js';
+import { Classes } from '../../entities/Classes.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
 import type {
   PlatformCommand,
@@ -482,12 +483,18 @@ export function createWebServer(opts: WebServerOptions) {
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
     try {
-      const [toons, dkpRows, gsUsers, lastRaidByName] = await Promise.all([
+      const [toons, dkpRows, gsUsers, lastRaidByName, classes] = await Promise.all([
         AppDataSource.manager.find(ActiveToons),
         AppDataSource.manager.find(Dkp),
         AppDataSource.manager.find(GuildSpaceUser),
         fetchLastRaidByName(),
+        AppDataSource.manager.find(Classes),
       ]);
+
+      const classAbbreviations: Record<string, string> = {};
+      for (const c of classes) {
+        classAbbreviations[c.characterClass] = c.abbreviation;
+      }
 
       const dkpByDiscord = new Map(dkpRows.map(d => [d.DiscordId, d]));
       const gsUserByDiscord = new Map(gsUsers.map(u => [u.discordId, u]));
@@ -544,6 +551,7 @@ export function createWebServer(opts: WebServerOptions) {
           totalCharacters,
           classCounts,
         },
+        classAbbreviations,
       });
     } catch (err) {
       console.error('Failed to fetch roster:', err);

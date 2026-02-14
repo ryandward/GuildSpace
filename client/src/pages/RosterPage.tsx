@@ -105,6 +105,7 @@ export default function RosterPage() {
                 levelBreakdown={levelBreakdown}
                 classFilter={classFilter}
                 onClassFilterChange={setClassFilter}
+                classAbbreviations={data.classAbbreviations}
               />
 
               {/* Filter strip — chips per active filter */}

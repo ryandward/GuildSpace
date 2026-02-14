@@ -14,11 +14,15 @@ export const CLASS_COLORS: Record<string, string> = {
   'Bard': '#f03070',
   'Paladin': '#f58cba',
   'Shaman': '#2890f0',
-  'Warlock': '#a898d8',
 };
 
 export function getClassColor(cls: string): string {
   return CLASS_COLORS[cls] || '#8888aa';
+}
+
+/** Look up shortest alias for a class from server-provided abbreviations. */
+export function getClassShort(cls: string, abbreviations?: Record<string, string>): string {
+  return abbreviations?.[cls]?.toUpperCase() || cls;
 }
 
 /**

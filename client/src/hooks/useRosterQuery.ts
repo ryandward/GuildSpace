@@ -10,6 +10,7 @@ export interface RosterData {
     totalCharacters: number;
     classCounts: Record<string, number>;
   };
+  classAbbreviations: Record<string, string>;
 }
 
 export function useRosterQuery() {
