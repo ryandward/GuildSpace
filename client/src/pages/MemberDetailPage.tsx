@@ -231,7 +231,7 @@ export default function MemberDetailPage() {
                           </div>
                           <div className="flex items-baseline gap-1.5 shrink-0">
                             <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{c.totalDkp}</span>
-                            <Text variant="caption">{c.raidCount} raids</Text>
+                            <Text variant="caption">{c.raidCount} calls</Text>
                           </div>
                         </div>
                         <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
