@@ -561,6 +561,8 @@ export function getDemoResponse(url: string, method: string): unknown | null {
       isOfficer: m.isOfficer,
       isAdmin: m.isAdmin,
       isOwner: m.isOwner,
+      role: m.role,
+      hasGuildSpace: m.hasGuildSpace,
       officerSince: m.officerSince,
       adminSince: m.adminSince,
       joinedAt: m.joinedAt,

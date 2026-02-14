@@ -612,6 +612,7 @@ export function createWebServer(opts: WebServerOptions) {
         discordId,
         displayName,
         bio: gsUser?.bio || null,
+        hasGuildSpace: !!gsUser,
         ...GuildSpaceUser.roleFlags(gsUser),
         officerSince: gsUser?.officerSince?.toISOString() || null,
         adminSince: gsUser?.adminSince?.toISOString() || null,

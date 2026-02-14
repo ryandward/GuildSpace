@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { Badge, Text } from '../../ui';
+import { Text } from '../../ui';
 import { text } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
-import { getClassColor, getClassShort } from '../../lib/classColors';
-import { isBadgeRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
+import { getClassShort } from '../../lib/classColors';
 import { timeAgo } from '../../utils/timeAgo';
+import MemberName from '../MemberName';
 
 // Desktop: name(1fr) | class(120) | lvl(32) | DKP(56) | lastRaid(72) | arrow(48)
 // Mobile:  name(1fr) | class(80)  | lvl(32) | DKP(48) | arrow(48)
@@ -84,18 +84,13 @@ export default function RosterRow({ member, classFilter, classAbbreviations, onl
         className={cx(ROW_GRID, 'w-full py-1 px-2 min-h-6 transition-colors duration-fast hover:bg-surface-2 text-left cursor-pointer bg-transparent border-none')}
         onClick={() => navigate(`/roster/${member.discordId}`)}
       >
-        <span
-          className="font-body text-body font-semibold truncate inline-flex items-center gap-1"
-          style={{ color: getClassColor(featured?.class || '') }}
-        >
-          {featured?.name || member.displayName}
-          {isOnline
-            ? <span className="inline-block size-1 rounded-full bg-green shrink-0" title="Online" />
-            : member.hasGuildSpace
-              ? <span className="inline-block size-1 rounded-full bg-accent shrink-0" title="GuildSpace member" />
-              : null}
-          {isBadgeRole(role) && <Badge variant="count" color={ROLE_COLOR[role]}>{ROLE_LABEL[role]}</Badge>}
-        </span>
+        <MemberName
+          name={featured?.name || member.displayName}
+          classColor={featured?.class}
+          role={role}
+          hasGuildSpace={member.hasGuildSpace}
+          isOnline={isOnline}
+        />
         <Text variant="label" className="truncate">{featured ? getClassShort(featured.class, classAbbreviations) : ''}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{netDkp}</span>

@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Badge, Text } from '../../ui';
+import { Text } from '../../ui';
 import type { CallDetail, EventMember } from '../../hooks/useEventDetailQuery';
-import { getClassColor } from '../../lib/classColors';
-import { isBadgeRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
+import MemberName from '../MemberName';
 
 interface Props {
   calls: CallDetail[];
@@ -35,15 +34,14 @@ export default function AttendanceMatrix({ calls, members }: Props) {
           {members.map(member => (
             <tr key={member.discordId} className="border-b border-border-subtle hover:bg-surface-2 transition-colors duration-fast">
               <td className="py-1 px-2 whitespace-nowrap">
-                <Link to={`/roster/${member.discordId}`} className="no-underline">
-                  <span
-                    className="font-body text-caption font-medium hover:brightness-125 transition-[color,filter] duration-fast inline-flex items-center gap-1"
-                    style={member.mainClass ? { color: getClassColor(member.mainClass) } : undefined}
-                  >
-                    {member.displayName}
-                    {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent shrink-0" title="GuildSpace member" />}
-                    {isBadgeRole(member.role) && <Badge variant="count" color={ROLE_COLOR[member.role]}>{ROLE_LABEL[member.role]}</Badge>}
-                  </span>
+                <Link to={`/roster/${member.discordId}`} className="no-underline hover:brightness-125 transition-[color,filter] duration-fast">
+                  <MemberName
+                    name={member.displayName}
+                    classColor={member.mainClass}
+                    role={member.role}
+                    hasGuildSpace={member.hasGuildSpace}
+                    className="font-body text-caption font-medium inline-flex items-center gap-1"
+                  />
                 </Link>
               </td>
               {calls.map(call => {

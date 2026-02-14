@@ -5,11 +5,11 @@ import { useMemberQuery } from '../hooks/useMemberQuery';
 import { useBioMutation } from '../hooks/useBioMutation';
 import { useRoleMutation } from '../hooks/useRoleMutation';
 import CharacterCard from '../components/roster/CharacterCard';
-import { Text, Heading, Card, Button, Textarea, Badge } from '../ui';
+import MemberName from '../components/MemberName';
+import { Text, Card, Button, Textarea } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
-import { getClassColor, getMostRecentClass } from '../lib/classColors';
-import { isBadgeRole, roleSince, ROLE_COLOR, ROLE_LABEL } from '../lib/roles';
+import { getMostRecentClass } from '../lib/classColors';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
@@ -47,10 +47,6 @@ export default function MemberDetailPage() {
   }, [bioMutation, bioText]);
 
   const netDkp = data ? data.earnedDkp - data.spentDkp : 0;
-  const nameColor = useMemo(() => {
-    const cls = getMostRecentClass(data?.characters ?? []);
-    return cls ? getClassColor(cls) : undefined;
-  }, [data]);
   const maxDkp = useMemo(() => {
     if (!data?.dkpByCharacter.length) return 1;
     return Math.max(...data.dkpByCharacter.map(c => c.totalDkp), 1);
@@ -70,13 +66,16 @@ export default function MemberDetailPage() {
             <>
               {/* Profile header */}
               <div className="flex flex-col gap-0.5 py-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Heading level="display" as="h1" style={nameColor ? { color: nameColor } : undefined}>{data.displayName}</Heading>
-                  {isBadgeRole(data.role) && (() => {
-                    const since = roleSince(data.role, data);
-                    return <Badge variant="status" color={ROLE_COLOR[data.role]} title={since ? `Since ${formatDate(since)}` : undefined}>{ROLE_LABEL[data.role]}</Badge>;
-                  })()}
-                </div>
+                <MemberName
+                  name={data.displayName}
+                  classColor={getMostRecentClass(data.characters)}
+                  role={data.role}
+                  hasGuildSpace={data.hasGuildSpace}
+                  badgeVariant="status"
+                  officerSince={data.officerSince}
+                  adminSince={data.adminSince}
+                  className="font-display text-display font-semibold truncate inline-flex items-center gap-1"
+                />
                 <div className="flex items-baseline gap-3">
                   <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-subheading')}>{netDkp} DKP</span>
                   {data.joinedAt && <Text variant="caption">Joined {formatDate(data.joinedAt)}</Text>}
