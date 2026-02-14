@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useRosterQuery } from '../hooks/useRosterQuery';
 import { useRosterFilters } from '../hooks/useRosterFilters';
+import { useClassStatsQuery } from '../hooks/useClassStatsQuery';
 import { useSocket } from '../context/SocketContext';
 import { ClassChart, StatusChart, LevelChart } from '../components/roster/RosterFilters';
 import MemberList from '../components/roster/RosterTable';
@@ -18,14 +19,20 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'inactive': 'Inactive 90d+',
 };
 
-export type SizeMode = 'count' | 'earned' | 'spent' | 'net';
+export type SizeMode = 'count' | 'earned' | 'spent' | 'net' | 'levels' | 'ticks' | 'items';
 
 const SIZE_MODE_OPTIONS: { value: SizeMode; label: string }[] = [
   { value: 'count', label: 'Count' },
+  { value: 'levels', label: 'Total Levels' },
   { value: 'earned', label: 'Earned DKP' },
   { value: 'spent', label: 'Spent DKP' },
   { value: 'net', label: 'Net DKP' },
+  { value: 'ticks', label: 'Raid Ticks' },
+  { value: 'items', label: 'Items Won' },
 ];
+
+// Modes that need the class-stats endpoint
+const SERVER_MODES = new Set<SizeMode>(['ticks', 'items']);
 
 export default function RosterPage() {
   const { data, isLoading, error } = useRosterQuery();
@@ -48,6 +55,7 @@ export default function RosterPage() {
   } = filters;
 
   const [sizeMode, setSizeMode] = useState<SizeMode>('count');
+  const { data: classStats } = useClassStatsQuery(SERVER_MODES.has(sizeMode));
 
   const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set(['stats', 'filters']));
 
@@ -61,12 +69,16 @@ export default function RosterPage() {
   }, []);
 
   // Treemap data uses pre-class filter so the treemap stays stable when clicking a class
-  // When status filter is active, narrow to matching characters (not all chars of matching members)
+  // Narrow characters to match active character-level filters (status, level range)
+  const isLevelDefault = levelRange[0] === 1 && levelRange[1] === 60;
   const preClassChars = useMemo(() => {
-    const chars = filteredPreClass.flatMap(m => m.characters);
-    if (statusFilter.size === 0) return chars;
-    return chars.filter(c => statusFilter.has(c.status));
-  }, [filteredPreClass, statusFilter]);
+    let chars = filteredPreClass.flatMap(m => m.characters);
+    if (statusFilter.size > 0)
+      chars = chars.filter(c => statusFilter.has(c.status));
+    if (!isLevelDefault)
+      chars = chars.filter(c => c.level >= levelRange[0] && c.level <= levelRange[1]);
+    return chars;
+  }, [filteredPreClass, statusFilter, isLevelDefault, levelRange]);
 
   // Stats data uses post-class-filter characters
   const filteredClassChars = useMemo(() => {
@@ -84,6 +96,21 @@ export default function RosterPage() {
 
   const classValues = useMemo(() => {
     if (sizeMode === 'count') return classCounts;
+
+    // Total levels — sum character levels per class from preClassChars
+    if (sizeMode === 'levels') {
+      const values: Record<string, number> = {};
+      for (const c of preClassChars) {
+        values[c.class] = (values[c.class] || 0) + c.level;
+      }
+      return values;
+    }
+
+    // Server-sourced modes — raid ticks and items won (global, not filter-sensitive)
+    if (sizeMode === 'ticks') return classStats?.raidTicks ?? {};
+    if (sizeMode === 'items') return classStats?.itemsWon ?? {};
+
+    // DKP modes — aggregate by member's mainClass
     const values: Record<string, number> = {};
     for (const m of filteredPreClass) {
       if (!m.mainClass) continue;
@@ -94,7 +121,7 @@ export default function RosterPage() {
       values[m.mainClass] = (values[m.mainClass] || 0) + v;
     }
     return values;
-  }, [sizeMode, classCounts, filteredPreClass]);
+  }, [sizeMode, classCounts, preClassChars, filteredPreClass, classStats]);
 
   const levelBreakdown = useMemo(() => {
     const breakdown: Record<string, { max: number; total: number }> = {};

@@ -121,12 +121,13 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
   const filtered = useMemo(() => {
     let result = filteredPreClass;
 
-    // Class filter — when combined with status filter, require BOTH on the same character
+    // Class filter — intersect with status and level on the same character
     if (classFilter) {
       result = result.filter(m =>
         m.characters.some(c =>
           c.class === classFilter &&
-          (statusFilter.size === 0 || statusFilter.has(c.status))
+          (statusFilter.size === 0 || statusFilter.has(c.status)) &&
+          (isLevelDefault || (c.level >= levelRange[0] && c.level <= levelRange[1]))
         )
       );
     }
@@ -155,7 +156,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
       }
       return sortDirection === 'asc' ? cmp : -cmp;
     });
-  }, [filteredPreClass, classFilter, statusFilter, sortField, sortDirection]);
+  }, [filteredPreClass, classFilter, statusFilter, isLevelDefault, levelRange, sortField, sortDirection]);
 
   return {
     classFilter, setClassFilter,

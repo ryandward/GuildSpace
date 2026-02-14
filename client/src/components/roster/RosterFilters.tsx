@@ -16,9 +16,12 @@ function formatValue(value: number, mode: SizeMode): string {
 
 const SUFFIX: Record<SizeMode, string> = {
   count: 'characters',
+  levels: 'total levels',
   earned: 'DKP earned',
   spent: 'DKP spent',
   net: 'DKP net',
+  ticks: 'raid ticks',
+  items: 'items won',
 };
 
 function tooltipText(label: string, value: number, mode: SizeMode, maxLvl: number): string {

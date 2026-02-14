@@ -32,6 +32,7 @@ import { RaidCall } from '../../entities/RaidCall.js';
 import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
 import { Census } from '../../entities/Census.js';
 import { Bank } from '../../entities/Bank.js';
+import { Items } from '../../entities/Items.js';
 import { BankImport } from '../../entities/BankImport.js';
 import { Trash } from '../../entities/Trash.js';
 import { Classes } from '../../entities/Classes.js';
@@ -555,6 +556,53 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err) {
       console.error('Failed to fetch roster:', err);
       res.status(500).json({ error: 'Failed to fetch roster' });
+    }
+  });
+
+  // ─── Class Stats (raid ticks + items won, grouped by class) ────────
+
+  app.get('/api/roster/class-stats', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const activeToons = await AppDataSource.manager.find(ActiveToons);
+      const charClassMap = new Map(activeToons.map(c => [c.Name, c.CharacterClass]));
+
+      // Raid ticks per character name
+      const tickRows = await AppDataSource.getRepository(Attendance)
+        .createQueryBuilder('a')
+        .select('a.Name', 'name')
+        .addSelect('COUNT(*)', 'ticks')
+        .groupBy('a.Name')
+        .getRawMany<{ name: string; ticks: string }>();
+
+      const raidTicks: Record<string, number> = {};
+      for (const row of tickRows) {
+        const cls = charClassMap.get(row.name);
+        if (!cls) continue;
+        raidTicks[cls] = (raidTicks[cls] || 0) + Number(row.ticks);
+      }
+
+      // Items won per character name
+      const itemRows = await AppDataSource.getRepository(Items)
+        .createQueryBuilder('i')
+        .select('i.Name', 'name')
+        .addSelect('COUNT(*)', 'items')
+        .groupBy('i.Name')
+        .getRawMany<{ name: string; items: string }>();
+
+      const itemsWon: Record<string, number> = {};
+      for (const row of itemRows) {
+        const cls = charClassMap.get(row.name);
+        if (!cls) continue;
+        itemsWon[cls] = (itemsWon[cls] || 0) + Number(row.items);
+      }
+
+      res.json({ raidTicks, itemsWon });
+    } catch (err) {
+      console.error('Failed to fetch class stats:', err);
+      res.status(500).json({ error: 'Failed to fetch class stats' });
     }
   });
 
