@@ -13,6 +13,7 @@
  */
 import { ILike, Not, In } from 'typeorm';
 import express from 'express';
+import { existsSync } from 'fs';
 import crypto from 'crypto';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
@@ -163,6 +164,9 @@ export function createWebServer(opts: WebServerOptions) {
   app.use(express.json());
 
   const staticDir = path.join(process.cwd(), 'client', 'dist');
+  if (!existsSync(staticDir)) {
+    console.warn(`⚠ Client build not found at ${staticDir} — static files will not be served`);
+  }
   app.use(express.static(staticDir));
 
   // ─── Shared Helpers ──────────────────────────────────────────────
@@ -2046,8 +2050,13 @@ export function createWebServer(opts: WebServerOptions) {
 
   // ─── SPA Fallback ───────────────────────────────────────────────────
   // Serve index.html for all non-API routes (client-side routing)
+  const indexPath = path.join(staticDir, 'index.html');
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(staticDir, 'index.html'));
+    if (existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(503).send('Client build not found');
+    }
   });
 
   // ─── Start ─────────────────────────────────────────────────────────
