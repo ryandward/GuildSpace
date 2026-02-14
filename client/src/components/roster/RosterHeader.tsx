@@ -19,8 +19,6 @@ export default function RosterHeader({ sortField, sortDirection, onSort }: Props
 
   return (
     <div className={cx(ROW_GRID, 'px-0.5 py-0.5 border-b border-border')}>
-      {/* pip spacer */}
-      <span />
       {/* Name */}
       <button className={cx(headerBtn, text({ variant: 'overline' }))} onClick={() => onSort('name')}>
         Name<SortArrow field="name" current={sortField} direction={sortDirection} />

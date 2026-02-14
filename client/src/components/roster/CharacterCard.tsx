@@ -41,16 +41,16 @@ export default function CharacterCard(props: Props) {
   const lastRaid = props.lastRaidDate ? timeAgo(props.lastRaidDate) : null;
 
   return (
-    <div className={cx(card(), 'p-2 flex flex-col gap-1')}>
-      <div className="flex items-center gap-1.5">
-        <span className={`w-0.5 h-4 rounded-full shrink-0 ${classToPip(props.class)}`} />
+    <div className={cx(card(), 'flex flex-col')}>
+      <span className={`h-0.5 w-full ${classToPip(props.class)}`} />
+      <div className="flex items-center gap-1.5 px-2 pt-1.5">
         <Text variant="body" className="font-semibold">{props.name}</Text>
         <span className={cx(badge({ variant: 'status', color: statusColor(props.status) }))}>{props.status}</span>
         {lastRaid && (
           <Text variant="caption" className="ml-auto shrink-0">{lastRaid}</Text>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 px-2 pb-1.5">
         <Text variant="label">{props.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim')}>Lv {props.level}</span>
       </div>

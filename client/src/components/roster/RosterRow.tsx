@@ -6,13 +6,9 @@ import { getClassColor, getClassShort } from '../../lib/classColors';
 import { highestRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
 import { timeAgo } from '../../utils/timeAgo';
 
-function classToPip(className: string): string {
-  return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
-}
-
-// Desktop: pip | name(1fr) | class(120) | lvl(32) | DKP(56) | lastRaid(72) | arrow(48)
-// Mobile:  pip | name(1fr) | class(80)  | lvl(32) | DKP(48) | arrow(48)
-export const ROW_GRID = 'grid grid-cols-[3px_minmax(0,1fr)_120px_32px_56px_72px_48px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px_48px_48px] items-center gap-x-1.5';
+// Desktop: name(1fr) | class(120) | lvl(32) | DKP(56) | lastRaid(72) | arrow(48)
+// Mobile:  name(1fr) | class(80)  | lvl(32) | DKP(48) | arrow(48)
+export const ROW_GRID = 'grid grid-cols-[minmax(0,1fr)_120px_32px_56px_72px_48px] max-md:grid-cols-[minmax(0,1fr)_80px_32px_48px_48px] items-center gap-x-1.5';
 
 export interface RosterCharacter {
   name: string;
@@ -87,7 +83,6 @@ export default function RosterRow({ member, classFilter, classAbbreviations, onl
         className={cx(ROW_GRID, 'w-full py-1 px-0.5 min-h-6 transition-colors duration-fast hover:bg-surface-2 text-left cursor-pointer bg-transparent border-none')}
         onClick={() => navigate(`/roster/${member.discordId}`)}
       >
-        <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
         <span
           className="font-body text-body font-semibold truncate inline-flex items-center gap-1"
           style={{ color: getClassColor(featured?.class || '') }}
