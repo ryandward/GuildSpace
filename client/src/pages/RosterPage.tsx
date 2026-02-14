@@ -146,9 +146,9 @@ export default function RosterPage() {
                 <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
                 <Select
                   size="sm"
-                  variant="surface"
                   value={sizeMode}
                   onChange={e => setSizeMode(e.target.value as SizeMode)}
+                  className="bg-surface min-h-0 font-semibold"
                 >
                   {SIZE_MODE_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
