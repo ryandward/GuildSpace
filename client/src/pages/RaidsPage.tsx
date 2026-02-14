@@ -54,7 +54,7 @@ export default function RaidsPage() {
                   className="flex-1"
                   autoFocus
                 />
-                <Button intent="primary" size="sm" type="submit" disabled={createEvent.isPending || !newName.trim()}>
+                <Button intent="primary" size="sm" type="submit" activating={createEvent.isPending || undefined} disabled={createEvent.isPending || !newName.trim()}>
                   {createEvent.isPending ? 'Creating...' : 'Create'}
                 </Button>
                 <Button intent="ghost" size="sm" onClick={() => { setShowCreate(false); setNewName(''); }}>

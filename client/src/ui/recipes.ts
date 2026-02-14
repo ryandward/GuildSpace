@@ -33,10 +33,15 @@ export const button = cva(
         lg: 'text-body py-1 px-3 rounded-sm',
         xl: 'text-body py-1.5 px-4 rounded-md font-bold',
       },
+      activating: {
+        true: 'opacity-60 cursor-wait pointer-events-none',
+        false: '',
+      },
     },
     defaultVariants: {
       intent: 'primary',
       size: 'md',
+      activating: false,
     },
   }
 );

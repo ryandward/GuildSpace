@@ -173,8 +173,9 @@ export default function BankPage() {
                         className="hidden"
                       />
                       <Button
-                        intent="ghost"
+                        intent="primary"
                         size="sm"
+                        activating={importMutation.isPending || undefined}
                         className="ml-auto max-md:ml-0 shrink-0"
                         disabled={importMutation.isPending}
                         onClick={() => fileInputRef.current?.click()}
