@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useSlidingIndicator } from '../hooks/useSlidingIndicator';
 
 const tabs = [
   {
@@ -47,17 +48,17 @@ const tabs = [
 ];
 
 export default function BottomTabs() {
+  const { ref: navRef, style: indicatorStyle } = useSlidingIndicator<HTMLElement>();
+
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-dropdown bg-surface border-t border-border flex md:hidden">
+    <nav ref={navRef} className="fixed bottom-0 inset-x-0 z-dropdown bg-surface border-t border-border flex md:hidden relative">
       {tabs.map(({ to, label, icon }) => (
         <NavLink
           key={to}
           to={to}
           className={({ isActive }) =>
             `flex-1 flex flex-col items-center gap-0.5 py-1.5 no-underline transition-colors duration-fast ${
-              isActive
-                ? 'text-accent border-t-2 border-accent -mt-px'
-                : 'text-text-dim hover:text-text'
+              isActive ? 'text-accent' : 'text-text-dim hover:text-text'
             }`
           }
         >
@@ -65,6 +66,12 @@ export default function BottomTabs() {
           <span className="text-micro font-medium tracking-wide">{label}</span>
         </NavLink>
       ))}
+      {indicatorStyle && (
+        <span
+          className="absolute top-0 h-px bg-accent pointer-events-none"
+          style={indicatorStyle}
+        />
+      )}
     </nav>
   );
 }
