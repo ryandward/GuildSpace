@@ -541,6 +541,8 @@ export function createWebServer(opts: WebServerOptions) {
           spentDkp: dkp ? Number(dkp.SpentDkp) : 0,
           hasGuildSpace: !!gsUser,
           isOfficer: gsUser?.isOfficer || gsUser?.isAdmin || gsUser?.isOwner || false,
+          isAdmin: gsUser?.isAdmin || gsUser?.isOwner || false,
+          isOwner: gsUser?.isOwner || false,
         };
       });
 

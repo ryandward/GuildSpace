@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useRosterQuery } from '../hooks/useRosterQuery';
 import { useRosterFilters } from '../hooks/useRosterFilters';
+import { useSocket } from '../context/SocketContext';
 import { ClassChart, StatusChart, LevelChart } from '../components/roster/RosterFilters';
 import MemberList from '../components/roster/RosterTable';
 import RosterFilterPanel from '../components/roster/RosterFilterPanel';
@@ -19,6 +20,8 @@ const ACTIVITY_LABELS: Record<string, string> = {
 
 export default function RosterPage() {
   const { data, isLoading, error } = useRosterQuery();
+  const { onlineIds: onlineIdsArray } = useSocket();
+  const onlineIds = useMemo(() => new Set(onlineIdsArray), [onlineIdsArray]);
 
   const filters = useRosterFilters(data?.members);
   const {
@@ -249,7 +252,7 @@ export default function RosterPage() {
                     sortDirection={sortDirection}
                     onSort={toggleSort}
                   />
-                  <MemberList members={filtered} classFilter={classFilter} classAbbreviations={data.classAbbreviations} />
+                  <MemberList members={filtered} classFilter={classFilter} classAbbreviations={data.classAbbreviations} onlineIds={onlineIds} />
                   {filtered.length === 0 && (
                     <Text variant="caption" className="text-center py-4 block">No results.</Text>
                   )}

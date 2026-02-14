@@ -520,6 +520,8 @@ export function getDemoResponse(url: string, method: string): unknown | null {
         spentDkp: m.spentDkp,
         hasGuildSpace: m.hasGuildSpace,
         isOfficer: m.isOfficer,
+        isAdmin: m.isAdmin || m.isOwner,
+        isOwner: m.isOwner,
       })),
       summary: {
         totalMembers: members.length,

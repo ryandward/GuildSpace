@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Text } from '../../ui';
+import { Badge, Text } from '../../ui';
 import { text } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getClassColor, getClassShort } from '../../lib/classColors';
@@ -8,6 +8,25 @@ import { timeAgo } from '../../utils/timeAgo';
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
 }
+
+function highestRole(member: RosterMember): 'owner' | 'admin' | 'officer' | null {
+  if (member.isOwner) return 'owner';
+  if (member.isAdmin) return 'admin';
+  if (member.isOfficer) return 'officer';
+  return null;
+}
+
+const ROLE_COLOR = {
+  owner: 'accent',
+  admin: 'red',
+  officer: 'blue',
+} as const;
+
+const ROLE_LABEL = {
+  owner: 'Owner',
+  admin: 'Admin',
+  officer: 'Officer',
+} as const;
 
 // Desktop: pip | name(1fr) | class(120) | lvl(32) | DKP(56) | lastRaid(72) | arrow(48)
 // Mobile:  pip | name(1fr) | class(80)  | lvl(32) | DKP(48) | arrow(48)
@@ -32,6 +51,8 @@ export interface RosterMember {
   spentDkp: number;
   hasGuildSpace: boolean;
   isOfficer: boolean;
+  isAdmin: boolean;
+  isOwner: boolean;
 }
 
 function selectFeatured(member: RosterMember, classFilter: string | null): RosterCharacter {
@@ -67,13 +88,16 @@ interface Props {
   member: RosterMember;
   classFilter?: string | null;
   classAbbreviations?: Record<string, string>;
+  onlineIds?: Set<string>;
 }
 
-export default function RosterRow({ member, classFilter, classAbbreviations }: Props) {
+export default function RosterRow({ member, classFilter, classAbbreviations, onlineIds }: Props) {
   const navigate = useNavigate();
   const featured = selectFeatured(member, classFilter ?? null);
   const netDkp = member.earnedDkp - member.spentDkp;
   const lastRaid = getMostRecentRaid(member);
+  const role = highestRole(member);
+  const isOnline = onlineIds?.has(member.discordId) ?? false;
 
   return (
     <div className="border-b border-border-subtle">
@@ -83,11 +107,16 @@ export default function RosterRow({ member, classFilter, classAbbreviations }: P
       >
         <span className={`w-0.5 self-stretch rounded-full ${classToPip(featured?.class || '')}`} />
         <span
-          className="font-body text-body font-semibold truncate"
+          className="font-body text-body font-semibold truncate inline-flex items-center gap-1"
           style={{ color: getClassColor(featured?.class || '') }}
         >
           {featured?.name || member.displayName}
-          {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent ml-1 align-middle" title="GuildSpace member" />}
+          {isOnline
+            ? <span className="inline-block size-1 rounded-full bg-green shrink-0" title="Online" />
+            : member.hasGuildSpace
+              ? <span className="inline-block size-1 rounded-full bg-accent shrink-0" title="GuildSpace member" />
+              : null}
+          {role && <Badge variant="count" color={ROLE_COLOR[role]}>{ROLE_LABEL[role]}</Badge>}
         </span>
         <Text variant="label" className="truncate">{featured ? getClassShort(featured.class, classAbbreviations) : ''}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
