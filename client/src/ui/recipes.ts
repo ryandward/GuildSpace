@@ -205,12 +205,12 @@ export type BadgeVariants = VariantProps<typeof badge>;
 // ── NAV LINK ────────────────────────────────────────────
 
 export const navLink = cva(
-  'no-underline font-body text-caption font-semibold px-2.5 py-1.5 flex items-center tracking-wide transition-colors duration-fast border-b-2',
+  'no-underline font-body text-caption font-semibold px-2.5 py-1.5 flex items-center tracking-wide transition-colors duration-fast',
   {
     variants: {
       active: {
-        true: 'text-accent border-accent',
-        false: 'text-text-secondary border-transparent hover:text-text',
+        true: 'text-accent',
+        false: 'text-text-secondary hover:text-text',
       },
     },
     defaultVariants: {

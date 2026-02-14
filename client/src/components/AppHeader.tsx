@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { Button } from '../ui';
 import { navLink, reconnectBanner } from '../ui/recipes';
@@ -6,12 +7,38 @@ import UserMenu from './UserMenu';
 
 export default function AppHeader() {
   const { connected, showHelp, onlineCount, totalMembers } = useSocket();
+  const location = useLocation();
+  const navRef = useRef<HTMLElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+  const [ready, setReady] = useState(false);
+
+  const measure = useCallback(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const active = nav.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!active) {
+      setIndicator(null);
+      return;
+    }
+    const navRect = nav.getBoundingClientRect();
+    const linkRect = active.getBoundingClientRect();
+    setIndicator({
+      left: linkRect.left - navRect.left,
+      width: linkRect.width,
+    });
+    // Enable transitions only after first measurement
+    if (!ready) requestAnimationFrame(() => setReady(true));
+  }, [ready]);
+
+  useEffect(() => {
+    measure();
+  }, [location.pathname, measure]);
 
   return (
     <>
       <header className="grid grid-cols-[auto_1fr_auto] items-center min-h-7 bg-bg-deep border-b border-border px-3">
         <h1 className="flex items-center font-display text-subheading font-bold text-accent tracking-wide">GuildSpace</h1>
-        <nav className="flex justify-center gap-1 max-md:hidden">
+        <nav ref={navRef} className="flex justify-center gap-1 max-md:hidden relative">
           <NavLink
             to="/roster"
             className={({ isActive }) => navLink({ active: isActive })}
@@ -36,6 +63,18 @@ export default function AppHeader() {
           >
             Terminal
           </NavLink>
+          {indicator && (
+            <span
+              className="absolute bottom-0 h-px bg-accent pointer-events-none"
+              style={{
+                left: indicator.left,
+                width: indicator.width,
+                transition: ready
+                  ? 'left var(--duration-normal) var(--ease-decelerate), width var(--duration-normal) var(--ease-decelerate)'
+                  : 'none',
+              }}
+            />
+          )}
         </nav>
         <div className="md:hidden" />
         <div className="flex items-center gap-2">
