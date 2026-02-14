@@ -29,9 +29,12 @@ function layoutStrip(
     return [{ label: items[0].label, value: items[0].value, x, y, w, h }];
   }
 
-  // Lay strips horizontally: cells flow left-to-right, rows stack top-to-bottom.
-  // This prevents tall skinny columns in wide containers.
-  const shortSide = w;
+  // Standard squarified treemap: pick actual short side of the remaining rectangle.
+  // w >= h → vertical strip on left edge, cells stack top-to-bottom, recurse right.
+  // h > w  → horizontal strip on top edge, cells stack left-to-right, recurse below.
+  const horizontal = h > w;
+  const shortSide = horizontal ? w : h;
+
   const strip = [items[0]];
   let stripTotal = items[0].area;
 
@@ -48,16 +51,30 @@ function layoutStrip(
   const results: TreemapNode[] = [];
   let pos = 0;
 
-  for (const item of strip) {
-    const span = item.area / thickness;
-    results.push({ label: item.label, value: item.value, x: x + pos, y, w: span, h: thickness });
-    pos += span;
+  for (let i = 0; i < strip.length; i++) {
+    const item = strip[i];
+    const isLast = i === strip.length - 1;
+    if (horizontal) {
+      // Cells flow left-to-right within a horizontal strip
+      const span = isLast ? shortSide - pos : item.area / thickness;
+      results.push({ label: item.label, value: item.value, x: x + pos, y, w: span, h: thickness });
+      pos += span;
+    } else {
+      // Cells stack top-to-bottom within a vertical strip
+      const span = isLast ? shortSide - pos : item.area / thickness;
+      results.push({ label: item.label, value: item.value, x, y: y + pos, w: thickness, h: span });
+      pos += span;
+    }
   }
 
   const rest = items.slice(strip.length);
   if (rest.length === 0) return results;
 
-  return [...results, ...layoutStrip(rest, x, y + thickness, w, h - thickness)];
+  if (horizontal) {
+    return [...results, ...layoutStrip(rest, x, y + thickness, w, h - thickness)];
+  } else {
+    return [...results, ...layoutStrip(rest, x + thickness, y, w - thickness, h)];
+  }
 }
 
 export function computeTreemap(
