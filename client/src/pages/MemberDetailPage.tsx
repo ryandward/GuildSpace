@@ -9,7 +9,7 @@ import { Text, Heading, Card, Button, Textarea, Badge } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getClassColor, getMostRecentClass } from '../lib/classColors';
-import { highestRole, ROLE_COLOR, ROLE_LABEL } from '../lib/roles';
+import { highestRole, roleSince, ROLE_COLOR, ROLE_LABEL } from '../lib/roles';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
@@ -75,7 +75,7 @@ export default function MemberDetailPage() {
                   {(() => {
                     const role = highestRole(data);
                     if (!role) return null;
-                    const since = role === 'admin' ? data.adminSince : role === 'officer' ? data.officerSince : null;
+                    const since = roleSince(role, data);
                     return <Badge variant="status" color={ROLE_COLOR[role]} title={since ? `Since ${formatDate(since)}` : undefined}>{ROLE_LABEL[role]}</Badge>;
                   })()}
                 </div>

@@ -19,3 +19,10 @@ export function highestRole(flags: { isOwner: boolean; isAdmin: boolean; isOffic
   if (flags.isOfficer) return 'officer';
   return null;
 }
+
+/** Get the "since" date for a role, if tracked. */
+export function roleSince(role: Role, data: { officerSince?: string | null; adminSince?: string | null }): string | null {
+  if (role === 'admin') return data.adminSince ?? null;
+  if (role === 'officer') return data.officerSince ?? null;
+  return null;
+}
