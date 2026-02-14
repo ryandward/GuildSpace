@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEventDetailQuery } from '../hooks/useEventDetailQuery';
 import { useRaidTemplatesQuery } from '../hooks/useRaidTemplatesQuery';
-import { useAddCallMutation, useDeleteCallMutation, useCloseEventMutation, useReopenEventMutation, useAddCharacterMutation, useRemoveCharacterMutation } from '../hooks/useRaidMutations';
+import { useAddCallMutation, useDeleteCallMutation, useEditCallMutation, useCloseEventMutation, useReopenEventMutation, useAddCharacterMutation, useRemoveCharacterMutation } from '../hooks/useRaidMutations';
 import type { AddCallResult } from '../hooks/useRaidMutations';
 import AddCallForm from '../components/raids/AddCallForm';
 import CallRow from '../components/raids/CallRow';
@@ -18,6 +18,7 @@ export default function RaidEventPage() {
   const { data: templates } = useRaidTemplatesQuery();
   const addCall = useAddCallMutation(Number(eventId));
   const deleteCall = useDeleteCallMutation(Number(eventId));
+  const editCall = useEditCallMutation(Number(eventId));
   const closeEvent = useCloseEventMutation(Number(eventId));
   const reopenEvent = useReopenEventMutation(Number(eventId));
   const addCharacter = useAddCharacterMutation(Number(eventId));
@@ -44,6 +45,10 @@ export default function RaidEventPage() {
     deleteCall.mutate(callId, {
       onSuccess: () => setConfirmDeleteId(null),
     });
+  }
+
+  function handleEditCall(callId: number, raidName: string, modifier: number) {
+    editCall.mutate({ callId, raidName, modifier });
   }
 
   function handleCloseEvent() {
@@ -165,6 +170,9 @@ export default function RaidEventPage() {
                     eventId={Number(eventId)}
                     onAddCharacter={(callId, name) => addCharacter.mutate({ callId, characterName: name })}
                     onRemoveCharacter={(callId, name) => removeCharacter.mutate({ callId, characterName: name })}
+                    onEditCall={handleEditCall}
+                    isEditPending={editCall.isPending}
+                    templates={templates}
                   />
                 ))}
               </Card>

@@ -756,6 +756,58 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  // ─── Raid Template CRUD ────────────────────────────────────────────────
+
+  app.post('/api/raids/templates', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const { name, type, modifier } = req.body;
+      if (!name || modifier == null) return res.status(400).json({ error: 'name and modifier are required' });
+      const existing = await AppDataSource.manager.findOne(Raids, { where: { Raid: name } });
+      if (existing) return res.status(409).json({ error: 'A template with that name already exists' });
+      const raid = new Raids();
+      raid.Raid = name;
+      raid.Type = type || null;
+      raid.Modifier = Number(modifier);
+      await AppDataSource.manager.save(raid);
+      res.json({ name: raid.Raid, type: raid.Type, modifier: Number(raid.Modifier) });
+    } catch (err) {
+      console.error('Failed to create raid template:', err);
+      res.status(500).json({ error: 'Failed to create raid template' });
+    }
+  });
+
+  app.patch('/api/raids/templates/:name', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const raid = await AppDataSource.manager.findOne(Raids, { where: { Raid: req.params.name } });
+      if (!raid) return res.status(404).json({ error: 'Template not found' });
+      if (req.body.type !== undefined) raid.Type = req.body.type || null;
+      if (req.body.modifier !== undefined) raid.Modifier = Number(req.body.modifier);
+      await AppDataSource.manager.save(raid);
+      res.json({ name: raid.Raid, type: raid.Type, modifier: Number(raid.Modifier) });
+    } catch (err) {
+      console.error('Failed to update raid template:', err);
+      res.status(500).json({ error: 'Failed to update raid template' });
+    }
+  });
+
+  app.delete('/api/raids/templates/:name', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const raid = await AppDataSource.manager.findOne(Raids, { where: { Raid: req.params.name } });
+      if (!raid) return res.status(404).json({ error: 'Template not found' });
+      await AppDataSource.manager.remove(raid);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to delete raid template:', err);
+      res.status(500).json({ error: 'Failed to delete raid template' });
+    }
+  });
+
   // ─── Raid Events ──────────────────────────────────────────────────────
 
   app.get('/api/raids/events', async (req, res) => {
@@ -1036,6 +1088,79 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err) {
       console.error('Failed to add raid call:', err);
       res.status(500).json({ error: 'Failed to add call' });
+    }
+  });
+
+  app.patch('/api/raids/events/:id/calls/:callId', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const callId = parseInt(req.params.callId, 10);
+      const eventId = parseInt(req.params.id, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+
+      const { raidName, modifier } = req.body;
+      const newModifier = modifier !== undefined ? Number(modifier) : call.modifier;
+      const newRaidName = raidName !== undefined ? String(raidName) : call.raidName;
+
+      if (modifier !== undefined && isNaN(newModifier)) {
+        return res.status(400).json({ error: 'modifier must be a number' });
+      }
+
+      const delta = newModifier - call.modifier;
+
+      // Get linked attendance records
+      const links = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId } });
+
+      if (links.length > 0) {
+        const attIds = links.map(l => l.attendanceId);
+
+        // Apply DKP delta if modifier changed
+        if (delta !== 0) {
+          const attendanceRows = await AppDataSource.manager
+            .createQueryBuilder()
+            .select(['a.discord_id as "discordId"'])
+            .from(Attendance, 'a')
+            .where('a.id IN (:...attIds)', { attIds })
+            .getRawMany() as { discordId: string }[];
+
+          const uniqueDiscordIds = [...new Set(attendanceRows.map(r => r.discordId))];
+
+          for (const discordId of uniqueDiscordIds) {
+            await AppDataSource.manager
+              .createQueryBuilder()
+              .update(Dkp)
+              .set({ EarnedDkp: () => `earned_dkp + ${delta}` })
+              .where('discord_id = :discordId', { discordId })
+              .execute();
+          }
+        }
+
+        // Update attendance snapshot rows
+        const updateFields: Record<string, string> = {};
+        if (raidName !== undefined) updateFields['Raid'] = newRaidName;
+        if (modifier !== undefined) updateFields['Modifier'] = String(newModifier);
+
+        if (Object.keys(updateFields).length > 0) {
+          await AppDataSource.manager
+            .createQueryBuilder()
+            .update(Attendance)
+            .set(updateFields as any)
+            .where('id IN (:...attIds)', { attIds })
+            .execute();
+        }
+      }
+
+      // Update the call record
+      call.raidName = newRaidName;
+      call.modifier = newModifier;
+      await AppDataSource.manager.save(call);
+
+      res.json({ ok: true, raidName: call.raidName, modifier: call.modifier });
+    } catch (err) {
+      console.error('Failed to edit raid call:', err);
+      res.status(500).json({ error: 'Failed to edit call' });
     }
   });
 

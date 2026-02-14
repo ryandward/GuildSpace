@@ -99,6 +99,24 @@ export function useDeleteCallMutation(eventId: number) {
   });
 }
 
+export function useEditCallMutation(eventId: number) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ callId, raidName, modifier }: { callId: number; raidName?: string; modifier?: number }) =>
+      authFetch(token!, `/api/raids/events/${eventId}/calls/${callId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raidName, modifier }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
+      queryClient.invalidateQueries({ queryKey: ['raidEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['roster'] });
+    },
+  });
+}
+
 export function useAddCharacterMutation(eventId: number) {
   const { token } = useAuth();
   const queryClient = useQueryClient();

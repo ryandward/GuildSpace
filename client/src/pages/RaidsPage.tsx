@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEventsQuery } from '../hooks/useEventsQuery';
 import { useCreateEventMutation } from '../hooks/useRaidMutations';
 import EventCard from '../components/raids/EventCard';
+import RaidTargetsModal from '../components/raids/RaidTargetsModal';
 import { Button, Card, Text, Heading, Input } from '../ui';
 
 export default function RaidsPage() {
@@ -10,6 +11,7 @@ export default function RaidsPage() {
   const { data: events, isLoading, error } = useEventsQuery();
   const createEvent = useCreateEventMutation();
   const [showCreate, setShowCreate] = useState(false);
+  const [showTargets, setShowTargets] = useState(false);
   const [newName, setNewName] = useState('');
 
   const isOfficer = user?.isOfficer;
@@ -30,9 +32,14 @@ export default function RaidsPage() {
           <div className="flex items-center justify-between">
             <Heading level="heading">Raids</Heading>
             {isOfficer && !showCreate && (
-              <Button intent="primary" size="sm" onClick={() => setShowCreate(true)}>
-                Create Event
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button intent="ghost" size="sm" onClick={() => setShowTargets(true)}>
+                  Raid Targets
+                </Button>
+                <Button intent="primary" size="sm" onClick={() => setShowCreate(true)}>
+                  Create Event
+                </Button>
+              </div>
             )}
           </div>
 
@@ -77,6 +84,8 @@ export default function RaidsPage() {
             <EventCard key={event.id} event={event} />
           ))}
         </div>
+
+        <RaidTargetsModal isOpen={showTargets} onClose={() => setShowTargets(false)} />
       </div>
   );
 }

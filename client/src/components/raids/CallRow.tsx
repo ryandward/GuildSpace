@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Badge, Text, Input } from '../../ui';
+import { Button, Badge, Text, Input, Select } from '../../ui';
 import { dropdown, dropdownItem } from '../../ui/recipes';
 import { useToonSearchQuery } from '../../hooks/useToonSearchQuery';
 import type { CallDetail } from '../../hooks/useEventDetailQuery';
+import type { RaidTemplate } from '../../hooks/useRaidTemplatesQuery';
 import { getClassColor } from '../../lib/classColors';
 
 interface Props {
@@ -18,12 +19,16 @@ interface Props {
   eventId: number;
   onAddCharacter: (callId: number, name: string) => void;
   onRemoveCharacter: (callId: number, name: string) => void;
+  onEditCall?: (callId: number, raidName: string, modifier: number) => void;
+  isEditPending?: boolean;
+  templates?: RaidTemplate[];
 }
 
 export default function CallRow({
   call, index, isOfficer, isActive,
   confirmDeleteId, onConfirmDelete, onDelete, isDeleting,
   onAddCharacter, onRemoveCharacter,
+  onEditCall, isEditPending, templates,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [addName, setAddName] = useState('');
@@ -31,6 +36,10 @@ export default function CallRow({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const [editing, setEditing] = useState(false);
+  const [editRaidName, setEditRaidName] = useState('');
+  const [editModifier, setEditModifier] = useState('');
 
   const { data: suggestions } = useToonSearchQuery(debouncedName);
 
@@ -45,6 +54,36 @@ export default function CallRow({
   }, [addName]);
 
   const isConfirmingDelete = confirmDeleteId === call.id;
+
+  function startEdit() {
+    setEditing(true);
+    setEditRaidName(call.raidName);
+    setEditModifier(String(call.modifier));
+    setConfirmDeleteId(null);
+  }
+
+  function setConfirmDeleteId(id: number | null) {
+    onConfirmDelete(id);
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+  }
+
+  function saveEdit() {
+    const mod = Number(editModifier);
+    if (!editRaidName.trim() || isNaN(mod)) return;
+    onEditCall?.(call.id, editRaidName.trim(), mod);
+    setEditing(false);
+  }
+
+  function handleTemplateSelect(value: string) {
+    const tmpl = templates?.find(t => t.name === value);
+    if (tmpl) {
+      setEditRaidName(tmpl.name);
+      setEditModifier(String(tmpl.modifier));
+    }
+  }
 
   return (
     <div className="border-t border-border">
@@ -85,6 +124,58 @@ export default function CallRow({
                   )}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Edit call form */}
+          {editing && (
+            <div className="flex flex-col gap-1 py-1 px-1 bg-surface-2 rounded-md mb-1">
+              <div className="flex items-center gap-1 flex-wrap">
+                {templates && templates.length > 0 && (
+                  <Select
+                    size="sm"
+                    value=""
+                    onChange={(e) => handleTemplateSelect(e.target.value)}
+                  >
+                    <option value="">Template...</option>
+                    {templates.map(t => (
+                      <option key={t.name} value={t.name}>{t.name} ({t.modifier})</option>
+                    ))}
+                  </Select>
+                )}
+                <Input
+                  size="sm"
+                  type="text"
+                  placeholder="Raid name"
+                  value={editRaidName}
+                  onChange={(e) => setEditRaidName(e.target.value)}
+                  className="flex-1 min-w-20"
+                />
+                <Input
+                  size="sm"
+                  type="number"
+                  placeholder="DKP"
+                  value={editModifier}
+                  onChange={(e) => setEditModifier(e.target.value)}
+                  className="w-14"
+                />
+              </div>
+              <div className="flex items-center gap-0.5">
+                <Button
+                  intent="primary"
+                  size="xs"
+                  onClick={saveEdit}
+                  disabled={isEditPending || !editRaidName.trim() || !editModifier}
+                >
+                  {isEditPending ? 'Saving...' : 'Save'}
+                </Button>
+                <Button intent="ghost" size="xs" onClick={cancelEdit}>Cancel</Button>
+                {Number(editModifier) !== call.modifier && !isNaN(Number(editModifier)) && (
+                  <Text variant="caption" className="text-text-dim ml-1">
+                    DKP delta: {Number(editModifier) - call.modifier > 0 ? '+' : ''}{Number(editModifier) - call.modifier} per member
+                  </Text>
+                )}
+              </div>
             </div>
           )}
 
@@ -156,6 +247,10 @@ export default function CallRow({
                 </div>
                 <Button intent="ghost" size="xs" type="submit" disabled={!addName.trim()}>Add</Button>
               </form>
+
+              {!editing && onEditCall && (
+                <Button intent="ghost" size="xs" onClick={startEdit}>Edit Call</Button>
+              )}
 
               {!isConfirmingDelete ? (
                 <Button
