@@ -8,7 +8,7 @@ import MemberList from '../components/roster/RosterTable';
 import RosterFilterPanel from '../components/roster/RosterFilterPanel';
 import RosterHeader from '../components/roster/RosterHeader';
 import CollapsibleCard from '../components/CollapsibleCard';
-import { Badge, Text, Input, Select } from '../ui';
+import { Badge, Text, Input } from '../ui';
 import { text } from '../ui/recipes';
 import { getClassShort } from '../lib/classColors';
 
@@ -159,16 +159,15 @@ export default function RosterPage() {
               {/* Filter strip — chips per active filter + size selector */}
               <div className="flex items-center gap-1 px-0.5 min-h-6 flex-wrap">
                 <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
-                <Select
-                  size="sm"
+                <select
                   value={sizeMode}
                   onChange={e => setSizeMode(e.target.value as SizeMode)}
-                  className="bg-surface min-h-0 font-semibold"
+                  className="appearance-none bg-surface border border-border rounded-sm px-1 py-0.5 text-caption font-semibold text-text cursor-pointer pr-2.5 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%228%22%20height%3D%225%22%3E%3Cpath%20d%3D%22M0%200l4%205%204-5z%22%20fill%3D%22%23888%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_0.25rem_center]"
                 >
                   {SIZE_MODE_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
-                </Select>
+                </select>
                 {activeFilterCount === 0 && (
                   <Badge variant="filter">All</Badge>
                 )}
