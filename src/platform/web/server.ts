@@ -1583,6 +1583,141 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  // ─── Bank Import Squash ────────────────────────────────────────────
+
+  app.post('/api/bank/history/:id/squash', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+
+    try {
+      const targetId = req.params.id;
+
+      const target = await AppDataSource.manager.findOne(BankImport, {
+        where: { id: targetId },
+      });
+      if (!target) return res.status(404).json({ error: 'Record not found' });
+
+      const older = await AppDataSource.manager
+        .createQueryBuilder(BankImport, 'bi')
+        .where('bi.banker = :banker AND bi.id < :id', {
+          banker: target.banker,
+          id: targetId,
+        })
+        .orderBy('bi.id', 'DESC')
+        .limit(1)
+        .getOne();
+
+      if (!older) {
+        return res.status(400).json({ error: 'No previous import to squash with' });
+      }
+
+      // Compose diffs: older (A→B) + target (B→C) = net (A→C)
+      const diff1 = older.diff;
+      const diff2 = target.diff;
+
+      const netAdded = new Map<string, number>();
+      const netRemoved = new Map<string, number>();
+      const netChanged = new Map<string, { oldQuantity: number; newQuantity: number }>();
+
+      // Process diff1 (A→B)
+      for (const item of diff1.added) {
+        const d2removed = diff2.removed.find(r => r.name === item.name);
+        const d2changed = diff2.changed.find(c => c.name === item.name);
+        if (d2removed) {
+          // added then removed → cancel out
+        } else if (d2changed) {
+          // added then changed → net added with C's quantity
+          netAdded.set(item.name, d2changed.newQuantity);
+        } else {
+          // added, untouched in diff2 → stays added
+          netAdded.set(item.name, item.quantity);
+        }
+      }
+
+      for (const item of diff1.removed) {
+        const d2added = diff2.added.find(a => a.name === item.name);
+        if (d2added) {
+          if (d2added.quantity === item.quantity) {
+            // removed then added back same qty → cancel out
+          } else {
+            // removed then added back diff qty → net changed
+            netChanged.set(item.name, {
+              oldQuantity: item.quantity,
+              newQuantity: d2added.quantity,
+            });
+          }
+        } else {
+          // removed, untouched in diff2 → stays removed
+          netRemoved.set(item.name, item.quantity);
+        }
+      }
+
+      for (const item of diff1.changed) {
+        const d2removed = diff2.removed.find(r => r.name === item.name);
+        const d2changed = diff2.changed.find(c => c.name === item.name);
+        if (d2removed) {
+          // changed then removed → net removed with A's original qty
+          netRemoved.set(item.name, item.oldQuantity);
+        } else if (d2changed) {
+          // changed then changed → A's old → C's new (cancel if equal)
+          if (item.oldQuantity !== d2changed.newQuantity) {
+            netChanged.set(item.name, {
+              oldQuantity: item.oldQuantity,
+              newQuantity: d2changed.newQuantity,
+            });
+          }
+        } else {
+          // changed, untouched in diff2 → stays changed
+          netChanged.set(item.name, {
+            oldQuantity: item.oldQuantity,
+            newQuantity: item.newQuantity,
+          });
+        }
+      }
+
+      // Process diff2 items not already handled (items only in diff2)
+      const d1names = new Set([
+        ...diff1.added.map(i => i.name),
+        ...diff1.removed.map(i => i.name),
+        ...diff1.changed.map(i => i.name),
+      ]);
+
+      for (const item of diff2.added) {
+        if (!d1names.has(item.name)) netAdded.set(item.name, item.quantity);
+      }
+      for (const item of diff2.removed) {
+        if (!d1names.has(item.name)) netRemoved.set(item.name, item.quantity);
+      }
+      for (const item of diff2.changed) {
+        if (!d1names.has(item.name)) {
+          netChanged.set(item.name, {
+            oldQuantity: item.oldQuantity,
+            newQuantity: item.newQuantity,
+          });
+        }
+      }
+
+      const composedDiff = {
+        added: Array.from(netAdded.entries()).map(([name, quantity]) => ({ name, quantity })),
+        removed: Array.from(netRemoved.entries()).map(([name, quantity]) => ({ name, quantity })),
+        changed: Array.from(netChanged.entries()).map(([name, { oldQuantity, newQuantity }]) => ({
+          name,
+          oldQuantity,
+          newQuantity,
+        })),
+      };
+
+      target.diff = composedDiff;
+      await AppDataSource.manager.save(target);
+      await AppDataSource.manager.delete(BankImport, { id: older.id });
+
+      res.json(target);
+    } catch (err) {
+      console.error('Failed to squash bank imports:', err);
+      res.status(500).json({ error: 'Failed to squash imports' });
+    }
+  });
+
   // ─── API Key Generation ──────────────────────────────────────────────
 
   app.post('/api/profile/api-key', async (req, res) => {

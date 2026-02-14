@@ -1,15 +1,19 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useBankQuery } from '../hooks/useBankQuery';
 import { useBankerHistory } from '../hooks/useBankerHistory';
+import { useBankSquash } from '../hooks/useBankSquash';
 import BankHistoryEntry from '../components/BankHistoryEntry';
 import { Card, Input, Text, Badge, Heading } from '../ui';
 import { text } from '../ui/recipes';
 
 export default function BankerDetailPage() {
   const { banker } = useParams<{ banker: string }>();
+  const { user } = useAuth();
   const { data, isLoading, error } = useBankQuery();
   const { data: history, isLoading: historyLoading } = useBankerHistory(banker);
+  const squashMutation = useBankSquash();
   const [search, setSearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
 
@@ -134,7 +138,7 @@ export default function BankerDetailPage() {
                       </Text>
                     )}
                     {filteredHistory.slice(0, 10).map(record => (
-                      <BankHistoryEntry key={record.id} record={record} />
+                      <BankHistoryEntry key={record.id} record={record} onSquash={(user?.isOfficer || user?.isAdmin || user?.isOwner) ? (id) => squashMutation.mutate(id) : undefined} />
                     ))}
                     {filteredHistory.length > 10 && (
                       <Text variant="caption" className="text-center py-1.5 block">

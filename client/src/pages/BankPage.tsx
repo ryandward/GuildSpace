@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useBankQuery, type BankItem } from '../hooks/useBankQuery';
 import { useBankImport } from '../hooks/useBankImport';
+import { useBankSquash } from '../hooks/useBankSquash';
 import { useBankHistory } from '../hooks/useBankerHistory';
 import BankHistoryEntry from '../components/BankHistoryEntry';
 import BankerTreemap from '../components/bank/BankerTreemap';
@@ -73,6 +74,7 @@ export default function BankPage() {
   const { user } = useAuth();
   const { data, isLoading, error } = useBankQuery();
   const importMutation = useBankImport();
+  const squashMutation = useBankSquash();
   const { data: history, isLoading: historyLoading } = useBankHistory();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
@@ -292,7 +294,7 @@ export default function BankPage() {
                       </Text>
                     )}
                     {filteredHistory.slice(0, 10).map(record => (
-                      <BankHistoryEntry key={record.id} record={record} showBanker />
+                      <BankHistoryEntry key={record.id} record={record} showBanker onSquash={isOfficer ? (id) => squashMutation.mutate(id) : undefined} />
                     ))}
                     {filteredHistory.length > 10 && (
                       <Text variant="caption" className="text-center py-1.5 block">
