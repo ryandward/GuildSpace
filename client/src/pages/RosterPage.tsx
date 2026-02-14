@@ -6,44 +6,9 @@ import { ClassChart, StatusChart, LevelChart } from '../components/roster/Roster
 import MemberList from '../components/roster/RosterTable';
 import RosterFilterPanel from '../components/roster/RosterFilterPanel';
 import RosterHeader from '../components/roster/RosterHeader';
-import { Card, Badge, Text, Input } from '../ui';
+import CollapsibleCard from '../components/CollapsibleCard';
+import { Badge, Text, Input } from '../ui';
 import { text } from '../ui/recipes';
-import { cx } from 'class-variance-authority';
-
-function CollapsibleCard({ id, title, count, collapsedPanels, onToggle, children }: {
-  id: string;
-  title: string;
-  count?: number;
-  collapsedPanels: Set<string>;
-  onToggle: (id: string) => void;
-  children: React.ReactNode;
-}) {
-  const collapsed = collapsedPanels.has(id);
-  return (
-    <Card>
-      <button
-        className="w-full flex items-center gap-1 py-1 px-2 min-h-6 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast"
-        onClick={() => onToggle(id)}
-      >
-        <span
-          className="collapse-chevron text-text-dim text-caption"
-          data-expanded={!collapsed}
-        >
-          ›
-        </span>
-        <span className={text({ variant: 'overline' })}>{title}</span>
-        {count != null && (
-          <span className={cx(text({ variant: 'body' }), 'font-bold ml-auto')}>{count}</span>
-        )}
-      </button>
-      <div className="collapse-container" data-expanded={!collapsed}>
-        <div className="collapse-inner">
-          {children}
-        </div>
-      </div>
-    </Card>
-  );
-}
 
 const ACTIVITY_LABELS: Record<string, string> = {
   '30d': 'Active 30d',
@@ -66,6 +31,7 @@ export default function RosterPage() {
     sortField, sortDirection, toggleSort,
     clearAll,
     activeFilterCount,
+    filteredPreClass,
     filtered,
   } = filters;
 
@@ -80,33 +46,34 @@ export default function RosterPage() {
     });
   }, []);
 
-  // Derive treemap + stats from the filtered member list so they update with filters
-  const filteredChars = useMemo(() => {
-    return filtered.flatMap(m => m.characters);
-  }, [filtered]);
+  // Treemap data uses pre-class filter so the treemap stays stable when clicking a class
+  const preClassChars = useMemo(() => {
+    return filteredPreClass.flatMap(m => m.characters);
+  }, [filteredPreClass]);
 
+  // Stats data uses post-class-filter characters
   const filteredClassChars = useMemo(() => {
-    if (!classFilter) return filteredChars;
-    return filteredChars.filter(c => c.class === classFilter);
-  }, [filteredChars, classFilter]);
+    if (!classFilter) return preClassChars;
+    return preClassChars.filter(c => c.class === classFilter);
+  }, [preClassChars, classFilter]);
 
   const classCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const c of filteredChars) {
+    for (const c of preClassChars) {
       counts[c.class] = (counts[c.class] || 0) + 1;
     }
     return counts;
-  }, [filteredChars]);
+  }, [preClassChars]);
 
   const levelBreakdown = useMemo(() => {
     const breakdown: Record<string, { max: number; total: number }> = {};
-    for (const c of filteredChars) {
+    for (const c of preClassChars) {
       if (!breakdown[c.class]) breakdown[c.class] = { max: 0, total: 0 };
       breakdown[c.class].total++;
       if (c.level >= 60) breakdown[c.class].max++;
     }
     return breakdown;
-  }, [filteredChars]);
+  }, [preClassChars]);
 
   const levelDist = useMemo(() => {
     let level60 = 0, sub60 = 0;

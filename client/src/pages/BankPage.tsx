@@ -5,6 +5,8 @@ import { useBankQuery, type BankItem } from '../hooks/useBankQuery';
 import { useBankImport } from '../hooks/useBankImport';
 import { useBankHistory } from '../hooks/useBankerHistory';
 import BankHistoryEntry from '../components/BankHistoryEntry';
+import BankerTreemap from '../components/bank/BankerTreemap';
+import CollapsibleCard from '../components/CollapsibleCard';
 import AppHeader from '../components/AppHeader';
 import { Card, Input, Text, Badge, Button } from '../ui';
 import { text } from '../ui/recipes';
@@ -76,13 +78,71 @@ export default function BankPage() {
   const { data: history, isLoading: historyLoading } = useBankHistory();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
+  const [bankerFilter, setBankerFilter] = useState<string | null>(null);
+  const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set(['inventory', 'activity-full']));
+  // Track whether inventory was auto-opened (by filter or search) so we can auto-close it
+  const [autoOpened, setAutoOpened] = useState(false);
+
+  const togglePanel = useCallback((id: string) => {
+    setCollapsedPanels(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    // If user manually toggles inventory, clear auto-opened tracking
+    if (id === 'inventory') setAutoOpened(false);
+  }, []);
+
+  const handleBankerFilter = useCallback((banker: string | null) => {
+    setBankerFilter(banker);
+    if (banker) {
+      // Auto-expand inventory when filtering
+      setCollapsedPanels(prev => {
+        if (!prev.has('inventory')) return prev;
+        const next = new Set(prev);
+        next.delete('inventory');
+        return next;
+      });
+      setAutoOpened(true);
+    } else if (autoOpened) {
+      // Re-collapse inventory when clearing filter (if it was auto-opened)
+      setCollapsedPanels(prev => {
+        if (prev.has('inventory')) return prev;
+        const next = new Set(prev);
+        next.add('inventory');
+        return next;
+      });
+      setAutoOpened(false);
+    }
+  }, [autoOpened]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearch(value);
+    // Auto-expand inventory when typing a search
+    if (value && collapsedPanels.has('inventory')) {
+      setCollapsedPanels(prev => {
+        const next = new Set(prev);
+        next.delete('inventory');
+        return next;
+      });
+      setAutoOpened(true);
+    }
+  }, [collapsedPanels]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
-    if (!search) return data;
-    const q = search.toLowerCase();
-    return data.filter(item => item.name.toLowerCase().includes(q));
-  }, [data, search]);
+    let result = data;
+    if (bankerFilter) {
+      result = result.filter(item => item.bankers.includes(bankerFilter));
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(item => item.name.toLowerCase().includes(q));
+    }
+    return result;
+  }, [data, search, bankerFilter]);
 
   const uniqueBankers = useMemo(() => {
     if (!data) return 0;
@@ -92,10 +152,6 @@ export default function BankPage() {
     }
     return bankers.size;
   }, [data]);
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -110,6 +166,7 @@ export default function BankPage() {
   }, [importMutation]);
 
   const isOfficer = user?.isOfficer || user?.isAdmin || user?.isOwner;
+  const hasActiveFilter = bankerFilter !== null || search !== '';
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
@@ -147,84 +204,138 @@ export default function BankPage() {
 
           {!isLoading && data && (
             <>
-              <Card>
-                <div className="flex items-center gap-2 py-1 px-2 border-b border-border max-md:flex-wrap">
-                  <span className={text({ variant: 'overline' })}>BANK</span>
-                  <span className="text-text font-body text-body font-bold">
-                    {search ? filtered.length : data.length}
-                  </span>
-                  {!search && (
-                    <span className={text({ variant: 'caption' }) + ' ml-auto max-md:ml-0'}>
-                      {data.length} unique items across {uniqueBankers} {uniqueBankers === 1 ? 'banker' : 'bankers'}
-                    </span>
-                  )}
-                  {search && (
-                    <span className={text({ variant: 'caption' }) + ' ml-auto max-md:ml-0'}>
-                      {filtered.length} of {data.length} items
-                    </span>
-                  )}
-                  {isOfficer && (
-                    <>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".txt,.tsv"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                      <Button
-                        intent="primary"
-                        size="sm"
-                        pending={importMutation.isPending || undefined}
-                        className="ml-auto max-md:ml-0 shrink-0"
-                        disabled={importMutation.isPending}
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {importMutation.isPending ? 'Importing...' : 'Import Inventory'}
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 py-1 px-2 border-b border-border">
-                  <Input
-                    variant="transparent"
-                    size="sm"
-                    type="text"
-                    placeholder="Search items..."
-                    value={search}
-                    onChange={handleSearchChange}
-                    autoFocus
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  {filtered.map(item => (
-                    <BankItemRow key={item.name} item={item} />
-                  ))}
-                  {filtered.length === 0 && (
-                    <Text variant="caption" className="text-center py-4 block">
-                      No items match your search
-                    </Text>
-                  )}
-                </div>
-              </Card>
+              {/* Treemap — banker distribution */}
+              <BankerTreemap
+                data={data}
+                bankerFilter={bankerFilter}
+                onBankerFilter={handleBankerFilter}
+              />
 
-              <Card>
-                <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
-                  <span className={text({ variant: 'overline' })}>TRANSACTION HISTORY</span>
-                </div>
-                <div>
+              {/* Filter strip */}
+              <div className="flex items-center gap-1 px-0.5 min-h-6 flex-wrap">
+                <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
+                {!hasActiveFilter && (
+                  <Badge variant="filter">All</Badge>
+                )}
+                {bankerFilter && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>{bankerFilter}</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => handleBankerFilter(null)}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                {search && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>"{search}"</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => setSearch('')}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                <span className={text({ variant: 'caption' }) + ' ml-auto max-md:ml-0'}>
+                  {hasActiveFilter
+                    ? `${filtered.length} of ${data.length} items`
+                    : `${data.length} unique items across ${uniqueBankers} ${uniqueBankers === 1 ? 'banker' : 'bankers'}`
+                  }
+                </span>
+                {isOfficer && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".txt,.tsv"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      intent="primary"
+                      size="sm"
+                      pending={importMutation.isPending || undefined}
+                      className="shrink-0"
+                      disabled={importMutation.isPending}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {importMutation.isPending ? 'Importing...' : 'Import Inventory'}
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Activity — recent imports, open by default */}
+              <CollapsibleCard
+                id="activity"
+                title="ACTIVITY"
+                count={history?.length}
+                collapsedPanels={collapsedPanels}
+                onToggle={togglePanel}
+              >
+                <div className="border-t border-border">
                   {historyLoading && (
                     <Text variant="caption" className="text-center py-4 block">Loading...</Text>
                   )}
                   {!historyLoading && (!history || history.length === 0) && (
                     <Text variant="caption" className="text-center py-4 block">No transactions yet</Text>
                   )}
-                  {history?.map(record => (
+                  {history?.slice(0, 5).map(record => (
                     <BankHistoryEntry key={record.id} record={record} showBanker />
                   ))}
+                  {history && history.length > 5 && collapsedPanels.has('activity-full') && (
+                    <button
+                      className="w-full py-1.5 px-2 bg-transparent border-none border-t border-border cursor-pointer text-text-dim text-caption hover:text-accent transition-colors duration-fast"
+                      onClick={() => togglePanel('activity-full')}
+                    >
+                      Show all {history.length} entries
+                    </button>
+                  )}
+                  {history && history.length > 5 && !collapsedPanels.has('activity-full') && (
+                    <>
+                      {history.slice(5).map(record => (
+                        <BankHistoryEntry key={record.id} record={record} showBanker />
+                      ))}
+                    </>
+                  )}
                 </div>
-              </Card>
+              </CollapsibleCard>
+
+              {/* Inventory — collapsed by default, auto-expands on search/filter */}
+              <CollapsibleCard
+                id="inventory"
+                title={bankerFilter ? bankerFilter.toUpperCase() : 'INVENTORY'}
+                count={filtered.length}
+                collapsedPanels={collapsedPanels}
+                onToggle={togglePanel}
+              >
+                <div className="border-t border-border">
+                  <div className="flex items-center gap-1 py-1 px-2 border-b border-border">
+                    <Input
+                      variant="transparent"
+                      size="sm"
+                      type="text"
+                      placeholder="Search items..."
+                      value={search}
+                      onChange={handleSearchChange}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    {filtered.map(item => (
+                      <BankItemRow key={item.name} item={item} />
+                    ))}
+                    {filtered.length === 0 && (
+                      <Text variant="caption" className="text-center py-4 block">
+                        No items match your search
+                      </Text>
+                    )}
+                  </div>
+                </div>
+              </CollapsibleCard>
             </>
           )}
         </div>

@@ -62,18 +62,12 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
     return count;
   }, [classFilter, search, isLevelDefault, officerOnly, statusFilter.size, activityFilter]);
 
-  const filtered = useMemo(() => {
+  // Apply all filters EXCEPT class — used for treemap so it stays stable when clicking a class
+  const filteredPreClass = useMemo(() => {
     if (!members) return [];
     const now = Date.now();
 
-    let result = members;
-
-    // Class filter
-    if (classFilter) {
-      result = result.filter(m =>
-        m.characters.some(c => c.class === classFilter)
-      );
-    }
+    let result: RosterMember[] = members;
 
     // Text search
     if (search) {
@@ -121,6 +115,19 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
       }
     }
 
+    return result;
+  }, [members, search, levelRange, isLevelDefault, officerOnly, statusFilter, activityFilter]);
+
+  const filtered = useMemo(() => {
+    let result = filteredPreClass;
+
+    // Class filter (applied after pre-class so treemap can use pre-class data)
+    if (classFilter) {
+      result = result.filter(m =>
+        m.characters.some(c => c.class === classFilter)
+      );
+    }
+
     // Sort
     return [...result].sort((a, b) => {
       let cmp = 0;
@@ -145,7 +152,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
       }
       return sortDirection === 'asc' ? cmp : -cmp;
     });
-  }, [members, classFilter, search, levelRange, isLevelDefault, officerOnly, statusFilter, activityFilter, sortField, sortDirection]);
+  }, [filteredPreClass, classFilter, sortField, sortDirection]);
 
   return {
     classFilter, setClassFilter,
@@ -157,6 +164,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
     sortField, sortDirection, toggleSort,
     clearAll,
     activeFilterCount,
+    filteredPreClass,
     filtered,
   };
 }
