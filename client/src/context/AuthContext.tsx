@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { GuildProvider } from './GuildContext';
+import { queryClient } from '../lib/queryClient';
 
 export interface User {
   id: string;
@@ -134,10 +135,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }).catch(() => {});
     }
     localStorage.removeItem('gs_token');
+    queryClient.clear();
     setState({ token: null, user: null, loading: false, needsSetup: false, isDemo: false });
   }, [state.token]);
 
   const enterDemo = useCallback(() => {
+    queryClient.clear();
     setState({
       token: 'demo',
       user: DEMO_USER,
