@@ -18,6 +18,8 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'inactive': 'Inactive 90d+',
 };
 
+export type SizeMode = 'count' | 'earned' | 'net';
+
 export default function RosterPage() {
   const { data, isLoading, error } = useRosterQuery();
   const { onlineIds: onlineIdsArray } = useSocket();
@@ -37,6 +39,8 @@ export default function RosterPage() {
     filteredPreClass,
     filtered,
   } = filters;
+
+  const [sizeMode, setSizeMode] = useState<SizeMode>('count');
 
   const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set(['stats', 'filters']));
 
@@ -67,6 +71,17 @@ export default function RosterPage() {
     }
     return counts;
   }, [preClassChars]);
+
+  const classValues = useMemo(() => {
+    if (sizeMode === 'count') return classCounts;
+    const values: Record<string, number> = {};
+    for (const m of filteredPreClass) {
+      if (!m.mainClass) continue;
+      const v = sizeMode === 'earned' ? m.earnedDkp : (m.earnedDkp - m.spentDkp);
+      values[m.mainClass] = (values[m.mainClass] || 0) + v;
+    }
+    return values;
+  }, [sizeMode, classCounts, filteredPreClass]);
 
   const levelBreakdown = useMemo(() => {
     const breakdown: Record<string, { max: number; total: number }> = {};
@@ -106,6 +121,9 @@ export default function RosterPage() {
               {/* Treemap — redraws to reflect active filters */}
               <ClassChart
                 classCounts={classCounts}
+                classValues={classValues}
+                sizeMode={sizeMode}
+                onSizeModeChange={setSizeMode}
                 levelBreakdown={levelBreakdown}
                 classFilter={classFilter}
                 onClassFilterChange={setClassFilter}
