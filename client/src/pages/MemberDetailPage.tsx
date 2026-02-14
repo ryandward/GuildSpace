@@ -68,17 +68,21 @@ export default function MemberDetailPage() {
 
           {!isLoading && data && (
             <>
-              {/* Header */}
-              <div className="flex items-baseline gap-2 flex-wrap">
-                <Heading level="heading" style={nameColor ? { color: nameColor } : undefined}>{data.displayName}</Heading>
-                {(() => {
-                  const role = highestRole(data);
-                  if (!role) return null;
-                  const since = role === 'admin' ? data.adminSince : role === 'officer' ? data.officerSince : null;
-                  return <Badge variant="count" color={ROLE_COLOR[role]} title={since ? `Since ${formatDate(since)}` : undefined}>{ROLE_LABEL[role]}</Badge>;
-                })()}
-                <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{netDkp} DKP</span>
-                {data.joinedAt && <Text variant="caption">Joined {formatDate(data.joinedAt)}</Text>}
+              {/* Profile header */}
+              <div className="flex flex-col gap-0.5 py-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Heading level="display" as="h1" style={nameColor ? { color: nameColor } : undefined}>{data.displayName}</Heading>
+                  {(() => {
+                    const role = highestRole(data);
+                    if (!role) return null;
+                    const since = role === 'admin' ? data.adminSince : role === 'officer' ? data.officerSince : null;
+                    return <Badge variant="status" color={ROLE_COLOR[role]} title={since ? `Since ${formatDate(since)}` : undefined}>{ROLE_LABEL[role]}</Badge>;
+                  })()}
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-subheading')}>{netDkp} DKP</span>
+                  {data.joinedAt && <Text variant="caption">Joined {formatDate(data.joinedAt)}</Text>}
+                </div>
               </div>
 
               {/* Role management */}
