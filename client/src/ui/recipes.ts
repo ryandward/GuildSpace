@@ -209,8 +209,8 @@ export const navLink = cva(
   {
     variants: {
       active: {
-        true: 'text-accent bg-surface-2',
-        false: 'text-text-secondary hover:text-text hover:bg-surface-2',
+        true: 'text-accent bg-bg',
+        false: 'text-text-secondary hover:text-text hover:bg-bg',
       },
     },
     defaultVariants: {
