@@ -9,7 +9,6 @@ import { text } from '../ui/recipes';
 interface OnlineMember {
   discordId: string;
   displayName: string;
-  mainName: string | null;
   classColor: string;
 }
 
@@ -35,52 +34,33 @@ export default function PresenceSidebar() {
       if (!member) continue;
 
       const cls = getMostRecentClass(member.characters);
-      const entry: OnlineMember = {
-        discordId: member.discordId,
-        displayName: member.displayName,
-        mainName: member.mainName,
-        classColor: cls ? getClassColor(cls) : getClassColor(''),
-      };
+      const classColor = cls ? getClassColor(cls) : getClassColor('');
 
       if (id === user?.id) {
-        me = entry;
+        // Use auth user's displayName — guaranteed GuildSpace name
+        me = {
+          discordId: member.discordId,
+          displayName: user.displayName,
+          classColor,
+        };
       } else {
-        others.push(entry);
+        others.push({
+          discordId: member.discordId,
+          displayName: member.displayName,
+          classColor,
+        });
       }
     }
 
     others.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     return { me, others };
-  }, [rosterData, onlineIds, user?.id]);
+  }, [rosterData, onlineIds, user?.id, user?.displayName]);
 
   if (!connected) return null;
 
   return (
     <aside className="w-[--container-sidebar] shrink-0 border-r border-border bg-surface flex flex-col max-lg:hidden">
-      {/* Me section */}
-      {me && (
-        <button
-          className="flex items-center gap-1.5 px-2 py-1.5 bg-transparent border-none border-b border-border cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast w-full"
-          onClick={() => navigate(`/roster/${me.discordId}`)}
-        >
-          <span className="size-1 rounded-full bg-green shrink-0" />
-          <div className="flex flex-col min-w-0">
-            <span
-              className="font-body text-caption font-bold truncate"
-              style={{ color: me.classColor }}
-            >
-              {me.displayName}
-            </span>
-            {me.mainName && (
-              <span className={text({ variant: 'caption' }) + ' truncate'}>
-                {me.mainName}
-              </span>
-            )}
-          </div>
-        </button>
-      )}
-
       {/* Online header */}
       <div className="px-2 pt-1.5 pb-0.5">
         <span className={text({ variant: 'overline' })}>
@@ -88,8 +68,22 @@ export default function PresenceSidebar() {
         </span>
       </div>
 
-      {/* Online members list */}
+      {/* Online members list — me pinned at top */}
       <div className="flex-1 overflow-y-auto">
+        {me && (
+          <button
+            className="flex items-center gap-1.5 px-2 py-1 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast w-full"
+            onClick={() => navigate(`/roster/${me.discordId}`)}
+          >
+            <span className="size-0.5 rounded-full bg-green shrink-0" />
+            <span
+              className="font-body text-caption font-bold truncate"
+              style={{ color: me.classColor }}
+            >
+              {me.displayName}
+            </span>
+          </button>
+        )}
         {others.map(member => (
           <button
             key={member.discordId}
