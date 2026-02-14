@@ -169,6 +169,8 @@ interface DemoCharacter {
   level: number;
   status: string;
   lastRaidDate: string | null;
+  earnedDkp: number;
+  spentDkp: number;
 }
 
 interface DemoMember {
@@ -230,14 +232,18 @@ function generateMembers(): DemoMember[] {
         ? generateDate(randInt(0, 60))
         : null;
 
-      characters.push({ name, class: cls, level, status, lastRaidDate });
+      // Characters level 46+ can earn DKP from raids
+      const charEarned = level >= 46 ? Math.round(Math.pow(rand(), 0.5) * 600) : 0;
+      const charSpent = charEarned > 0 ? Math.round(rand() * charEarned * 0.7) : 0;
+
+      characters.push({ name, class: cls, level, status, lastRaidDate, earnedDkp: charEarned, spentDkp: charSpent });
     }
 
     const mainChar = characters.find(c => c.status === 'Main')!;
 
-    // DKP: power-law distribution
-    const earned = Math.round(Math.pow(rand(), 0.5) * 800);
-    const spent = Math.round(rand() * earned * 0.6);
+    // DKP: sum of character-level DKP for the member total
+    const earned = characters.reduce((s, c) => s + c.earnedDkp, 0);
+    const spent = characters.reduce((s, c) => s + c.spentDkp, 0);
 
     const bio = rand() < 0.2 ? pick(BIOS) : null;
     const joinedAt = generateDate(randInt(30, 365));

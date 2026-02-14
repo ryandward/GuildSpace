@@ -50,10 +50,8 @@ export default function RosterPage() {
     sortField, sortDirection, toggleSort,
     clearAll,
     activeFilterCount,
-    filteredPreClass,
     filteredCharsPreClass,
     filteredChars,
-    charMatchesFilters,
     filtered,
   } = filters;
 
@@ -97,20 +95,17 @@ export default function RosterPage() {
     if (sizeMode === 'ticks') return classStats?.raidTicks ?? {};
     if (sizeMode === 'items') return classStats?.itemsWon ?? {};
 
-    // DKP modes — aggregate by member's mainClass, but only if their
-    // main-class character itself passes character-level filters
+    // DKP modes — per-character, same as count/levels
     const values: Record<string, number> = {};
-    for (const m of filteredPreClass) {
-      if (!m.mainClass) continue;
-      if (!m.characters.some(c => c.class === m.mainClass && charMatchesFilters(c))) continue;
+    for (const c of filteredCharsPreClass) {
       let v: number;
-      if (sizeMode === 'earned') v = m.earnedDkp;
-      else if (sizeMode === 'spent') v = m.spentDkp;
-      else v = m.earnedDkp - m.spentDkp;
-      values[m.mainClass] = (values[m.mainClass] || 0) + v;
+      if (sizeMode === 'earned') v = c.earnedDkp;
+      else if (sizeMode === 'spent') v = c.spentDkp;
+      else v = c.earnedDkp - c.spentDkp;
+      values[c.class] = (values[c.class] || 0) + v;
     }
     return values;
-  }, [sizeMode, classCounts, filteredCharsPreClass, filteredPreClass, classStats, charMatchesFilters]);
+  }, [sizeMode, classCounts, filteredCharsPreClass, classStats]);
 
   const levelBreakdown = useMemo(() => {
     const breakdown: Record<string, { max: number; total: number }> = {};

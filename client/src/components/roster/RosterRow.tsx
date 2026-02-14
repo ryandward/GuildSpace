@@ -16,6 +16,8 @@ export interface RosterCharacter {
   level: number;
   status: string;
   lastRaidDate: string | null;
+  earnedDkp: number;
+  spentDkp: number;
 }
 
 export interface RosterMember {

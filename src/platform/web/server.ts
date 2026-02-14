@@ -483,13 +483,28 @@ export function createWebServer(opts: WebServerOptions) {
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
     try {
-      const [toons, dkpRows, gsUsers, lastRaidByName, classes] = await Promise.all([
+      const [toons, dkpRows, gsUsers, lastRaidByName, classes, earnedByChar, spentByChar] = await Promise.all([
         AppDataSource.manager.find(ActiveToons),
         AppDataSource.manager.find(Dkp),
         AppDataSource.manager.find(GuildSpaceUser),
         fetchLastRaidByName(),
         AppDataSource.manager.find(Classes),
+        AppDataSource.getRepository(Attendance)
+          .createQueryBuilder('a')
+          .select('a.Name', 'name')
+          .addSelect('COALESCE(SUM(a.Modifier), 0)', 'earned')
+          .groupBy('a.Name')
+          .getRawMany<{ name: string; earned: string }>(),
+        AppDataSource.getRepository(Items)
+          .createQueryBuilder('i')
+          .select('i.Name', 'name')
+          .addSelect('COALESCE(SUM(i.DkpSpent), 0)', 'spent')
+          .groupBy('i.Name')
+          .getRawMany<{ name: string; spent: string }>(),
       ]);
+
+      const earnedMap = new Map(earnedByChar.map(r => [r.name, Number(r.earned)]));
+      const spentMap = new Map(spentByChar.map(r => [r.name, Number(r.spent)]));
 
       const classAbbreviations: Record<string, string> = {};
       for (const c of classes) {
@@ -527,6 +542,8 @@ export function createWebServer(opts: WebServerOptions) {
             level: Number(c.Level),
             status: c.Status,
             lastRaidDate: lastRaidByName.get(c.Name) || null,
+            earnedDkp: earnedMap.get(c.Name) || 0,
+            spentDkp: spentMap.get(c.Name) || 0,
           };
         });
 
