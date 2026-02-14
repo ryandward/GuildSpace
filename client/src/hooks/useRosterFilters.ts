@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { RosterMember, RosterCharacter } from '../components/roster/RosterRow';
-import { getMostRecentRaid } from '../components/roster/RosterRow';
+import { getMostRecentRaid, selectFeatured } from '../components/roster/RosterRow';
 
 export type SortField = 'name' | 'level' | 'dkp' | 'lastRaid';
 export type SortDirection = 'asc' | 'desc';
@@ -152,7 +152,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
           cmp = (a.mainLevel || 0) - (b.mainLevel || 0);
           break;
         case 'dkp':
-          cmp = a.earnedDkp - b.earnedDkp;
+          cmp = selectFeatured(a, classFilter).earnedDkp - selectFeatured(b, classFilter).earnedDkp;
           break;
         case 'lastRaid': {
           const aDate = getMostRecentRaid(a);

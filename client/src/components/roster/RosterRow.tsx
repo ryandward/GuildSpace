@@ -36,7 +36,7 @@ export interface RosterMember {
   role: 'owner' | 'admin' | 'officer' | 'member';
 }
 
-function selectFeatured(member: RosterMember, classFilter: string | null): RosterCharacter {
+export function selectFeatured(member: RosterMember, classFilter: string | null): RosterCharacter {
   let candidates = member.characters;
 
   if (classFilter) {
