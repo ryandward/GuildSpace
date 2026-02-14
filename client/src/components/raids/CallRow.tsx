@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useSortable } from '@dnd-kit/sortable';
+import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
+import type { AnimateLayoutChanges } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button, Badge, Text, Input, Select } from '../../ui';
 import { dropdown, dropdownItem } from '../../ui/recipes';
@@ -34,10 +35,13 @@ export default function CallRow({
   onEditCall, isEditPending, templates,
   sortable,
 }: Props) {
+  const animateLayoutChanges: AnimateLayoutChanges = (args) =>
+    args.wasDragging ? false : defaultAnimateLayoutChanges(args);
+
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging,
-  } = useSortable({ id: call.id, disabled: !sortable });
+  } = useSortable({ id: call.id, disabled: !sortable, animateLayoutChanges });
   const [expanded, setExpanded] = useState(false);
   const [addName, setAddName] = useState('');
   const [debouncedName, setDebouncedName] = useState('');
