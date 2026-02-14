@@ -80,42 +80,50 @@ export default function RosterPage() {
     });
   }, []);
 
-  const allChars = useMemo(() => {
-    if (!data) return [];
-    return data.members.flatMap(m => m.characters);
-  }, [data]);
-
+  // Derive treemap + stats from the filtered member list so they update with filters
   const filteredChars = useMemo(() => {
-    if (!classFilter) return allChars;
-    return allChars.filter(c => c.class === classFilter);
-  }, [allChars, classFilter]);
+    return filtered.flatMap(m => m.characters);
+  }, [filtered]);
+
+  const filteredClassChars = useMemo(() => {
+    if (!classFilter) return filteredChars;
+    return filteredChars.filter(c => c.class === classFilter);
+  }, [filteredChars, classFilter]);
+
+  const classCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of filteredChars) {
+      counts[c.class] = (counts[c.class] || 0) + 1;
+    }
+    return counts;
+  }, [filteredChars]);
 
   const levelBreakdown = useMemo(() => {
     const breakdown: Record<string, { max: number; total: number }> = {};
-    for (const c of allChars) {
+    for (const c of filteredChars) {
       if (!breakdown[c.class]) breakdown[c.class] = { max: 0, total: 0 };
       breakdown[c.class].total++;
       if (c.level >= 60) breakdown[c.class].max++;
     }
     return breakdown;
-  }, [allChars]);
+  }, [filteredChars]);
 
   const levelDist = useMemo(() => {
     let level60 = 0, sub60 = 0;
-    for (const c of filteredChars) {
+    for (const c of filteredClassChars) {
       if (c.level >= 60) level60++;
       else sub60++;
     }
     return { level60, sub60 };
-  }, [filteredChars]);
+  }, [filteredClassChars]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const c of filteredChars) {
+    for (const c of filteredClassChars) {
       counts[c.status] = (counts[c.status] || 0) + 1;
     }
     return counts;
-  }, [filteredChars]);
+  }, [filteredClassChars]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
@@ -127,9 +135,9 @@ export default function RosterPage() {
 
           {!isLoading && data && (
             <>
-              {/* Treemap — always shows full guild */}
+              {/* Treemap — redraws to reflect active filters */}
               <ClassChart
-                classCounts={data.summary.classCounts}
+                classCounts={classCounts}
                 levelBreakdown={levelBreakdown}
                 classFilter={classFilter}
                 onClassFilterChange={setClassFilter}
@@ -237,7 +245,7 @@ export default function RosterPage() {
                 />
               </CollapsibleCard>
 
-              {/* Stats — always shows full guild/class composition */}
+              {/* Stats — reflects active filters */}
               <CollapsibleCard
                 id="stats"
                 title="Stats"
@@ -246,7 +254,7 @@ export default function RosterPage() {
               >
                 <div className="flex border-t border-border max-md:flex-col">
                   <LevelChart levelDist={levelDist} />
-                  <StatusChart statusCounts={statusCounts} total={filteredChars.length} />
+                  <StatusChart statusCounts={statusCounts} total={filteredClassChars.length} />
                 </div>
               </CollapsibleCard>
 
