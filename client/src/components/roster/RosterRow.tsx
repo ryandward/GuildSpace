@@ -3,14 +3,15 @@ import { Text } from '../../ui';
 import { text } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getClassColor } from '../../lib/classColors';
+import { timeAgo } from '../../utils/timeAgo';
 
 function classToPip(className: string): string {
   return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
 }
 
-// Desktop: pip | name(1fr) | class(120) | lvl(32) | DKP(56) | arrow(48)
+// Desktop: pip | name(1fr) | class(120) | lvl(32) | DKP(56) | lastRaid(72) | arrow(48)
 // Mobile:  pip | name(1fr) | class(80)  | lvl(32) | DKP(48) | arrow(48)
-const ROW_GRID = 'grid grid-cols-[3px_minmax(0,1fr)_120px_32px_56px_48px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px_48px_48px] items-center gap-x-1.5';
+export const ROW_GRID = 'grid grid-cols-[3px_minmax(0,1fr)_120px_32px_56px_72px_48px] max-md:grid-cols-[3px_minmax(0,1fr)_80px_32px_48px_48px] items-center gap-x-1.5';
 
 export interface RosterCharacter {
   name: string;
@@ -30,6 +31,7 @@ export interface RosterMember {
   earnedDkp: number;
   spentDkp: number;
   hasGuildSpace: boolean;
+  isOfficer: boolean;
 }
 
 function selectFeatured(member: RosterMember, classFilter: string | null): RosterCharacter {
@@ -51,6 +53,16 @@ function selectFeatured(member: RosterMember, classFilter: string | null): Roste
   })[0];
 }
 
+export function getMostRecentRaid(member: RosterMember): string | null {
+  let latest: string | null = null;
+  for (const c of member.characters) {
+    if (c.lastRaidDate && (!latest || c.lastRaidDate > latest)) {
+      latest = c.lastRaidDate;
+    }
+  }
+  return latest;
+}
+
 interface Props {
   member: RosterMember;
   classFilter?: string | null;
@@ -60,6 +72,7 @@ export default function RosterRow({ member, classFilter }: Props) {
   const navigate = useNavigate();
   const featured = selectFeatured(member, classFilter ?? null);
   const netDkp = member.earnedDkp - member.spentDkp;
+  const lastRaid = getMostRecentRaid(member);
 
   return (
     <div className="border-b border-border-subtle">
@@ -78,6 +91,7 @@ export default function RosterRow({ member, classFilter }: Props) {
         <Text variant="label" className="truncate">{featured?.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{netDkp}</span>
+        <span className={cx(text({ variant: 'mono' }), 'text-text-dim text-right max-md:hidden')}>{lastRaid ? timeAgo(lastRaid) : '--'}</span>
         <span className="flex items-center justify-center text-text-dim text-caption">&rsaquo;</span>
       </button>
     </div>

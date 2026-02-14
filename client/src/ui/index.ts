@@ -4,6 +4,7 @@ export { default as Card } from './Card';
 export { Text, Heading } from './Text';
 export { default as Badge } from './Badge';
 export { default as StatusDot } from './StatusDot';
+export { default as RangeSlider } from './RangeSlider';
 
 export {
   button,

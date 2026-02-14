@@ -1,8 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useRosterQuery } from '../hooks/useRosterQuery';
+import { useRosterFilters } from '../hooks/useRosterFilters';
 import AppHeader from '../components/AppHeader';
 import { ClassChart, StatusChart, LevelChart } from '../components/roster/RosterFilters';
 import MemberList from '../components/roster/RosterTable';
+import RosterFilterPanel from '../components/roster/RosterFilterPanel';
+import RosterHeader from '../components/roster/RosterHeader';
 import { Card, Badge, Text, Input } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
@@ -42,12 +45,31 @@ function CollapsibleCard({ id, title, count, collapsedPanels, onToggle, children
   );
 }
 
+const ACTIVITY_LABELS: Record<string, string> = {
+  '30d': 'Active 30d',
+  '60d': 'Active 60d',
+  '90d': 'Active 90d',
+  'inactive': 'Inactive 90d+',
+};
+
 export default function RosterPage() {
   const { data, isLoading, error } = useRosterQuery();
 
-  const [search, setSearch] = useState('');
-  const [classFilter, setClassFilter] = useState<string | null>(null);
-  const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set(['stats']));
+  const filters = useRosterFilters(data?.members);
+  const {
+    classFilter, setClassFilter,
+    search, setSearch,
+    levelRange, setLevelRange,
+    officerOnly, setOfficerOnly,
+    statusFilter, toggleStatus,
+    activityFilter, setActivityFilter,
+    sortField, sortDirection, toggleSort,
+    clearAll,
+    activeFilterCount,
+    filtered,
+  } = filters;
+
+  const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set(['stats', 'filters']));
 
   const togglePanel = useCallback((id: string) => {
     setCollapsedPanels(prev => {
@@ -95,29 +117,6 @@ export default function RosterPage() {
     return counts;
   }, [filteredChars]);
 
-  const filtered = useMemo(() => {
-    if (!data) return [];
-    let members = data.members;
-
-    if (classFilter) {
-      members = members.filter(m =>
-        m.characters.some(c => c.class === classFilter)
-      );
-    }
-
-    if (search) {
-      const q = search.toLowerCase();
-      members = members.filter(m =>
-        m.displayName.toLowerCase().includes(q) ||
-        m.characters.some(c => c.name.toLowerCase().includes(q))
-      );
-    }
-
-    return [...members].sort((a, b) =>
-      (b.earnedDkp - b.spentDkp) - (a.earnedDkp - a.spentDkp)
-    );
-  }, [data, search, classFilter]);
-
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
       <AppHeader />
@@ -128,7 +127,7 @@ export default function RosterPage() {
 
           {!isLoading && data && (
             <>
-              {/* Treemap */}
+              {/* Treemap — always shows full guild */}
               <ClassChart
                 classCounts={data.summary.classCounts}
                 levelBreakdown={levelBreakdown}
@@ -136,26 +135,109 @@ export default function RosterPage() {
                 onClassFilterChange={setClassFilter}
               />
 
-              {/* Filter strip — fixed height to prevent layout shift */}
-              <div className="flex items-center gap-1 px-0.5 min-h-6">
+              {/* Filter strip — chips per active filter */}
+              <div className="flex items-center gap-1 px-0.5 min-h-6 flex-wrap">
                 <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
-                <Badge variant="filter" className="inline-flex items-center gap-1">
-                  {classFilter && (
-                    <span className={`w-1 h-1 rounded-full ${('pip-' + classFilter.toLowerCase().replace(/\s+/g, '-'))}`} />
-                  )}
-                  <span>{classFilter || 'All Classes'}</span>
-                </Badge>
+                {activeFilterCount === 0 && (
+                  <Badge variant="filter">All</Badge>
+                )}
                 {classFilter && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span className={`w-1 h-1 rounded-full ${('pip-' + classFilter.toLowerCase().replace(/\s+/g, '-'))}`} />
+                    <span>{classFilter}</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => setClassFilter(null)}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                {search && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>"{search}"</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => setSearch('')}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                {!(levelRange[0] === 1 && levelRange[1] === 60) && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>Lv {levelRange[0]}–{levelRange[1]}</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => setLevelRange([1, 60])}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                {officerOnly && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>Officers</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => setOfficerOnly(false)}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                {statusFilter.size > 0 && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>{Array.from(statusFilter).join(', ')}</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => { for (const s of statusFilter) toggleStatus(s); }}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                {activityFilter !== 'all' && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>{ACTIVITY_LABELS[activityFilter]}</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => setActivityFilter('all')}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                {activeFilterCount >= 2 && (
                   <button
-                    className="bg-transparent border-none cursor-pointer transition-colors duration-fast"
-                    onClick={() => setClassFilter(null)}
+                    className="bg-transparent border-none cursor-pointer text-caption text-text-dim hover:text-red transition-colors duration-fast p-0"
+                    onClick={clearAll}
                   >
-                    <Text variant="caption" className="hover:text-red">Clear</Text>
+                    Clear all
                   </button>
                 )}
               </div>
 
-              {/* Stats */}
+              {/* Filters */}
+              <CollapsibleCard
+                id="filters"
+                title="Filters"
+                collapsedPanels={collapsedPanels}
+                onToggle={togglePanel}
+              >
+                <RosterFilterPanel
+                  levelRange={levelRange}
+                  onLevelRangeChange={setLevelRange}
+                  officerOnly={officerOnly}
+                  onOfficerToggle={() => setOfficerOnly(v => !v)}
+                  statusFilter={statusFilter}
+                  onStatusToggle={toggleStatus}
+                  activityFilter={activityFilter}
+                  onActivityChange={setActivityFilter}
+                />
+              </CollapsibleCard>
+
+              {/* Stats — always shows full guild/class composition */}
               <CollapsibleCard
                 id="stats"
                 title="Stats"
@@ -188,6 +270,11 @@ export default function RosterPage() {
                       className="ml-auto w-22.5 max-md:w-full max-md:ml-0"
                     />
                   </div>
+                  <RosterHeader
+                    sortField={sortField}
+                    sortDirection={sortDirection}
+                    onSort={toggleSort}
+                  />
                   <MemberList members={filtered} classFilter={classFilter} />
                   {filtered.length === 0 && (
                     <Text variant="caption" className="text-center py-4 block">No results.</Text>
