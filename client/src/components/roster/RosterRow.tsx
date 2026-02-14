@@ -75,7 +75,7 @@ interface Props {
 export default function RosterRow({ member, classFilter, classAbbreviations, onlineIds }: Props) {
   const navigate = useNavigate();
   const featured = selectFeatured(member, classFilter ?? null);
-  const netDkp = member.earnedDkp - member.spentDkp;
+  const netDkp = featured.earnedDkp - featured.spentDkp;
   const lastRaid = getMostRecentRaid(member);
   const role = member.role;
   const isOnline = onlineIds?.has(member.discordId) ?? false;
