@@ -1260,6 +1260,7 @@ export function createWebServer(opts: WebServerOptions) {
                 SUM(quantity)::int as "totalQuantity",
                 json_agg(json_build_object('banker', banker, 'location', location, 'quantity', quantity::int)) as "slots"
          FROM bank
+         WHERE name NOT IN (SELECT name FROM trash WHERE name IS NOT NULL)
          GROUP BY name
          ORDER BY name`
       ) as { name: string; totalQuantity: number; slots: { banker: string; location: string; quantity: number }[] }[];
