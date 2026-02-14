@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { authFetch } from '../lib/api';
+import type { EventDetail } from './useEventDetailQuery';
 
 export function useCreateEventMutation() {
   const { token } = useAuth();
@@ -149,6 +150,38 @@ export function useRemoveCharacterMutation(eventId: number) {
       queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
       queryClient.invalidateQueries({ queryKey: ['raidEvents'] });
       queryClient.invalidateQueries({ queryKey: ['roster'] });
+    },
+  });
+}
+
+export function useReorderCallsMutation(eventId: number) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (callIds: number[]) =>
+      authFetch(token!, `/api/raids/events/${eventId}/calls/reorder`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callIds }),
+      }),
+    onMutate: async (callIds) => {
+      const key = ['raidEvent', String(eventId)];
+      await queryClient.cancelQueries({ queryKey: key });
+      const prev = queryClient.getQueryData<EventDetail>(key);
+      if (prev) {
+        const callMap = new Map(prev.calls.map(c => [c.id, c]));
+        const reordered = callIds.map(id => callMap.get(id)!).filter(Boolean);
+        queryClient.setQueryData<EventDetail>(key, { ...prev, calls: reordered });
+      }
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) {
+        queryClient.setQueryData(['raidEvent', String(eventId)], ctx.prev);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
     },
   });
 }

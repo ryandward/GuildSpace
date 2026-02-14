@@ -20,6 +20,9 @@ export class RaidCall {
   @Column('text', { name: 'created_by' })
   createdBy: string;
 
+  @Column('integer', { name: 'sort_order', nullable: true })
+  sortOrder: number | null;
+
   @Column('timestamp', { name: 'created_at', default: () => 'NOW()' })
   createdAt: Date;
 }

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEventDetailQuery } from '../hooks/useEventDetailQuery';
 import { useRaidTemplatesQuery } from '../hooks/useRaidTemplatesQuery';
-import { useAddCallMutation, useDeleteCallMutation, useEditCallMutation, useCloseEventMutation, useReopenEventMutation, useAddCharacterMutation, useRemoveCharacterMutation } from '../hooks/useRaidMutations';
+import { useAddCallMutation, useDeleteCallMutation, useEditCallMutation, useCloseEventMutation, useReopenEventMutation, useAddCharacterMutation, useRemoveCharacterMutation, useReorderCallsMutation } from '../hooks/useRaidMutations';
 import type { AddCallResult } from '../hooks/useRaidMutations';
 import AddCallForm from '../components/raids/AddCallForm';
 import CallRow from '../components/raids/CallRow';
@@ -23,11 +23,14 @@ export default function RaidEventPage() {
   const reopenEvent = useReopenEventMutation(Number(eventId));
   const addCharacter = useAddCharacterMutation(Number(eventId));
   const removeCharacter = useRemoveCharacterMutation(Number(eventId));
+  const reorderCalls = useReorderCallsMutation(Number(eventId));
 
   const [showAddCall, setShowAddCall] = useState(false);
   const [lastResult, setLastResult] = useState<AddCallResult | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
 
   const isOfficer = user?.isOfficer;
   const isActive = data?.event.status === 'active';
@@ -173,6 +176,36 @@ export default function RaidEventPage() {
                     onEditCall={handleEditCall}
                     isEditPending={editCall.isPending}
                     templates={templates}
+                    isDragOver={overIdx === idx}
+                    dragHandleProps={isOfficer && isActive ? {
+                      draggable: true,
+                      onDragStart: (e) => {
+                        setDragIdx(idx);
+                        e.dataTransfer.effectAllowed = 'move';
+                      },
+                      onDragEnd: () => {
+                        setDragIdx(null);
+                        setOverIdx(null);
+                      },
+                      onDragOver: (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragIdx !== null && dragIdx !== idx) {
+                          setOverIdx(idx);
+                        }
+                      },
+                      onDrop: (e) => {
+                        e.preventDefault();
+                        if (dragIdx !== null && dragIdx !== idx) {
+                          const calls = [...data.calls];
+                          const [moved] = calls.splice(dragIdx, 1);
+                          calls.splice(idx, 0, moved);
+                          reorderCalls.mutate(calls.map(c => c.id));
+                        }
+                        setDragIdx(null);
+                        setOverIdx(null);
+                      },
+                    } : undefined}
                   />
                 ))}
               </Card>

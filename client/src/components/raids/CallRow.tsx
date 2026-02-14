@@ -7,6 +7,14 @@ import type { CallDetail } from '../../hooks/useEventDetailQuery';
 import type { RaidTemplate } from '../../hooks/useRaidTemplatesQuery';
 import { getClassColor } from '../../lib/classColors';
 
+export interface DragHandleProps {
+  draggable: true;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+}
+
 interface Props {
   call: CallDetail;
   index: number;
@@ -22,6 +30,8 @@ interface Props {
   onEditCall?: (callId: number, raidName: string, modifier: number) => void;
   isEditPending?: boolean;
   templates?: RaidTemplate[];
+  dragHandleProps?: DragHandleProps;
+  isDragOver?: boolean;
 }
 
 export default function CallRow({
@@ -29,6 +39,7 @@ export default function CallRow({
   confirmDeleteId, onConfirmDelete, onDelete, isDeleting,
   onAddCharacter, onRemoveCharacter,
   onEditCall, isEditPending, templates,
+  dragHandleProps, isDragOver,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [addName, setAddName] = useState('');
@@ -86,11 +97,27 @@ export default function CallRow({
   }
 
   return (
-    <div className="border-t border-border">
-      <button
-        className="w-full flex items-center gap-1 py-1 px-2 min-h-6 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast"
-        onClick={() => setExpanded(!expanded)}
-      >
+    <div
+      className={`border-t border-border${isDragOver ? ' bg-surface-2' : ''}`}
+      onDragOver={dragHandleProps?.onDragOver}
+      onDrop={dragHandleProps?.onDrop}
+    >
+      <div className="w-full flex items-center gap-1 py-1 px-2 min-h-6">
+        {dragHandleProps && (
+          <span
+            draggable
+            onDragStart={dragHandleProps.onDragStart}
+            onDragEnd={dragHandleProps.onDragEnd}
+            className="cursor-grab active:cursor-grabbing text-text-dim text-caption select-none px-0.5 shrink-0"
+            title="Drag to reorder"
+          >
+            ⠿
+          </span>
+        )}
+        <button
+          className="flex items-center gap-1 flex-1 min-w-0 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast p-0"
+          onClick={() => setExpanded(!expanded)}
+        >
         <span className="collapse-chevron text-text-dim text-caption" data-expanded={expanded}>
           ›
         </span>
@@ -98,10 +125,11 @@ export default function CallRow({
         <Text variant="body" className="font-bold flex-1 truncate">{call.raidName}</Text>
         <Badge variant="count" color="accent">{call.modifier} DKP</Badge>
         <Badge variant="count">{call.recordedCount} recorded</Badge>
-      </button>
+        </button>
+      </div>
 
       {expanded && (
-        <div className="px-2 pb-1.5 animate-fade-in">
+        <div className="px-2 pt-1 pb-1.5 animate-fade-in">
           {/* Attendees list */}
           {call.attendees.length > 0 && (
             <div className="flex flex-wrap gap-0.5 mb-1">
