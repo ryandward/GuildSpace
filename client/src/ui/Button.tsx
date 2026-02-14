@@ -5,8 +5,8 @@ import { button, type ButtonVariants } from './recipes';
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & ButtonVariants;
 
 const Button = forwardRef<HTMLButtonElement, Props>(
-  ({ intent, size, activating, className, ...props }, ref) => (
-    <button ref={ref} className={cx(button({ intent, size, activating }), className)} {...props} />
+  ({ intent, size, pending, className, ...props }, ref) => (
+    <button ref={ref} className={cx(button({ intent, size, pending }), className)} {...props} />
   )
 );
 Button.displayName = 'Button';
