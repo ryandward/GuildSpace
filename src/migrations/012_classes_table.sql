@@ -23,12 +23,27 @@ INSERT INTO classes (character_class, abbreviation) VALUES
   ('Wizard',        'WIZ')
 ON CONFLICT DO NOTHING;
 
--- FK constraints on existing tables
-ALTER TABLE class_definitions ADD CONSTRAINT fk_classdefs_class
-  FOREIGN KEY (character_class) REFERENCES classes(character_class);
-ALTER TABLE census ADD CONSTRAINT fk_census_class
-  FOREIGN KEY (character_class) REFERENCES classes(character_class);
-ALTER TABLE class_lore ADD CONSTRAINT fk_classlore_class
-  FOREIGN KEY (character_class) REFERENCES classes(character_class);
-ALTER TABLE class_roles ADD CONSTRAINT fk_classroles_class
-  FOREIGN KEY (character_class) REFERENCES classes(character_class);
+-- FK constraints on existing tables (idempotent)
+DO $$ BEGIN
+  ALTER TABLE class_definitions ADD CONSTRAINT fk_classdefs_class
+    FOREIGN KEY (character_class) REFERENCES classes(character_class);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE census ADD CONSTRAINT fk_census_class
+    FOREIGN KEY (character_class) REFERENCES classes(character_class);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE class_lore ADD CONSTRAINT fk_classlore_class
+    FOREIGN KEY (character_class) REFERENCES classes(character_class);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE class_roles ADD CONSTRAINT fk_classroles_class
+    FOREIGN KEY (character_class) REFERENCES classes(character_class);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
