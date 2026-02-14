@@ -9,7 +9,7 @@ export default function PageLayout() {
       <AppHeader />
       <div className="flex flex-1 overflow-hidden relative z-0">
         <PresenceSidebar />
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0 isolate">
           <Outlet />
         </div>
       </div>
