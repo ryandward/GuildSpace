@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { useMemberQuery } from '../hooks/useMemberQuery';
 import { useBioMutation } from '../hooks/useBioMutation';
 import { useRoleMutation } from '../hooks/useRoleMutation';
@@ -23,6 +24,7 @@ function formatDate(iso: string | null | undefined): string | undefined {
 export default function MemberDetailPage() {
   const { discordId } = useParams<{ discordId: string }>();
   const { user: authUser } = useAuth();
+  const { onlineIds } = useSocket();
   const { data, isLoading, error } = useMemberQuery(discordId);
   const bioMutation = useBioMutation(discordId);
   const roleMutation = useRoleMutation(discordId);
@@ -71,6 +73,7 @@ export default function MemberDetailPage() {
                   classColor={getMostRecentClass(data.characters)}
                   role={data.role}
                   hasGuildSpace={data.hasGuildSpace}
+                  isOnline={onlineIds.includes(discordId!)}
                   badgeVariant="status"
                   officerSince={data.officerSince}
                   adminSince={data.adminSince}
