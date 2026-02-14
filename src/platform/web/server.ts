@@ -11,7 +11,7 @@
  *
  * @module
  */
-import { ILike } from 'typeorm';
+import { ILike, Not, In } from 'typeorm';
 import express from 'express';
 import crypto from 'crypto';
 import { existsSync } from 'fs';
@@ -32,6 +32,7 @@ import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
 import { Census } from '../../entities/Census.js';
 import { Bank } from '../../entities/Bank.js';
 import { BankImport } from '../../entities/BankImport.js';
+import { Trash } from '../../entities/Trash.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
 import type {
   PlatformCommand,
@@ -1255,21 +1256,35 @@ export function createWebServer(opts: WebServerOptions) {
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
     try {
-      const rows = await AppDataSource.manager.query(
-        `SELECT name,
-                SUM(quantity)::int as "totalQuantity",
-                json_agg(json_build_object('banker', banker, 'location', location, 'quantity', quantity::int)) as "slots"
-         FROM bank
-         WHERE name NOT IN (SELECT name FROM trash WHERE name IS NOT NULL)
-         GROUP BY name
-         ORDER BY name`
-      ) as { name: string; totalQuantity: number; slots: { banker: string; location: string; quantity: number }[] }[];
+      // Fetch trash item names to exclude
+      const trashRows = await AppDataSource.manager.find(Trash);
+      const trashNames = trashRows.map(t => t.Name).filter((n): n is string => n != null);
 
-      const result = rows.map(row => ({
-        name: row.name,
-        totalQuantity: row.totalQuantity,
-        bankers: [...new Set(row.slots.map(s => s.banker))],
-        slots: row.slots,
+      // Fetch bank items, excluding trash
+      const bankRows = await AppDataSource.manager.find(Bank, {
+        where: trashNames.length > 0 ? { Name: Not(In(trashNames)) } : undefined,
+        order: { Name: 'ASC' },
+      });
+
+      // Aggregate by item name
+      const grouped = new Map<string, { totalQuantity: number; bankers: Set<string>; slots: { banker: string; location: string; quantity: number }[] }>();
+      for (const row of bankRows) {
+        let entry = grouped.get(row.Name);
+        if (!entry) {
+          entry = { totalQuantity: 0, bankers: new Set(), slots: [] };
+          grouped.set(row.Name, entry);
+        }
+        const qty = Number(row.Quantity);
+        entry.totalQuantity += qty;
+        entry.bankers.add(row.Banker);
+        entry.slots.push({ banker: row.Banker, location: row.Location, quantity: qty });
+      }
+
+      const result = Array.from(grouped.entries()).map(([name, entry]) => ({
+        name,
+        totalQuantity: entry.totalQuantity,
+        bankers: [...entry.bankers],
+        slots: entry.slots,
       }));
 
       res.json(result);
