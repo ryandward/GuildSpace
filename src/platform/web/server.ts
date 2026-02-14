@@ -172,9 +172,12 @@ export function createWebServer(opts: WebServerOptions) {
 
   /** Fetch name → last raid date map. Used by roster, member detail, and event detail. */
   async function fetchLastRaidByName(): Promise<Map<string, string | null>> {
-    const rows = await AppDataSource.manager.query(
-      `SELECT name, MAX(date) as last_raid FROM attendance GROUP BY name`
-    ) as { name: string; last_raid: string | null }[];
+    const rows = await AppDataSource.getRepository(Attendance)
+      .createQueryBuilder('a')
+      .select('a.Name', 'name')
+      .addSelect('MAX(a.Date)', 'last_raid')
+      .groupBy('a.Name')
+      .getRawMany<{ name: string; last_raid: string | null }>();
     return new Map(rows.map(r => [r.name, r.last_raid]));
   }
 
@@ -561,12 +564,16 @@ export function createWebServer(opts: WebServerOptions) {
         AppDataSource.manager.find(ActiveToons, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } }),
-        AppDataSource.manager.query(
-          `SELECT name, COALESCE(SUM(modifier), 0)::int as total_dkp, COUNT(*)::int as raid_count, MAX(date) as last_raid
-           FROM attendance WHERE discord_id = $1 GROUP BY name
-           ORDER BY MAX(date) DESC NULLS LAST`,
-          [discordId]
-        ) as Promise<{ name: string; total_dkp: number; raid_count: number; last_raid: string | null }[]>,
+        AppDataSource.getRepository(Attendance)
+          .createQueryBuilder('a')
+          .select('a.Name', 'name')
+          .addSelect('COALESCE(SUM(a.Modifier), 0)', 'total_dkp')
+          .addSelect('COUNT(*)', 'raid_count')
+          .addSelect('MAX(a.Date)', 'last_raid')
+          .where('a.DiscordId = :discordId', { discordId })
+          .groupBy('a.Name')
+          .orderBy('MAX(a.Date)', 'DESC', 'NULLS LAST')
+          .getRawMany<{ name: string; total_dkp: string; raid_count: string; last_raid: string | null }>(),
       ]);
 
       if (toons.length === 0) {
@@ -587,12 +594,12 @@ export function createWebServer(opts: WebServerOptions) {
       // Per-character DKP breakdown — only include active characters
       const charClassMap = new Map(toons.map(c => [c.Name, c.CharacterClass]));
       const dkpByCharacter = dkpByCharRows
-        .filter(r => charClassMap.has(r.name) && r.total_dkp > 0)
+        .filter(r => charClassMap.has(r.name) && Number(r.total_dkp) > 0)
         .map(r => ({
           name: r.name,
           class: charClassMap.get(r.name)!,
-          totalDkp: r.total_dkp,
-          raidCount: r.raid_count,
+          totalDkp: Number(r.total_dkp),
+          raidCount: Number(r.raid_count),
         }));
 
       res.json({
@@ -1353,20 +1360,27 @@ export function createWebServer(opts: WebServerOptions) {
         return res.status(400).json({ error: 'No valid items found in file' });
       }
 
-      // Fetch old inventory for this banker, aggregate by name
-      const oldRows = await AppDataSource.manager.find(Bank, { where: { Banker: bankerName } });
+      // Fetch trash list and old inventory in parallel
+      const [trashRows, oldRows] = await Promise.all([
+        AppDataSource.manager.find(Trash),
+        AppDataSource.manager.find(Bank, { where: { Banker: bankerName } }),
+      ]);
+      const trashNames = new Set(trashRows.map(t => t.Name).filter((n): n is string => n != null));
+
       const oldByName = new Map<string, number>();
       for (const row of oldRows) {
+        if (trashNames.has(row.Name)) continue;
         oldByName.set(row.Name, (oldByName.get(row.Name) || 0) + Number(row.Quantity));
       }
 
-      // Aggregate new by name
+      // Aggregate new by name (excluding trash)
       const newByName = new Map<string, number>();
       for (const e of newEntities) {
+        if (trashNames.has(e.Name)) continue;
         newByName.set(e.Name, (newByName.get(e.Name) || 0) + e.Quantity);
       }
 
-      // Compute diff
+      // Compute diff (trash items excluded from both sides)
       const added: { name: string; quantity: number }[] = [];
       const removed: { name: string; quantity: number }[] = [];
       const changed: { name: string; oldQuantity: number; newQuantity: number }[] = [];
@@ -1463,14 +1477,19 @@ export function createWebServer(opts: WebServerOptions) {
 
   const onlineUsers = new Map<string, number>(); // discordId → connection count
 
+  async function fetchTotalMemberCount(): Promise<number> {
+    const result = await AppDataSource.getRepository(ActiveToons)
+      .createQueryBuilder('t')
+      .select('COUNT(DISTINCT t.DiscordId)', 'count')
+      .getRawOne<{ count: string }>();
+    return Number(result?.count ?? 0);
+  }
+
   async function emitPresenceUpdate() {
     const onlineIds = Array.from(onlineUsers.keys());
     let totalMembers = 0;
     try {
-      const result = await AppDataSource.manager.query(
-        `SELECT COUNT(DISTINCT discord_id) as count FROM active_toons`
-      ) as { count: string }[];
-      totalMembers = Number(result[0]?.count ?? 0);
+      totalMembers = await fetchTotalMemberCount();
     } catch { /* ignore */ }
     io.emit('presenceUpdate', {
       onlineCount: onlineIds.length,
@@ -1526,10 +1545,7 @@ export function createWebServer(opts: WebServerOptions) {
           const onlineIds = Array.from(onlineUsers.keys());
           let currentTotalMembers = 0;
           try {
-            const result = await AppDataSource.manager.query(
-              `SELECT COUNT(DISTINCT discord_id) as count FROM active_toons`
-            ) as { count: string }[];
-            currentTotalMembers = Number(result[0]?.count ?? 0);
+            currentTotalMembers = await fetchTotalMemberCount();
           } catch { /* ignore */ }
           socket.emit('presenceUpdate', {
             onlineCount: onlineIds.length,
