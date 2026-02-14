@@ -152,7 +152,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
           cmp = (a.mainLevel || 0) - (b.mainLevel || 0);
           break;
         case 'dkp':
-          cmp = (a.earnedDkp - a.spentDkp) - (b.earnedDkp - b.spentDkp);
+          cmp = a.earnedDkp - b.earnedDkp;
           break;
         case 'lastRaid': {
           const aDate = getMostRecentRaid(a);

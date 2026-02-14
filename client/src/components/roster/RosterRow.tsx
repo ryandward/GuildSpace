@@ -75,7 +75,7 @@ interface Props {
 export default function RosterRow({ member, classFilter, classAbbreviations, onlineIds }: Props) {
   const navigate = useNavigate();
   const featured = selectFeatured(member, classFilter ?? null);
-  const netDkp = featured.earnedDkp - featured.spentDkp;
+  const dkp = featured.earnedDkp;
   const lastRaid = getMostRecentRaid(member);
   const role = member.role;
   const isOnline = onlineIds?.has(member.discordId) ?? false;
@@ -95,7 +95,7 @@ export default function RosterRow({ member, classFilter, classAbbreviations, onl
         />
         <Text variant="label" className="truncate">{featured ? getClassShort(featured.class, classAbbreviations) : ''}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
-        <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{netDkp}</span>
+        <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{dkp}</span>
         <span className={cx(text({ variant: 'mono' }), 'text-text-dim text-right max-md:hidden')}>{lastRaid ? timeAgo(lastRaid) : '--'}</span>
         <span className="flex items-center justify-center text-text-dim text-caption">&rsaquo;</span>
       </button>
