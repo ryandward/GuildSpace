@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { GuildProvider } from './GuildContext';
 
 export interface User {
   id: string;
@@ -16,11 +17,13 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   needsSetup: boolean;
+  isDemo: boolean;
 }
 
 interface AuthContextValue extends AuthState {
   submitName: (name: string) => Promise<string | null>;
   logout: () => void;
+  enterDemo: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -31,12 +34,19 @@ export function useAuth() {
   return ctx;
 }
 
+const DEMO_USER: User = {
+  id: 'demo',
+  username: 'demo',
+  displayName: 'Demo Visitor',
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     token: null,
     user: null,
     loading: true,
     needsSetup: false,
+    isDemo: false,
   });
 
   useEffect(() => {
@@ -57,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!tkn) {
-      setState({ token: null, user: null, loading: false, needsSetup: false });
+      setState({ token: null, user: null, loading: false, needsSetup: false, isDemo: false });
       return;
     }
 
@@ -68,21 +78,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!res.ok) {
         localStorage.removeItem('gs_token');
-        setState({ token: null, user: null, loading: false, needsSetup: false });
+        setState({ token: null, user: null, loading: false, needsSetup: false, isDemo: false });
         return;
       }
 
       const me: User = await res.json();
 
       if (me.needsSetup) {
-        setState({ token: tkn, user: null, loading: false, needsSetup: true });
+        setState({ token: tkn, user: null, loading: false, needsSetup: true, isDemo: false });
         return;
       }
 
-      setState({ token: tkn, user: me, loading: false, needsSetup: false });
+      setState({ token: tkn, user: me, loading: false, needsSetup: false, isDemo: false });
     } catch {
       localStorage.removeItem('gs_token');
-      setState({ token: null, user: null, loading: false, needsSetup: false });
+      setState({ token: null, user: null, loading: false, needsSetup: false, isDemo: false });
     }
   }
 
@@ -117,19 +127,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     const tkn = state.token;
-    if (tkn) {
+    if (tkn && tkn !== 'demo') {
       fetch('/api/auth/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${tkn}` },
       }).catch(() => {});
     }
     localStorage.removeItem('gs_token');
-    setState({ token: null, user: null, loading: false, needsSetup: false });
+    setState({ token: null, user: null, loading: false, needsSetup: false, isDemo: false });
   }, [state.token]);
 
+  const enterDemo = useCallback(() => {
+    setState({
+      token: 'demo',
+      user: DEMO_USER,
+      loading: false,
+      needsSetup: false,
+      isDemo: true,
+    });
+  }, []);
+
+  const guildValue = state.isDemo
+    ? { guildId: 'demo', guildName: 'Demo Guild', isDemo: true }
+    : { guildId: '838976035575562293', guildName: 'Ex Astra', isDemo: false };
+
   return (
-    <AuthContext.Provider value={{ ...state, submitName, logout }}>
-      {children}
+    <AuthContext.Provider value={{ ...state, submitName, logout, enterDemo }}>
+      <GuildProvider value={guildValue}>
+        {children}
+      </GuildProvider>
     </AuthContext.Provider>
   );
 }

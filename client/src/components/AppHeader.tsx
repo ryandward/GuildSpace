@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useSlidingIndicator } from '../hooks/useSlidingIndicator';
 import { Button } from '../ui';
@@ -6,6 +7,7 @@ import { navLink, reconnectBanner } from '../ui/recipes';
 import UserMenu from './UserMenu';
 
 export default function AppHeader() {
+  const { isDemo } = useAuth();
   const { connected, showHelp, onlineCount, totalMembers } = useSocket();
   const { ref: navRef, style: indicatorStyle } = useSlidingIndicator<HTMLElement>();
 
@@ -32,12 +34,14 @@ export default function AppHeader() {
           >
             Bank
           </NavLink>
-          <NavLink
-            to="/terminal"
-            className={({ isActive }) => navLink({ active: isActive })}
-          >
-            Terminal
-          </NavLink>
+          {!isDemo && (
+            <NavLink
+              to="/terminal"
+              className={({ isActive }) => navLink({ active: isActive })}
+            >
+              Terminal
+            </NavLink>
+          )}
           {indicatorStyle && (
             <span
               className="absolute bottom-0 h-px bg-accent pointer-events-none"
@@ -47,27 +51,31 @@ export default function AppHeader() {
         </nav>
         <div className="md:hidden" />
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 text-caption text-text-dim lg:hidden">
-            {totalMembers > 0 && (
-              <span>{totalMembers} Members</span>
-            )}
-            {totalMembers > 0 && onlineCount > 0 && (
-              <span className="text-border">·</span>
-            )}
-            {onlineCount > 0 && (
-              <span className="flex items-center gap-1">
-                <span className="w-1 h-1 rounded-full bg-green inline-block" />
-                {onlineCount} Online
-              </span>
-            )}
-          </div>
-          <Button intent="ghost" size="sm" onClick={showHelp} title="Show available commands" className="max-md:hidden">
-            ?
-          </Button>
+          {!isDemo && (
+            <div className="flex items-center gap-2 text-caption text-text-dim lg:hidden">
+              {totalMembers > 0 && (
+                <span>{totalMembers} Members</span>
+              )}
+              {totalMembers > 0 && onlineCount > 0 && (
+                <span className="text-border">·</span>
+              )}
+              {onlineCount > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-green inline-block" />
+                  {onlineCount} Online
+                </span>
+              )}
+            </div>
+          )}
+          {!isDemo && (
+            <Button intent="ghost" size="sm" onClick={showHelp} title="Show available commands" className="max-md:hidden">
+              ?
+            </Button>
+          )}
           <UserMenu />
         </div>
       </header>
-      {!connected && (
+      {!isDemo && !connected && (
         <div className={reconnectBanner()}>Reconnecting...</div>
       )}
     </>

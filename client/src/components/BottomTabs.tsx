@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useSlidingIndicator } from '../hooks/useSlidingIndicator';
 
 const tabs = [
@@ -48,11 +49,13 @@ const tabs = [
 ];
 
 export default function BottomTabs() {
+  const { isDemo } = useAuth();
   const { ref: navRef, style: indicatorStyle } = useSlidingIndicator<HTMLElement>();
+  const visibleTabs = isDemo ? tabs.filter(t => t.to !== '/terminal') : tabs;
 
   return (
     <nav ref={navRef} className="fixed bottom-0 inset-x-0 z-dropdown bg-surface border-t border-border flex md:hidden relative">
-      {tabs.map(({ to, label, icon }) => (
+      {visibleTabs.map(({ to, label, icon }) => (
         <NavLink
           key={to}
           to={to}

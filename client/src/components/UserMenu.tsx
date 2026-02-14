@@ -5,7 +5,7 @@ import { Button, StatusDot } from '../ui';
 import { dropdown, text } from '../ui/recipes';
 
 export default function UserMenu() {
-  const { user, logout } = useAuth();
+  const { user, isDemo, logout } = useAuth();
   const { connected } = useSocket();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -21,6 +21,38 @@ export default function UserMenu() {
   }, [open]);
 
   if (!user) return null;
+
+  if (isDemo) {
+    return (
+      <div className="relative" ref={menuRef}>
+        <Button intent="ghost" size="sm" className="gap-1" onClick={() => setOpen(o => !o)}>
+          <span className={text({ variant: 'secondary' })}>Demo Mode</span>
+        </Button>
+        {open && (
+          <div className={dropdown({ position: 'below-right' })}>
+            <div className="px-1.5 pt-1.5 pb-1">
+              <span className={text({ variant: 'caption' }) + ' block'}>
+                You're browsing demo data
+              </span>
+            </div>
+            <div className="h-px bg-border" />
+            <a
+              href="/api/auth/discord"
+              className="block w-full text-left bg-transparent border-none text-accent font-body text-caption py-1 px-1.5 cursor-pointer hover:bg-surface-2 no-underline"
+            >
+              Log in with Discord
+            </a>
+            <button
+              className="block w-full text-left bg-transparent border-none text-text-dim font-body text-caption py-1 px-1.5 cursor-pointer hover:bg-surface-2 hover:text-red rounded-b-md"
+              onClick={() => { setOpen(false); logout(); }}
+            >
+              Exit demo
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const connStatus = connected ? 'connected' : 'disconnected';
 

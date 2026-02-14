@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { Heading, Text } from '../ui';
 import OAuthButton from '../components/OAuthButton';
 
@@ -8,6 +9,8 @@ const DiscordIcon = () => (
 );
 
 export default function LoginPage() {
+  const { enterDemo } = useAuth();
+
   return (
     <div className="flex flex-col items-center justify-center flex-1 gap-2.5">
       <div className="relative">
@@ -23,6 +26,17 @@ export default function LoginPage() {
         color="#5865F2"
         hoverColor="#4752C4"
       />
+      <button
+        onClick={enterDemo}
+        className="mt-1 flex flex-col items-center gap-0.5 bg-transparent border-none cursor-pointer group"
+      >
+        <span className="font-body text-body font-medium text-text-dim group-hover:text-text transition-colors duration-fast">
+          Look Around
+        </span>
+        <span className="font-body text-caption text-text-dim/60">
+          Browse a demo guild
+        </span>
+      </button>
     </div>
   );
 }

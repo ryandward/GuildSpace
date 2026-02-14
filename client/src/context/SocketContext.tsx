@@ -152,9 +152,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   const { data: commands = [] } = useCommandsQuery(!!user);
 
-  // Connect socket when user + token are ready
+  // Connect socket when user + token are ready (skip in demo mode)
   useEffect(() => {
-    if (!token || !user) return;
+    if (!token || !user || token === 'demo') return;
 
     const sock = io();
     socketRef.current = sock;
