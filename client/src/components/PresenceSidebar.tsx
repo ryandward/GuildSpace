@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { useRosterQuery } from '../hooks/useRosterQuery';
 import { getClassColor, getMostRecentClass } from '../lib/classColors';
+import { ChannelListSidebar } from './ChannelTabs';
 import { text } from '../ui/recipes';
 
 interface OnlineMember {
@@ -17,6 +18,8 @@ export default function PresenceSidebar() {
   const { user } = useAuth();
   const { data: rosterData } = useRosterQuery();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isChat = location.pathname.startsWith('/chat');
 
   const { me, others } = useMemo(() => {
     if (!rosterData?.members) return { me: null, others: [] };
@@ -61,6 +64,13 @@ export default function PresenceSidebar() {
 
   return (
     <aside className="w-[--container-sidebar] shrink-0 border-r border-border bg-surface flex flex-col max-lg:hidden">
+      {/* Channel list — only on chat routes */}
+      {isChat && (
+        <div className="border-b border-border pb-1">
+          <ChannelListSidebar />
+        </div>
+      )}
+
       {/* Online header */}
       <div className="px-2 pt-1.5 pb-0.5">
         <span className={text({ variant: 'overline' })}>
