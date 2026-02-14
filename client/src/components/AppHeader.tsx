@@ -39,7 +39,7 @@ export default function AppHeader() {
         </nav>
         <div className="md:hidden" />
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 text-caption text-text-dim max-md:hidden">
+          <div className="flex items-center gap-2 text-caption text-text-dim lg:hidden">
             {totalMembers > 0 && (
               <span>{totalMembers} Members</span>
             )}

@@ -9,7 +9,7 @@ import RaidsPage from './pages/RaidsPage';
 import RaidEventPage from './pages/RaidEventPage';
 import BankPage from './pages/BankPage';
 import BankerDetailPage from './pages/BankerDetailPage';
-import BottomTabs from './components/BottomTabs';
+import PageLayout from './layouts/PageLayout';
 
 export default function App() {
   const { loading, token, user, needsSetup } = useAuth();
@@ -35,8 +35,8 @@ export default function App() {
   }
 
   return (
-    <>
-      <Routes>
+    <Routes>
+      <Route element={<PageLayout />}>
         <Route path="/" element={<Navigate to="/roster" replace />} />
         <Route path="/roster" element={<RosterPage />} />
         <Route path="/roster/:discordId" element={<MemberDetailPage />} />
@@ -45,9 +45,8 @@ export default function App() {
         <Route path="/bank" element={<BankPage />} />
         <Route path="/bank/:banker" element={<BankerDetailPage />} />
         <Route path="/terminal" element={<AppShell />} />
-        <Route path="*" element={<Navigate to="/roster" replace />} />
-      </Routes>
-      <BottomTabs />
-    </>
+      </Route>
+      <Route path="*" element={<Navigate to="/roster" replace />} />
+    </Routes>
   );
 }

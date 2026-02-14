@@ -5,7 +5,6 @@ import { useEventDetailQuery } from '../hooks/useEventDetailQuery';
 import { useRaidTemplatesQuery } from '../hooks/useRaidTemplatesQuery';
 import { useAddCallMutation, useDeleteCallMutation, useCloseEventMutation, useReopenEventMutation, useAddCharacterMutation, useRemoveCharacterMutation } from '../hooks/useRaidMutations';
 import type { AddCallResult } from '../hooks/useRaidMutations';
-import AppHeader from '../components/AppHeader';
 import AddCallForm from '../components/raids/AddCallForm';
 import CallRow from '../components/raids/CallRow';
 import AttendanceMatrix from '../components/raids/AttendanceMatrix';
@@ -54,10 +53,8 @@ export default function RaidEventPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
-      <AppHeader />
-      <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           <Link to="/raids" className="no-underline">
             <Text variant="caption" className="hover:text-text">&larr; Back to raids</Text>
           </Link>
@@ -189,6 +186,5 @@ export default function RaidEventPage() {
           )}
         </div>
       </div>
-    </div>
   );
 }

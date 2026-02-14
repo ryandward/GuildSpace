@@ -168,6 +168,9 @@
   --container-message: calc(var(--space-unit) * 88);
   /* 704px = 88 × 8px. TUNABLE — chat messages: wider than embeds for conversation flow */
 
+  --container-sidebar: calc(var(--space-unit) * 28);
+  /* 224px = 28 × 8px. TUNABLE — presence sidebar: fits name + class color + status dot */
+
   /* ═══════════════════════════════════════════════════════
      Z-INDEX — simplest integers for correct stacking.
      Grain overlay ::after = 1 (within its isolation context).

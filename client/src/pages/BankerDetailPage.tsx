@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { useBankQuery } from '../hooks/useBankQuery';
 import { useBankerHistory } from '../hooks/useBankerHistory';
 import BankHistoryEntry from '../components/BankHistoryEntry';
-import AppHeader from '../components/AppHeader';
 import { Card, Input, Text, Badge, Heading } from '../ui';
 import { text } from '../ui/recipes';
 
@@ -35,10 +34,8 @@ export default function BankerDetailPage() {
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
-      <AppHeader />
-      <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           <Link to="/bank" className="no-underline">
             <Text variant="caption" className="hover:text-accent transition-colors duration-fast">&lsaquo; Back to bank</Text>
           </Link>
@@ -112,6 +109,5 @@ export default function BankerDetailPage() {
           )}
         </div>
       </div>
-    </div>
   );
 }

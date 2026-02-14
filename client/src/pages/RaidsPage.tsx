@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useEventsQuery } from '../hooks/useEventsQuery';
 import { useCreateEventMutation } from '../hooks/useRaidMutations';
-import AppHeader from '../components/AppHeader';
 import EventCard from '../components/raids/EventCard';
 import { Button, Card, Text, Heading, Input } from '../ui';
 
@@ -26,10 +25,8 @@ export default function RaidsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
-      <AppHeader />
-      <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           <div className="flex items-center justify-between">
             <Heading level="heading">Raids</Heading>
             {isOfficer && !showCreate && (
@@ -81,6 +78,5 @@ export default function RaidsPage() {
           ))}
         </div>
       </div>
-    </div>
   );
 }

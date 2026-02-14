@@ -7,7 +7,6 @@ import { useBankHistory } from '../hooks/useBankerHistory';
 import BankHistoryEntry from '../components/BankHistoryEntry';
 import BankerTreemap from '../components/bank/BankerTreemap';
 import CollapsibleCard from '../components/CollapsibleCard';
-import AppHeader from '../components/AppHeader';
 import { Card, Input, Text, Badge, Button } from '../ui';
 import { text } from '../ui/recipes';
 
@@ -169,10 +168,8 @@ export default function BankPage() {
   const hasActiveFilter = bankerFilter !== null || search !== '';
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
-      <AppHeader />
-      <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           {error && <Text variant="error">{error instanceof Error ? error.message : 'Failed to fetch bank'}</Text>}
           {isLoading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
 
@@ -340,6 +337,5 @@ export default function BankPage() {
           )}
         </div>
       </div>
-    </div>
   );
 }

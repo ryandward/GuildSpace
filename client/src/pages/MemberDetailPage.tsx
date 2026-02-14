@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useMemberQuery } from '../hooks/useMemberQuery';
 import { useBioMutation } from '../hooks/useBioMutation';
 import { useRoleMutation } from '../hooks/useRoleMutation';
-import AppHeader from '../components/AppHeader';
 import CharacterCard from '../components/roster/CharacterCard';
 import { Text, Heading, Card, Button, Textarea, Badge } from '../ui';
 import { text } from '../ui/recipes';
@@ -57,10 +56,8 @@ export default function MemberDetailPage() {
   }, [data]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
-      <AppHeader />
-      <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           <Link to="/roster" className="no-underline">
             <Text variant="caption" className="hover:text-accent transition-colors duration-fast">&lsaquo; Back to roster</Text>
           </Link>
@@ -248,6 +245,5 @@ export default function MemberDetailPage() {
           )}
         </div>
       </div>
-    </div>
   );
 }

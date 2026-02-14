@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useRosterQuery } from '../hooks/useRosterQuery';
 import { useRosterFilters } from '../hooks/useRosterFilters';
-import AppHeader from '../components/AppHeader';
 import { ClassChart, StatusChart, LevelChart } from '../components/roster/RosterFilters';
 import MemberList from '../components/roster/RosterTable';
 import RosterFilterPanel from '../components/roster/RosterFilterPanel';
@@ -93,10 +92,8 @@ export default function RosterPage() {
   }, [filteredClassChars]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
-      <AppHeader />
-      <div className="flex-1 overflow-y-auto relative z-0">
-        <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-content mx-auto py-3 px-3 pb-8 w-full flex flex-col gap-2 max-md:px-1.5 max-md:py-1.5 max-md:pb-14">
           {error && <Text variant="error">{error instanceof Error ? error.message : 'Failed to fetch roster'}</Text>}
           {isLoading && <Text variant="caption" className="py-6 text-center block">Loading...</Text>}
 
@@ -260,6 +257,5 @@ export default function RosterPage() {
           )}
         </div>
       </div>
-    </div>
   );
 }
