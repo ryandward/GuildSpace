@@ -47,23 +47,21 @@ export default function CharacterCard(props: Props) {
       <div className="flex items-center gap-1.5 px-2 pt-1.5">
         <Text variant="body" className="font-semibold">{props.name}</Text>
         <span className={cx(badge({ variant: 'status', color: statusColor(props.status) }))}>{props.status}</span>
-        <div className="ml-auto flex items-center gap-1.5">
-          {props.onEdit && (
-            <button
-              className="bg-transparent border-none cursor-pointer p-0"
-              onClick={props.onEdit}
-            >
-              <Text variant="caption" className="hover:text-accent transition-colors duration-fast">Edit</Text>
-            </button>
-          )}
-          {lastRaid && (
-            <Text variant="caption" className="shrink-0">{lastRaid}</Text>
-          )}
-        </div>
+        {lastRaid && (
+          <Text variant="caption" className="ml-auto shrink-0">{lastRaid}</Text>
+        )}
       </div>
       <div className="flex items-center gap-2 px-2 pb-1.5">
         <Text variant="label">{props.class}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim')}>Lv {props.level}</span>
+        {props.onEdit && (
+          <button
+            className="bg-transparent border-none cursor-pointer p-0 ml-auto"
+            onClick={props.onEdit}
+          >
+            <Text variant="caption" className="hover:text-accent transition-colors duration-fast">Edit</Text>
+          </button>
+        )}
       </div>
     </div>
   );
