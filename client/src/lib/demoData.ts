@@ -40,28 +40,37 @@ const CLASSES = [
   'Monk', 'Bard', 'Paladin', 'Shaman', 'Warlock',
 ];
 
-const FIRST_NAMES = [
-  'Aelindra', 'Brogan', 'Caelith', 'Durnok', 'Elara',
-  'Faelan', 'Grimshaw', 'Halvard', 'Isolde', 'Jareth',
-  'Kaelum', 'Lyris', 'Mordain', 'Nythara', 'Orinvex',
-  'Pyrion', 'Quelara', 'Ravek', 'Sylvaine', 'Thandril',
-  'Ulvaine', 'Vashira', 'Wynthor', 'Xandiel', 'Ysolde',
-  'Zephyran', 'Arken', 'Belvaine', 'Cyreth', 'Delvara',
-  'Elthain', 'Fenwick', 'Galvorn', 'Hestia', 'Ildrin',
-  'Jorvath', 'Kelthane', 'Lunareth', 'Maelis', 'Norivex',
-  'Othrane', 'Pellion', 'Quethar', 'Rylind', 'Seravix',
-  'Thexian', 'Umbriel', 'Veldrin', 'Wyneth', 'Xaelen',
-  'Yrathis', 'Zolvane', 'Ashveil', 'Brinara', 'Corvath',
-  'Dariel', 'Eshara', 'Fynrath', 'Galdris', 'Helmara',
-  'Ivorn', 'Jyneth', 'Kolvane', 'Lithara', 'Morwen',
-  'Neldris', 'Orvaine', 'Praelin', 'Quinthar', 'Roseveil',
-  'Stormael', 'Thalvex', 'Ulric', 'Verdaine', 'Welkor',
-  'Xilvane', 'Yundris', 'Zethara', 'Alveron', 'Braevil',
-  'Cindrel', 'Dravex', 'Essara', 'Folvaine', 'Grenthos',
-  'Haldrik', 'Indara', 'Jeldrin', 'Krevane', 'Lythion',
-  'Marvex', 'Noleth', 'Ondris', 'Phaelix', 'Relvaine',
-  'Shaldrik', 'Trevane', 'Valdris', 'Wynvex', 'Zarevil',
+const NAME_PREFIXES = [
+  'Ael', 'Bro', 'Cae', 'Dur', 'El', 'Fae', 'Grim', 'Hal', 'Iso', 'Jar',
+  'Kael', 'Lyr', 'Mor', 'Nyth', 'Orin', 'Pyr', 'Quel', 'Rav', 'Syl', 'Than',
+  'Ulv', 'Vash', 'Wyn', 'Xan', 'Yso', 'Zeph', 'Ark', 'Bel', 'Cyr', 'Del',
 ];
+
+const NAME_SUFFIXES = [
+  'indra', 'gan', 'lith', 'nok', 'ara', 'lan', 'shaw', 'vard', 'lde', 'eth',
+  'um', 'is', 'dain', 'ara', 'vex', 'ion', 'wyn', 'ek', 'aine', 'dril',
+  'ira', 'thor', 'iel', 'de', 'ran', 'en', 'aine', 'eth', 'vara', 'thane',
+];
+
+function generateName(usedNames: Set<string>): string {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const pre = NAME_PREFIXES[Math.floor(rand() * NAME_PREFIXES.length)];
+    const suf = NAME_SUFFIXES[Math.floor(rand() * NAME_SUFFIXES.length)];
+    const name = pre + suf;
+    if (!usedNames.has(name)) {
+      usedNames.add(name);
+      return name;
+    }
+  }
+  // Fallback: append a number to guarantee uniqueness
+  const base = NAME_PREFIXES[Math.floor(rand() * NAME_PREFIXES.length)] +
+    NAME_SUFFIXES[Math.floor(rand() * NAME_SUFFIXES.length)];
+  let n = 2;
+  while (usedNames.has(`${base}${n}`)) n++;
+  const name = `${base}${n}`;
+  usedNames.add(name);
+  return name;
+}
 
 const DISPLAY_NAMES = [
   'CriticalHit', 'Tankzilla', 'HealBot3000', 'ShadowDancer', 'FireStorm',
@@ -190,7 +199,6 @@ function generateDate(daysAgo: number): string {
 
 function generateMembers(): DemoMember[] {
   const usedNames = new Set<string>();
-  const names = shuffle(FIRST_NAMES);
   const displayNames = shuffle(DISPLAY_NAMES);
   const members: DemoMember[] = [];
 
@@ -206,9 +214,7 @@ function generateMembers(): DemoMember[] {
     const characters: DemoCharacter[] = [];
 
     for (let c = 0; c < charCount; c++) {
-      let name = names.pop()!;
-      while (usedNames.has(name)) name = names.pop()!;
-      usedNames.add(name);
+      const name = generateName(usedNames);
 
       const cls = pick(CLASSES);
       const isMain = c === 0;
