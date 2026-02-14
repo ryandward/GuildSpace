@@ -19,19 +19,21 @@ export default function LoginPage() {
       </div>
       <Heading level="hero">GuildSpace</Heading>
       <Text variant="secondary" className="mb-4">a place for guilds</Text>
-      <OAuthButton
-        href="/api/auth/discord"
-        icon={<DiscordIcon />}
-        label="Log in with Discord"
-        color="#5865F2"
-        hoverColor="#4752C4"
-      />
-      <button
-        onClick={enterDemo}
-        className="inline-flex items-center justify-center font-body text-body font-medium text-white py-1.5 px-4 rounded-md transition-colors duration-fast bg-surface-2 hover:bg-surface-3 border-none cursor-pointer w-30"
-      >
-        Look Around
-      </button>
+      <div className="flex flex-col gap-1.5">
+        <OAuthButton
+          href="/api/auth/discord"
+          icon={<DiscordIcon />}
+          label="Log in with Discord"
+          color="#5865F2"
+          hoverColor="#4752C4"
+        />
+        <button
+          onClick={enterDemo}
+          className="flex items-center justify-center font-body text-body font-medium text-white py-1.5 px-4 rounded-md transition-colors duration-fast bg-surface-2 hover:bg-surface-3 border-none cursor-pointer"
+        >
+          Look Around
+        </button>
+      </div>
     </div>
   );
 }
