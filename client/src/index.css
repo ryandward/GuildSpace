@@ -308,7 +308,7 @@
 .pip-enchanter { background: #b490d0; }
 .pip-necromancer { background: #bf50e0; }
 .pip-shadow-knight { background: #9545d0; }
-.pip-rogue { background: #fff569; }
+.pip-rogue { background: #d4e040; }
 .pip-ranger { background: #abd473; }
 .pip-druid { background: #ff7d0a; }
 .pip-monk { background: #00ff96; }
@@ -446,12 +446,12 @@
 .readout-seg { transition: flex var(--duration-slow) var(--ease-standard); }
 .readout-seg.status-main { background: var(--color-accent); }
 .readout-seg.status-alt { background: var(--color-green); }
-.readout-seg.status-bot { background: var(--color-yellow); }
+.readout-seg.status-bot { background: var(--color-blue); }
 .readout-seg.status-probationary { background: var(--color-text-dim); }
 
 .readout-dot.status-main { background: var(--color-accent); }
 .readout-dot.status-alt { background: var(--color-green); }
-.readout-dot.status-bot { background: var(--color-yellow); }
+.readout-dot.status-bot { background: var(--color-blue); }
 .readout-dot.status-probationary { background: var(--color-text-dim); }
 
 /* ── Chat background ─────────────────────────────────── */

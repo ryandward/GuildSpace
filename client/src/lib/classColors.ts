@@ -7,7 +7,7 @@ export const CLASS_COLORS: Record<string, string> = {
   'Enchanter': '#b490d0',
   'Necromancer': '#bf50e0',
   'Shadow Knight': '#9545d0',
-  'Rogue': '#fff569',
+  'Rogue': '#d4e040',
   'Ranger': '#abd473',
   'Druid': '#ff7d0a',
   'Monk': '#00ff96',
