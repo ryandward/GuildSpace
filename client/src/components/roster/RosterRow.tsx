@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Text } from '../../ui';
 import { text } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
-import { getClassColor } from '../../lib/classColors';
+import { getClassColor, getClassShort } from '../../lib/classColors';
 import { timeAgo } from '../../utils/timeAgo';
 
 function classToPip(className: string): string {
@@ -66,9 +66,10 @@ export function getMostRecentRaid(member: RosterMember): string | null {
 interface Props {
   member: RosterMember;
   classFilter?: string | null;
+  classAbbreviations?: Record<string, string>;
 }
 
-export default function RosterRow({ member, classFilter }: Props) {
+export default function RosterRow({ member, classFilter, classAbbreviations }: Props) {
   const navigate = useNavigate();
   const featured = selectFeatured(member, classFilter ?? null);
   const netDkp = member.earnedDkp - member.spentDkp;
@@ -88,7 +89,7 @@ export default function RosterRow({ member, classFilter }: Props) {
           {featured?.name || member.displayName}
           {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent ml-1 align-middle" title="GuildSpace member" />}
         </span>
-        <Text variant="label" className="truncate">{featured?.class}</Text>
+        <Text variant="label" className="truncate">{featured ? getClassShort(featured.class, classAbbreviations) : ''}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{netDkp}</span>
         <span className={cx(text({ variant: 'mono' }), 'text-text-dim text-right max-md:hidden')}>{lastRaid ? timeAgo(lastRaid) : '--'}</span>

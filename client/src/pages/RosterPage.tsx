@@ -8,6 +8,7 @@ import RosterHeader from '../components/roster/RosterHeader';
 import CollapsibleCard from '../components/CollapsibleCard';
 import { Badge, Text, Input } from '../ui';
 import { text } from '../ui/recipes';
+import { getClassShort } from '../lib/classColors';
 
 const ACTIVITY_LABELS: Record<string, string> = {
   '30d': 'Active 30d',
@@ -117,7 +118,7 @@ export default function RosterPage() {
                 {classFilter && (
                   <Badge variant="filter" className="inline-flex items-center gap-1">
                     <span className={`w-1 h-1 rounded-full ${('pip-' + classFilter.toLowerCase().replace(/\s+/g, '-'))}`} />
-                    <span>{classFilter}</span>
+                    <span>{getClassShort(classFilter, data?.classAbbreviations)}</span>
                     <button
                       className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
                       onClick={() => setClassFilter(null)}
@@ -226,7 +227,7 @@ export default function RosterPage() {
               {/* Members */}
               <CollapsibleCard
                 id="members"
-                title={classFilter ? classFilter.toUpperCase() : 'ROSTER'}
+                title={classFilter ? getClassShort(classFilter, data?.classAbbreviations) : 'ROSTER'}
                 count={filtered.length}
                 collapsedPanels={collapsedPanels}
                 onToggle={togglePanel}
@@ -248,7 +249,7 @@ export default function RosterPage() {
                     sortDirection={sortDirection}
                     onSort={toggleSort}
                   />
-                  <MemberList members={filtered} classFilter={classFilter} />
+                  <MemberList members={filtered} classFilter={classFilter} classAbbreviations={data.classAbbreviations} />
                   {filtered.length === 0 && (
                     <Text variant="caption" className="text-center py-4 block">No results.</Text>
                   )}
