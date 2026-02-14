@@ -180,6 +180,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
     filteredPreClass,
     filteredCharsPreClass,
     filteredChars,
+    charMatchesFilters,
     filtered,
   };
 }

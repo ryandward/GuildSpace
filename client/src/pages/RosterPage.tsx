@@ -53,6 +53,7 @@ export default function RosterPage() {
     filteredPreClass,
     filteredCharsPreClass,
     filteredChars,
+    charMatchesFilters,
     filtered,
   } = filters;
 
@@ -96,10 +97,12 @@ export default function RosterPage() {
     if (sizeMode === 'ticks') return classStats?.raidTicks ?? {};
     if (sizeMode === 'items') return classStats?.itemsWon ?? {};
 
-    // DKP modes — aggregate by member's mainClass
+    // DKP modes — aggregate by member's mainClass, but only if their
+    // main-class character itself passes character-level filters
     const values: Record<string, number> = {};
     for (const m of filteredPreClass) {
       if (!m.mainClass) continue;
+      if (!m.characters.some(c => c.class === m.mainClass && charMatchesFilters(c))) continue;
       let v: number;
       if (sizeMode === 'earned') v = m.earnedDkp;
       else if (sizeMode === 'spent') v = m.spentDkp;
@@ -107,7 +110,7 @@ export default function RosterPage() {
       values[m.mainClass] = (values[m.mainClass] || 0) + v;
     }
     return values;
-  }, [sizeMode, classCounts, filteredCharsPreClass, filteredPreClass, classStats]);
+  }, [sizeMode, classCounts, filteredCharsPreClass, filteredPreClass, classStats, charMatchesFilters]);
 
   const levelBreakdown = useMemo(() => {
     const breakdown: Record<string, { max: number; total: number }> = {};
