@@ -19,6 +19,18 @@ function formatDate(iso: string | null | undefined): string | undefined {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+type Role = 'owner' | 'admin' | 'officer';
+
+const ROLE_COLOR = { owner: 'accent', admin: 'red', officer: 'blue' } as const;
+const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', officer: 'Officer' } as const;
+
+function highestRole(data: { isOwner: boolean; isAdmin: boolean; isOfficer: boolean }): Role | null {
+  if (data.isOwner) return 'owner';
+  if (data.isAdmin) return 'admin';
+  if (data.isOfficer) return 'officer';
+  return null;
+}
+
 export default function MemberDetailPage() {
   const { discordId } = useParams<{ discordId: string }>();
   const { user: authUser } = useAuth();
@@ -70,13 +82,12 @@ export default function MemberDetailPage() {
               {/* Header */}
               <div className="flex items-baseline gap-2 flex-wrap">
                 <Heading level="heading" style={nameColor ? { color: nameColor } : undefined}>{data.displayName}</Heading>
-                {data.isOwner && <Badge variant="status" className="bg-accent text-bg font-bold">Owner</Badge>}
-                {data.isAdmin && !data.isOwner && (
-                  <Badge variant="status" className="bg-transparent border border-accent text-accent" title={data.adminSince ? `Since ${formatDate(data.adminSince)}` : undefined}>Admin</Badge>
-                )}
-                {data.isOfficer && !data.isAdmin && !data.isOwner && (
-                  <Badge variant="status" color="yellow" title={data.officerSince ? `Since ${formatDate(data.officerSince)}` : undefined}>Officer</Badge>
-                )}
+                {(() => {
+                  const role = highestRole(data);
+                  if (!role) return null;
+                  const since = role === 'admin' ? data.adminSince : role === 'officer' ? data.officerSince : null;
+                  return <Badge variant="count" color={ROLE_COLOR[role]} title={since ? `Since ${formatDate(since)}` : undefined}>{ROLE_LABEL[role]}</Badge>;
+                })()}
                 <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{netDkp} DKP</span>
                 {data.joinedAt && <Text variant="caption">Joined {formatDate(data.joinedAt)}</Text>}
               </div>
