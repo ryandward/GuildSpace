@@ -51,6 +51,8 @@ export default function RosterPage() {
     clearAll,
     activeFilterCount,
     filteredPreClass,
+    filteredCharsPreClass,
+    filteredChars,
     filtered,
   } = filters;
 
@@ -68,45 +70,29 @@ export default function RosterPage() {
     });
   }, []);
 
-  // Treemap data uses pre-class filter so the treemap stays stable when clicking a class
-  // Narrow characters to match active character-level filters (status, level range)
-  const isLevelDefault = levelRange[0] === 1 && levelRange[1] === 60;
-  const preClassChars = useMemo(() => {
-    let chars = filteredPreClass.flatMap(m => m.characters);
-    if (statusFilter.size > 0)
-      chars = chars.filter(c => statusFilter.has(c.status));
-    if (!isLevelDefault)
-      chars = chars.filter(c => c.level >= levelRange[0] && c.level <= levelRange[1]);
-    return chars;
-  }, [filteredPreClass, statusFilter, isLevelDefault, levelRange]);
-
-  // Stats data uses post-class-filter characters
-  const filteredClassChars = useMemo(() => {
-    if (!classFilter) return preClassChars;
-    return preClassChars.filter(c => c.class === classFilter);
-  }, [preClassChars, classFilter]);
+  // ── Treemap aggregations (use filteredCharsPreClass — stable when clicking a class) ──
 
   const classCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const c of preClassChars) {
+    for (const c of filteredCharsPreClass) {
       counts[c.class] = (counts[c.class] || 0) + 1;
     }
     return counts;
-  }, [preClassChars]);
+  }, [filteredCharsPreClass]);
 
   const classValues = useMemo(() => {
     if (sizeMode === 'count') return classCounts;
 
-    // Total levels — sum character levels per class from preClassChars
+    // Total levels — sum character levels per class
     if (sizeMode === 'levels') {
       const values: Record<string, number> = {};
-      for (const c of preClassChars) {
+      for (const c of filteredCharsPreClass) {
         values[c.class] = (values[c.class] || 0) + c.level;
       }
       return values;
     }
 
-    // Server-sourced modes — raid ticks and items won (global, not filter-sensitive)
+    // Server-sourced modes (global, not filter-sensitive)
     if (sizeMode === 'ticks') return classStats?.raidTicks ?? {};
     if (sizeMode === 'items') return classStats?.itemsWon ?? {};
 
@@ -121,34 +107,36 @@ export default function RosterPage() {
       values[m.mainClass] = (values[m.mainClass] || 0) + v;
     }
     return values;
-  }, [sizeMode, classCounts, preClassChars, filteredPreClass, classStats]);
+  }, [sizeMode, classCounts, filteredCharsPreClass, filteredPreClass, classStats]);
 
   const levelBreakdown = useMemo(() => {
     const breakdown: Record<string, { max: number; total: number }> = {};
-    for (const c of preClassChars) {
+    for (const c of filteredCharsPreClass) {
       if (!breakdown[c.class]) breakdown[c.class] = { max: 0, total: 0 };
       breakdown[c.class].total++;
       if (c.level >= 60) breakdown[c.class].max++;
     }
     return breakdown;
-  }, [preClassChars]);
+  }, [filteredCharsPreClass]);
+
+  // ── Stats (use filteredChars — reflects class selection) ──
 
   const levelDist = useMemo(() => {
     let level60 = 0, sub60 = 0;
-    for (const c of filteredClassChars) {
+    for (const c of filteredChars) {
       if (c.level >= 60) level60++;
       else sub60++;
     }
     return { level60, sub60 };
-  }, [filteredClassChars]);
+  }, [filteredChars]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const c of filteredClassChars) {
+    for (const c of filteredChars) {
       counts[c.status] = (counts[c.status] || 0) + 1;
     }
     return counts;
-  }, [filteredClassChars]);
+  }, [filteredChars]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -289,7 +277,7 @@ export default function RosterPage() {
               >
                 <div className="flex border-t border-border max-md:flex-col">
                   <LevelChart levelDist={levelDist} />
-                  <StatusChart statusCounts={statusCounts} total={filteredClassChars.length} />
+                  <StatusChart statusCounts={statusCounts} total={filteredChars.length} />
                 </div>
               </CollapsibleCard>
 

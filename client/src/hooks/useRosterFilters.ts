@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import type { RosterMember } from '../components/roster/RosterRow';
+import type { RosterMember, RosterCharacter } from '../components/roster/RosterRow';
 import { getMostRecentRaid } from '../components/roster/RosterRow';
 
 export type SortField = 'name' | 'level' | 'dkp' | 'lastRaid';
@@ -62,6 +62,13 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
     return count;
   }, [classFilter, search, isLevelDefault, officerOnly, statusFilter.size, activityFilter]);
 
+  // Single predicate for character-level filters (status + level)
+  const charMatchesFilters = useCallback((c: RosterCharacter): boolean => {
+    if (statusFilter.size > 0 && !statusFilter.has(c.status)) return false;
+    if (!isLevelDefault && (c.level < levelRange[0] || c.level > levelRange[1])) return false;
+    return true;
+  }, [statusFilter, isLevelDefault, levelRange]);
+
   // Apply all filters EXCEPT class — used for treemap so it stays stable when clicking a class
   const filteredPreClass = useMemo(() => {
     if (!members) return [];
@@ -69,7 +76,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
 
     let result: RosterMember[] = members;
 
-    // Text search
+    // Text search (member-level)
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(m =>
@@ -78,26 +85,12 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
       );
     }
 
-    // Level range
-    if (!isLevelDefault) {
-      result = result.filter(m =>
-        m.characters.some(c => c.level >= levelRange[0] && c.level <= levelRange[1])
-      );
-    }
-
-    // Officer only
+    // Officer only (member-level)
     if (officerOnly) {
       result = result.filter(m => m.isOfficer);
     }
 
-    // Status filter
-    if (statusFilter.size > 0) {
-      result = result.filter(m =>
-        m.characters.some(c => statusFilter.has(c.status))
-      );
-    }
-
-    // Activity filter
+    // Activity filter (member-level)
     if (activityFilter !== 'all') {
       if (activityFilter === 'inactive') {
         const cutoff = now - 90 * DAY_MS;
@@ -115,20 +108,36 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
       }
     }
 
-    return result;
-  }, [members, search, levelRange, isLevelDefault, officerOnly, statusFilter, activityFilter]);
+    // Character-level filters — keep member if at least one character matches
+    if (statusFilter.size > 0 || !isLevelDefault) {
+      result = result.filter(m => m.characters.some(charMatchesFilters));
+    }
 
+    return result;
+  }, [members, search, officerOnly, statusFilter, isLevelDefault, activityFilter, charMatchesFilters]);
+
+  // Characters from pre-class members, narrowed to those matching character-level filters
+  // Used by treemap + stats — stable when clicking a class
+  const filteredCharsPreClass = useMemo(() => {
+    const chars = filteredPreClass.flatMap(m => m.characters);
+    if (statusFilter.size === 0 && isLevelDefault) return chars;
+    return chars.filter(charMatchesFilters);
+  }, [filteredPreClass, statusFilter, isLevelDefault, charMatchesFilters]);
+
+  // Post-class characters — treemap chars narrowed to selected class
+  const filteredChars = useMemo(() => {
+    if (!classFilter) return filteredCharsPreClass;
+    return filteredCharsPreClass.filter(c => c.class === classFilter);
+  }, [filteredCharsPreClass, classFilter]);
+
+  // Members filtered by ALL filters including class, sorted
   const filtered = useMemo(() => {
     let result = filteredPreClass;
 
-    // Class filter — intersect with status and level on the same character
+    // Class filter — intersect with character-level filters on the same character
     if (classFilter) {
       result = result.filter(m =>
-        m.characters.some(c =>
-          c.class === classFilter &&
-          (statusFilter.size === 0 || statusFilter.has(c.status)) &&
-          (isLevelDefault || (c.level >= levelRange[0] && c.level <= levelRange[1]))
-        )
+        m.characters.some(c => c.class === classFilter && charMatchesFilters(c))
       );
     }
 
@@ -156,7 +165,7 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
       }
       return sortDirection === 'asc' ? cmp : -cmp;
     });
-  }, [filteredPreClass, classFilter, statusFilter, isLevelDefault, levelRange, sortField, sortDirection]);
+  }, [filteredPreClass, classFilter, charMatchesFilters, sortField, sortDirection]);
 
   return {
     classFilter, setClassFilter,
@@ -169,6 +178,8 @@ export function useRosterFilters(members: RosterMember[] | undefined) {
     clearAll,
     activeFilterCount,
     filteredPreClass,
+    filteredCharsPreClass,
+    filteredChars,
     filtered,
   };
 }
