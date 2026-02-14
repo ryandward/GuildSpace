@@ -139,6 +139,14 @@ These Discord APIs are used by unported commands but not yet implemented in `src
 
 Currently there are **no data-access REST endpoints** — all data flows through command execution over WebSocket. The Discord bot has zero REST endpoints either. To open GuildSpace up for third-party API consumers, dedicated endpoints (e.g. `GET /api/census`, `GET /api/dkp/:user`, `GET /api/bank/search`) would need to be built separate from the command system.
 
+## Role Hierarchy
+
+Four-tier role hierarchy: **Member → Officer → Admin → Owner**.
+
+- **Server**: `GuildSpaceUser.roleFlags(user)` is the single source of truth. It computes a `role` field (`'owner' | 'admin' | 'officer' | 'member'`) and cascading boolean flags (`isOfficer`, `isAdmin`, `isOwner`). All API responses spread `...GuildSpaceUser.roleFlags(gsUser)`. Access guards use `hasOfficerAccess` / `hasAdminAccess` getters on the entity.
+- **Client**: `lib/roles.ts` owns presentation only — `ROLE_COLOR`, `ROLE_LABEL`, `roleSince()`, `isBadgeRole()`. Components read `data.role` directly from the API response. Never re-derive the hierarchy on the client.
+- **"Member" is implicit**: everyone on the roster gets `role: 'member'` by default. This assumption breaks with multi-guild tenancy — membership will need to become an explicit relationship on a `guild_members` join table, and `role` will move from a computed property to a stored column per guild.
+
 ## Conventions
 
 - Error messages shown to users should use plain language with no implementation details (see commit c271b73).
