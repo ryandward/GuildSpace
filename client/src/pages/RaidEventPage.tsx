@@ -184,24 +184,25 @@ export default function RaidEventPage() {
                 >
                   <SortableContext items={data.calls.map(c => c.id)} strategy={verticalListSortingStrategy}>
                     {data.calls.map((call, idx) => (
-                      <CallRow
-                        key={call.id}
-                        call={call}
-                        index={idx + 1}
-                        isOfficer={!!isOfficer}
-                        isActive={isActive}
-                        confirmDeleteId={confirmDeleteId}
-                        onConfirmDelete={setConfirmDeleteId}
-                        onDelete={handleDeleteCall}
-                        isDeleting={deleteCall.isPending}
-                        eventId={Number(eventId)}
-                        onAddCharacter={(callId, name) => addCharacter.mutate({ callId, characterName: name })}
-                        onRemoveCharacter={(callId, name) => removeCharacter.mutate({ callId, characterName: name })}
-                        onEditCall={handleEditCall}
-                        isEditPending={editCall.isPending}
-                        templates={templates}
-                        sortable={!!isOfficer && isActive}
-                      />
+                      <div key={call.id} className="border-t border-border flex">
+                        <Text variant="body" className="font-mono text-text-dim w-4 shrink-0 py-1 pl-2">{idx + 1}.</Text>
+                        <CallRow
+                          call={call}
+                          isOfficer={!!isOfficer}
+                          isActive={isActive}
+                          confirmDeleteId={confirmDeleteId}
+                          onConfirmDelete={setConfirmDeleteId}
+                          onDelete={handleDeleteCall}
+                          isDeleting={deleteCall.isPending}
+                          eventId={Number(eventId)}
+                          onAddCharacter={(callId, name) => addCharacter.mutate({ callId, characterName: name })}
+                          onRemoveCharacter={(callId, name) => removeCharacter.mutate({ callId, characterName: name })}
+                          onEditCall={handleEditCall}
+                          isEditPending={editCall.isPending}
+                          templates={templates}
+                          sortable={!!isOfficer && isActive}
+                        />
+                      </div>
                     ))}
                   </SortableContext>
                 </DndContext>

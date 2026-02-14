@@ -12,7 +12,6 @@ import { getClassColor } from '../../lib/classColors';
 
 interface Props {
   call: CallDetail;
-  index: number;
   isOfficer: boolean;
   isActive: boolean;
   confirmDeleteId: number | null;
@@ -29,7 +28,7 @@ interface Props {
 }
 
 export default function CallRow({
-  call, index, isOfficer, isActive,
+  call, isOfficer, isActive,
   confirmDeleteId, onConfirmDelete, onDelete, isDeleting,
   onAddCharacter, onRemoveCharacter,
   onEditCall, isEditPending, templates,
@@ -105,7 +104,7 @@ export default function CallRow({
   return (
     <div
       ref={setNodeRef}
-      className={`border-t border-border${isDragging ? ' opacity-40 z-10' : ''}`}
+      className={`flex-1 min-w-0${isDragging ? ' opacity-40 z-10' : ''}`}
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition ?? undefined,
@@ -129,7 +128,6 @@ export default function CallRow({
         <span className="collapse-chevron text-text-dim text-caption" data-expanded={expanded}>
           ›
         </span>
-        <Text variant="body" className="font-mono text-text-dim w-4 shrink-0">{index}.</Text>
         <Text variant="body" className="font-bold flex-1 truncate">{call.raidName}</Text>
         <Badge variant="count" color="accent">{call.modifier} DKP</Badge>
         <Badge variant="count">{call.recordedCount} recorded</Badge>
