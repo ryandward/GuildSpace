@@ -46,6 +46,14 @@ export default function BankerDetailPage() {
     });
   }, [history, historySearch]);
 
+  // Every entry except the oldest (last in DESC list) is squashable
+  const squashableIds = useMemo(() => {
+    if (!history || history.length < 2) return new Set<string>();
+    return new Set(history.slice(0, -1).map(r => r.id));
+  }, [history]);
+
+  const isOfficer = user?.isOfficer || user?.isAdmin || user?.isOwner;
+
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
   }, []);
@@ -138,7 +146,7 @@ export default function BankerDetailPage() {
                       </Text>
                     )}
                     {filteredHistory.slice(0, 10).map(record => (
-                      <BankHistoryEntry key={record.id} record={record} onSquash={(user?.isOfficer || user?.isAdmin || user?.isOwner) ? (id) => squashMutation.mutate(id) : undefined} />
+                      <BankHistoryEntry key={record.id} record={record} onSquash={isOfficer && squashableIds.has(record.id) ? (id) => squashMutation.mutate(id) : undefined} />
                     ))}
                     {filteredHistory.length > 10 && (
                       <Text variant="caption" className="text-center py-1.5 block">

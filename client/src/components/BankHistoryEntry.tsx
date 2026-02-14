@@ -57,7 +57,12 @@ export default function BankHistoryEntry({ record, showBanker, onSquash }: { rec
           <button
             className="shrink-0 bg-transparent border border-border rounded px-1 py-0.5 text-caption text-text-dim cursor-pointer hover:bg-surface-2 hover:text-text transition-colors duration-fast"
             title="Squash with previous import"
-            onClick={(e) => { e.stopPropagation(); onSquash(record.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm('Squash this import with the previous one? The two entries will be merged into a single net diff.')) {
+                onSquash(record.id);
+              }
+            }}
           >
             Squash
           </button>

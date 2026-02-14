@@ -110,6 +110,20 @@ export default function BankPage() {
     });
   }, [history, historySearch]);
 
+  // An entry is squashable if there's an older entry for the same banker
+  const squashableIds = useMemo(() => {
+    if (!history) return new Set<string>();
+    const seen = new Set<string>();
+    const ids = new Set<string>();
+    // history is sorted DESC (newest first) — walk backwards to find which have a predecessor
+    for (let i = history.length - 1; i >= 0; i--) {
+      const r = history[i];
+      if (seen.has(r.banker)) ids.add(r.id);
+      seen.add(r.banker);
+    }
+    return ids;
+  }, [history]);
+
   const uniqueBankers = useMemo(() => {
     if (!data) return 0;
     const bankers = new Set<string>();
@@ -294,7 +308,7 @@ export default function BankPage() {
                       </Text>
                     )}
                     {filteredHistory.slice(0, 10).map(record => (
-                      <BankHistoryEntry key={record.id} record={record} showBanker onSquash={isOfficer ? (id) => squashMutation.mutate(id) : undefined} />
+                      <BankHistoryEntry key={record.id} record={record} showBanker onSquash={isOfficer && squashableIds.has(record.id) ? (id) => squashMutation.mutate(id) : undefined} />
                     ))}
                     {filteredHistory.length > 10 && (
                       <Text variant="caption" className="text-center py-1.5 block">
