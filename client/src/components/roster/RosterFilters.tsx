@@ -7,12 +7,6 @@ import type { SizeMode } from '../../pages/RosterPage';
 
 /* ── ClassChart (Treemap) ────────────────────────────────── */
 
-const SIZE_MODE_OPTIONS: { value: SizeMode; label: string }[] = [
-  { value: 'count', label: 'Count' },
-  { value: 'earned', label: 'Earned DKP' },
-  { value: 'net', label: 'Net DKP' },
-];
-
 function formatValue(value: number, mode: SizeMode): string {
   if (mode === 'count') return String(value);
   const abs = Math.abs(value);
@@ -20,30 +14,31 @@ function formatValue(value: number, mode: SizeMode): string {
   return String(value);
 }
 
+const SUFFIX: Record<SizeMode, string> = {
+  count: 'characters',
+  earned: 'DKP earned',
+  spent: 'DKP spent',
+  net: 'DKP net',
+};
+
 function tooltipText(label: string, value: number, mode: SizeMode, maxLvl: number): string {
   if (mode === 'count') return `${label}: ${value} characters (${maxLvl} at 60)`;
-  const suffix = mode === 'earned' ? 'earned' : 'net';
-  return `${label}: ${value.toLocaleString()} DKP ${suffix}`;
+  return `${label}: ${value.toLocaleString()} ${SUFFIX[mode]}`;
 }
 
 interface ClassChartProps {
-  classCounts: Record<string, number>;
   classValues: Record<string, number>;
   sizeMode: SizeMode;
-  onSizeModeChange: (mode: SizeMode) => void;
   levelBreakdown: Record<string, { max: number; total: number }>;
   classFilter: string | null;
   onClassFilterChange: (value: string | null) => void;
   classAbbreviations?: Record<string, string>;
 }
 
-export function ClassChart({ classCounts, classValues, sizeMode, onSizeModeChange, levelBreakdown, classFilter, onClassFilterChange, classAbbreviations }: ClassChartProps) {
-  // Treemap layout uses classValues (sized by selected metric)
-  // but we need classCounts for the count display in non-count modes
+export function ClassChart({ classValues, sizeMode, levelBreakdown, classFilter, onClassFilterChange, classAbbreviations }: ClassChartProps) {
   const items = useMemo(() => {
     // For net DKP, values can be negative — clamp to 0 for layout
-    const entries = Object.entries(classValues);
-    return entries
+    return Object.entries(classValues)
       .map(([label, value]) => ({ label, value: Math.max(0, value) }))
       .filter(item => item.value > 0)
       .sort((a, b) => b.value - a.value);
@@ -55,51 +50,35 @@ export function ClassChart({ classCounts, classValues, sizeMode, onSizeModeChang
   );
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-end px-0.5">
-        <label className={cx(text({ variant: 'label' }), 'flex items-center gap-1')}>
-          <span className="text-text-dim">Size by</span>
-          <select
-            value={sizeMode}
-            onChange={e => onSizeModeChange(e.target.value as SizeMode)}
-            className="bg-surface-raised border border-border rounded text-caption text-text-primary py-0.5 px-1 cursor-pointer"
-          >
-            {SIZE_MODE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="relative w-full aspect-treemap overflow-hidden border border-border max-md:aspect-treemap-mobile" role="img" aria-label="Class composition">
-        {nodes.map((node) => {
-          const color = getClassColor(node.label);
-          const lb = levelBreakdown[node.label];
-          const maxLvl = lb ? lb.max : 0;
-          const isActive = classFilter === node.label;
-          const isDimmed = classFilter !== null && !isActive;
-          const displayValue = classValues[node.label] ?? 0;
+    <div className="relative w-full aspect-treemap overflow-hidden border border-border max-md:aspect-treemap-mobile" role="img" aria-label="Class composition">
+      {nodes.map((node) => {
+        const color = getClassColor(node.label);
+        const lb = levelBreakdown[node.label];
+        const maxLvl = lb ? lb.max : 0;
+        const isActive = classFilter === node.label;
+        const isDimmed = classFilter !== null && !isActive;
+        const displayValue = classValues[node.label] ?? 0;
 
-          return (
-            <button
-              key={node.label}
-              className={`treemap-cell${isActive ? ' active' : ''}${isDimmed ? ' dimmed' : ''}`}
-              style={{
-                left: `${(node.x / VW) * 100}%`,
-                top: `${(node.y / VH) * 100}%`,
-                width: `${(node.w / VW) * 100}%`,
-                height: `${(node.h / VH) * 100}%`,
-                '--cell-color': color,
-              } as React.CSSProperties}
-              onClick={() => onClassFilterChange(isActive ? null : node.label)}
-              title={tooltipText(node.label, displayValue, sizeMode, maxLvl)}
-            >
-              <span className="treemap-label">{getClassShort(node.label, classAbbreviations)}</span>
-              <span className="treemap-count">{formatValue(displayValue, sizeMode)}</span>
-            </button>
-          );
-        })}
-        <div className="treemap-texture" />
-      </div>
+        return (
+          <button
+            key={node.label}
+            className={`treemap-cell${isActive ? ' active' : ''}${isDimmed ? ' dimmed' : ''}`}
+            style={{
+              left: `${(node.x / VW) * 100}%`,
+              top: `${(node.y / VH) * 100}%`,
+              width: `${(node.w / VW) * 100}%`,
+              height: `${(node.h / VH) * 100}%`,
+              '--cell-color': color,
+            } as React.CSSProperties}
+            onClick={() => onClassFilterChange(isActive ? null : node.label)}
+            title={tooltipText(node.label, displayValue, sizeMode, maxLvl)}
+          >
+            <span className="treemap-label">{getClassShort(node.label, classAbbreviations)}</span>
+            <span className="treemap-count">{formatValue(displayValue, sizeMode)}</span>
+          </button>
+        );
+      })}
+      <div className="treemap-texture" />
     </div>
   );
 }

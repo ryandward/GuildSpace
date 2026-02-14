@@ -7,7 +7,7 @@ import MemberList from '../components/roster/RosterTable';
 import RosterFilterPanel from '../components/roster/RosterFilterPanel';
 import RosterHeader from '../components/roster/RosterHeader';
 import CollapsibleCard from '../components/CollapsibleCard';
-import { Badge, Text, Input } from '../ui';
+import { Badge, Text, Input, Select } from '../ui';
 import { text } from '../ui/recipes';
 import { getClassShort } from '../lib/classColors';
 
@@ -18,7 +18,14 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'inactive': 'Inactive 90d+',
 };
 
-export type SizeMode = 'count' | 'earned' | 'net';
+export type SizeMode = 'count' | 'earned' | 'spent' | 'net';
+
+const SIZE_MODE_OPTIONS: { value: SizeMode; label: string }[] = [
+  { value: 'count', label: 'Count' },
+  { value: 'earned', label: 'Earned DKP' },
+  { value: 'spent', label: 'Spent DKP' },
+  { value: 'net', label: 'Net DKP' },
+];
 
 export default function RosterPage() {
   const { data, isLoading, error } = useRosterQuery();
@@ -77,7 +84,10 @@ export default function RosterPage() {
     const values: Record<string, number> = {};
     for (const m of filteredPreClass) {
       if (!m.mainClass) continue;
-      const v = sizeMode === 'earned' ? m.earnedDkp : (m.earnedDkp - m.spentDkp);
+      let v: number;
+      if (sizeMode === 'earned') v = m.earnedDkp;
+      else if (sizeMode === 'spent') v = m.spentDkp;
+      else v = m.earnedDkp - m.spentDkp;
       values[m.mainClass] = (values[m.mainClass] || 0) + v;
     }
     return values;
@@ -120,19 +130,27 @@ export default function RosterPage() {
             <>
               {/* Treemap — redraws to reflect active filters */}
               <ClassChart
-                classCounts={classCounts}
                 classValues={classValues}
                 sizeMode={sizeMode}
-                onSizeModeChange={setSizeMode}
                 levelBreakdown={levelBreakdown}
                 classFilter={classFilter}
                 onClassFilterChange={setClassFilter}
                 classAbbreviations={data.classAbbreviations}
               />
 
-              {/* Filter strip — chips per active filter */}
+              {/* Filter strip — chips per active filter + size selector */}
               <div className="flex items-center gap-1 px-0.5 min-h-6 flex-wrap">
                 <Text variant="secondary" as="span" className="text-caption">Showing:</Text>
+                <Select
+                  size="sm"
+                  variant="surface"
+                  value={sizeMode}
+                  onChange={e => setSizeMode(e.target.value as SizeMode)}
+                >
+                  {SIZE_MODE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </Select>
                 {activeFilterCount === 0 && (
                   <Badge variant="filter">All</Badge>
                 )}
