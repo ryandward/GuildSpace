@@ -343,9 +343,7 @@ export function createWebServer(opts: WebServerOptions) {
       displayName: user.displayName,
       discordUsername: user.discordUsername,
       needsSetup: user.needsSetup || false,
-      isOfficer: gsUser?.hasOfficerAccess || false,
-      isAdmin: gsUser?.hasAdminAccess || false,
-      isOwner: gsUser?.isOwner || false,
+      ...GuildSpaceUser.roleFlags(gsUser),
       joinedAt: gsUser?.createdAt?.toISOString() || null,
     });
   });
@@ -540,9 +538,7 @@ export function createWebServer(opts: WebServerOptions) {
           earnedDkp: dkp ? Number(dkp.EarnedDkp) : 0,
           spentDkp: dkp ? Number(dkp.SpentDkp) : 0,
           hasGuildSpace: !!gsUser,
-          isOfficer: gsUser?.hasOfficerAccess || false,
-          isAdmin: gsUser?.hasAdminAccess || false,
-          isOwner: gsUser?.isOwner || false,
+          ...GuildSpaceUser.roleFlags(gsUser),
         };
       });
 
@@ -616,9 +612,7 @@ export function createWebServer(opts: WebServerOptions) {
         discordId,
         displayName,
         bio: gsUser?.bio || null,
-        isOfficer: gsUser?.hasOfficerAccess || false,
-        isAdmin: gsUser?.hasAdminAccess || false,
-        isOwner: gsUser?.isOwner || false,
+        ...GuildSpaceUser.roleFlags(gsUser),
         officerSince: gsUser?.officerSince?.toISOString() || null,
         adminSince: gsUser?.adminSince?.toISOString() || null,
         joinedAt: gsUser?.createdAt?.toISOString() || null,
@@ -988,6 +982,7 @@ export function createWebServer(opts: WebServerOptions) {
           callsPresent: data.callsPresent,
           totalDkp: data.totalDkp,
           hasGuildSpace: !!gsUser,
+          ...GuildSpaceUser.roleFlags(gsUser),
         };
       }).sort((a, b) => b.totalDkp - a.totalDkp);
 

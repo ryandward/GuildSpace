@@ -58,4 +58,13 @@ export class GuildSpaceUser {
   get hasAdminAccess(): boolean {
     return this.isAdmin || this.isOwner;
   }
+
+  /** Serializable role flags for API responses. Null-safe via static method. */
+  static roleFlags(user: GuildSpaceUser | null | undefined) {
+    return {
+      isOfficer: user?.hasOfficerAccess || false,
+      isAdmin: user?.hasAdminAccess || false,
+      isOwner: user?.isOwner || false,
+    };
+  }
 }

@@ -26,6 +26,9 @@ export interface EventMember {
   callsPresent: number[];
   totalDkp: number;
   hasGuildSpace: boolean;
+  isOfficer: boolean;
+  isAdmin: boolean;
+  isOwner: boolean;
 }
 
 export interface EventDetail {

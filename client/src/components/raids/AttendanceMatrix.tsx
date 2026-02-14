@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Text } from '../../ui';
+import { Badge, Text } from '../../ui';
 import type { CallDetail, EventMember } from '../../hooks/useEventDetailQuery';
 import { getClassColor } from '../../lib/classColors';
+import { highestRole, ROLE_COLOR, ROLE_LABEL } from '../../lib/roles';
 
 interface Props {
   calls: CallDetail[];
@@ -36,11 +37,15 @@ export default function AttendanceMatrix({ calls, members }: Props) {
               <td className="py-1 px-2 whitespace-nowrap">
                 <Link to={`/roster/${member.discordId}`} className="no-underline">
                   <span
-                    className="font-body text-caption font-medium hover:brightness-125 transition-[color,filter] duration-fast"
+                    className="font-body text-caption font-medium hover:brightness-125 transition-[color,filter] duration-fast inline-flex items-center gap-1"
                     style={member.mainClass ? { color: getClassColor(member.mainClass) } : undefined}
                   >
                     {member.displayName}
-                    {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent ml-1 align-middle" title="GuildSpace member" />}
+                    {member.hasGuildSpace && <span className="inline-block size-1 rounded-full bg-accent shrink-0" title="GuildSpace member" />}
+                    {(() => {
+                      const role = highestRole(member);
+                      return role ? <Badge variant="count" color={ROLE_COLOR[role]}>{ROLE_LABEL[role]}</Badge> : null;
+                    })()}
                   </span>
                 </Link>
               </td>
