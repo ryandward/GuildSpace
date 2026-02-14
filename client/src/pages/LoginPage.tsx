@@ -28,11 +28,10 @@ export default function LoginPage() {
       />
       <button
         onClick={enterDemo}
-        className="inline-flex items-center gap-1.5 font-body text-body font-medium text-white no-underline py-1.5 px-4 rounded-md transition-colors duration-fast bg-surface-2 hover:bg-surface-3 border-none cursor-pointer"
+        className="inline-flex items-center justify-center font-body text-body font-medium text-white py-1.5 px-4 rounded-md transition-colors duration-fast bg-surface-2 hover:bg-surface-3 border-none cursor-pointer w-30"
       >
         Look Around
       </button>
-      <Text variant="caption" className="text-text-dim/60">Browse a demo guild</Text>
     </div>
   );
 }
