@@ -10,21 +10,25 @@ interface Props {
 }
 
 export default function RangeSlider({ min, max, value, onChange, debounce = 150 }: Props) {
-  // Local state for smooth dragging — synced from parent when not dragging
+  // Local state drives the visual thumb position. Parent value only syncs in
+  // when the user is NOT dragging AND no debounce timer is pending.
   const [local, setLocal] = useState<[number, number]>(value);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragging = useRef(false);
 
-  // Sync from parent when not actively dragging
+  // Sync from parent only when idle (not dragging, no pending timer)
   useEffect(() => {
-    if (!dragging.current) setLocal(value);
+    if (!dragging.current && !timerRef.current) setLocal(value);
   }, [value]);
 
   const emit = useCallback(
     (next: [number, number]) => {
       setLocal(next);
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => onChange(next), debounce);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        onChange(next);
+      }, debounce);
     },
     [onChange, debounce],
   );
@@ -49,7 +53,15 @@ export default function RangeSlider({ min, max, value, onChange, debounce = 150 
   );
 
   const onDragStart = useCallback(() => { dragging.current = true; }, []);
-  const onDragEnd = useCallback(() => { dragging.current = false; }, []);
+  const onDragEnd = useCallback(() => {
+    dragging.current = false;
+    // Flush any pending debounce immediately on release
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      onChange(local);
+    }
+  }, [local, onChange]);
 
   const range = max - min || 1;
   const loPercent = ((local[0] - min) / range) * 100;
