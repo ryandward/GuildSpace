@@ -1,19 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Button, Badge, Text, Input, Select } from '../../ui';
 import { dropdown, dropdownItem } from '../../ui/recipes';
 import { useToonSearchQuery } from '../../hooks/useToonSearchQuery';
 import type { CallDetail } from '../../hooks/useEventDetailQuery';
 import type { RaidTemplate } from '../../hooks/useRaidTemplatesQuery';
 import { getClassColor } from '../../lib/classColors';
-
-export interface DragHandleProps {
-  draggable: true;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragEnd: () => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent) => void;
-}
 
 interface Props {
   call: CallDetail;
@@ -30,9 +24,7 @@ interface Props {
   onEditCall?: (callId: number, raidName: string, modifier: number) => void;
   isEditPending?: boolean;
   templates?: RaidTemplate[];
-  dragHandleProps?: DragHandleProps;
-  isDragOver?: boolean;
-  isDragging?: boolean;
+  sortable?: boolean;
 }
 
 export default function CallRow({
@@ -40,8 +32,12 @@ export default function CallRow({
   confirmDeleteId, onConfirmDelete, onDelete, isDeleting,
   onAddCharacter, onRemoveCharacter,
   onEditCall, isEditPending, templates,
-  dragHandleProps, isDragOver, isDragging,
+  sortable,
 }: Props) {
+  const {
+    attributes, listeners, setNodeRef,
+    transform, transition, isDragging,
+  } = useSortable({ id: call.id, disabled: !sortable });
   const [expanded, setExpanded] = useState(false);
   const [addName, setAddName] = useState('');
   const [debouncedName, setDebouncedName] = useState('');
@@ -99,18 +95,19 @@ export default function CallRow({
 
   return (
     <div
-      className={`border-t-2 transition-colors duration-fast${isDragOver ? ' border-accent' : ' border-transparent'}${isDragging ? ' opacity-40' : ''}`}
-      style={{ borderTopWidth: isDragOver ? 2 : undefined }}
-      onDragOver={dragHandleProps?.onDragOver}
-      onDrop={dragHandleProps?.onDrop}
+      ref={setNodeRef}
+      className={`border-t border-border${isDragging ? ' opacity-40 z-10' : ''}`}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition ?? undefined,
+      }}
     >
       <div className="w-full flex items-center gap-1 py-1 px-2 min-h-6">
-        {dragHandleProps && (
+        {sortable && (
           <span
-            draggable
-            onDragStart={dragHandleProps.onDragStart}
-            onDragEnd={dragHandleProps.onDragEnd}
-            className="cursor-grab active:cursor-grabbing text-text-dim text-caption select-none px-0.5 shrink-0"
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-text-dim text-caption select-none px-0.5 shrink-0 touch-none"
             title="Drag to reorder"
           >
             ⠿

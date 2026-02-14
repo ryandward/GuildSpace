@@ -1,5 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useAuth } from '../context/AuthContext';
 import { useEventDetailQuery } from '../hooks/useEventDetailQuery';
 import { useRaidTemplatesQuery } from '../hooks/useRaidTemplatesQuery';
@@ -29,20 +33,21 @@ export default function RaidEventPage() {
   const [lastResult, setLastResult] = useState<AddCallResult | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [dragId, setDragId] = useState<number | null>(null);
-  const [overId, setOverId] = useState<number | null>(null);
 
-  // Compute the visually reordered list during drag
-  const displayCalls = useMemo(() => {
-    if (!data || dragId === null || overId === null || dragId === overId) return data?.calls ?? [];
-    const calls = [...data.calls];
-    const fromIdx = calls.findIndex(c => c.id === dragId);
-    const toIdx = calls.findIndex(c => c.id === overId);
-    if (fromIdx === -1 || toIdx === -1) return data.calls;
-    const [moved] = calls.splice(fromIdx, 1);
-    calls.splice(toIdx, 0, moved);
-    return calls;
-  }, [data, dragId, overId]);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || !data || active.id === over.id) return;
+    const calls = data.calls;
+    const fromIdx = calls.findIndex(c => c.id === active.id);
+    const toIdx = calls.findIndex(c => c.id === over.id);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const reordered = [...calls];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    reorderCalls.mutate(reordered.map(c => c.id));
+  }, [data, reorderCalls]);
 
   const isOfficer = user?.isOfficer;
   const isActive = data?.event.status === 'active';
@@ -171,52 +176,35 @@ export default function RaidEventPage() {
                   </div>
                 )}
 
-                {displayCalls.map((call, idx) => (
-                  <CallRow
-                    key={call.id}
-                    call={call}
-                    index={idx + 1}
-                    isOfficer={!!isOfficer}
-                    isActive={isActive}
-                    confirmDeleteId={confirmDeleteId}
-                    onConfirmDelete={setConfirmDeleteId}
-                    onDelete={handleDeleteCall}
-                    isDeleting={deleteCall.isPending}
-                    eventId={Number(eventId)}
-                    onAddCharacter={(callId, name) => addCharacter.mutate({ callId, characterName: name })}
-                    onRemoveCharacter={(callId, name) => removeCharacter.mutate({ callId, characterName: name })}
-                    onEditCall={handleEditCall}
-                    isEditPending={editCall.isPending}
-                    templates={templates}
-                    isDragging={call.id === dragId}
-                    isDragOver={overId !== null && dragId !== null && overId !== dragId && call.id === overId}
-                    dragHandleProps={isOfficer && isActive ? {
-                      draggable: true,
-                      onDragStart: (e) => {
-                        setDragId(call.id);
-                        e.dataTransfer.effectAllowed = 'move';
-                      },
-                      onDragEnd: () => {
-                        // Commit the reorder
-                        if (dragId !== null && overId !== null && dragId !== overId) {
-                          reorderCalls.mutate(displayCalls.map(c => c.id));
-                        }
-                        setDragId(null);
-                        setOverId(null);
-                      },
-                      onDragOver: (e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        if (dragId !== null && call.id !== dragId) {
-                          setOverId(call.id);
-                        }
-                      },
-                      onDrop: (e) => {
-                        e.preventDefault();
-                      },
-                    } : undefined}
-                  />
-                ))}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToVerticalAxis]}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={data.calls.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                    {data.calls.map((call, idx) => (
+                      <CallRow
+                        key={call.id}
+                        call={call}
+                        index={idx + 1}
+                        isOfficer={!!isOfficer}
+                        isActive={isActive}
+                        confirmDeleteId={confirmDeleteId}
+                        onConfirmDelete={setConfirmDeleteId}
+                        onDelete={handleDeleteCall}
+                        isDeleting={deleteCall.isPending}
+                        eventId={Number(eventId)}
+                        onAddCharacter={(callId, name) => addCharacter.mutate({ callId, characterName: name })}
+                        onRemoveCharacter={(callId, name) => removeCharacter.mutate({ callId, characterName: name })}
+                        onEditCall={handleEditCall}
+                        isEditPending={editCall.isPending}
+                        templates={templates}
+                        sortable={!!isOfficer && isActive}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               </Card>
 
               {/* Attendance Matrix */}
