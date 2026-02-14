@@ -6,7 +6,6 @@ import { useBankImport } from '../hooks/useBankImport';
 import { useBankHistory } from '../hooks/useBankerHistory';
 import BankHistoryEntry from '../components/BankHistoryEntry';
 import BankerTreemap from '../components/bank/BankerTreemap';
-import CollapsibleCard from '../components/CollapsibleCard';
 import { Card, Input, Text, Badge, Button } from '../ui';
 import { text } from '../ui/recipes';
 
@@ -77,58 +76,12 @@ export default function BankPage() {
   const { data: history, isLoading: historyLoading } = useBankHistory();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
   const [bankerFilter, setBankerFilter] = useState<string | null>(null);
-  const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set(['inventory', 'activity-full']));
-  // Track whether inventory was auto-opened (by filter or search) so we can auto-close it
-  const [autoOpened, setAutoOpened] = useState(false);
-
-  const togglePanel = useCallback((id: string) => {
-    setCollapsedPanels(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    // If user manually toggles inventory, clear auto-opened tracking
-    if (id === 'inventory') setAutoOpened(false);
-  }, []);
 
   const handleBankerFilter = useCallback((banker: string | null) => {
     setBankerFilter(banker);
-    if (banker) {
-      // Auto-expand inventory when filtering
-      setCollapsedPanels(prev => {
-        if (!prev.has('inventory')) return prev;
-        const next = new Set(prev);
-        next.delete('inventory');
-        return next;
-      });
-      setAutoOpened(true);
-    } else if (autoOpened) {
-      // Re-collapse inventory when clearing filter (if it was auto-opened)
-      setCollapsedPanels(prev => {
-        if (prev.has('inventory')) return prev;
-        const next = new Set(prev);
-        next.add('inventory');
-        return next;
-      });
-      setAutoOpened(false);
-    }
-  }, [autoOpened]);
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearch(value);
-    // Auto-expand inventory when typing a search
-    if (value && collapsedPanels.has('inventory')) {
-      setCollapsedPanels(prev => {
-        const next = new Set(prev);
-        next.delete('inventory');
-        return next;
-      });
-      setAutoOpened(true);
-    }
-  }, [collapsedPanels]);
+  }, []);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -142,6 +95,18 @@ export default function BankPage() {
     }
     return result;
   }, [data, search, bankerFilter]);
+
+  const filteredHistory = useMemo(() => {
+    if (!history) return [];
+    if (!historySearch) return history;
+    const q = historySearch.toLowerCase();
+    return history.filter(record => {
+      const { added, removed, changed } = record.diff;
+      return [...added, ...removed, ...changed].some(
+        item => item.name.toLowerCase().includes(q)
+      );
+    });
+  }, [history, historySearch]);
 
   const uniqueBankers = useMemo(() => {
     if (!data) return 0;
@@ -160,7 +125,6 @@ export default function BankPage() {
       importMutation.mutate({ filename: file.name, content: reader.result as string });
     };
     reader.readAsText(file);
-    // Reset so the same file can be re-selected
     e.target.value = '';
   }, [importMutation]);
 
@@ -265,51 +229,15 @@ export default function BankPage() {
                 )}
               </div>
 
-              {/* Activity — recent imports, open by default */}
-              <CollapsibleCard
-                id="activity"
-                title="ACTIVITY"
-                count={history?.length}
-                collapsedPanels={collapsedPanels}
-                onToggle={togglePanel}
-              >
-                <div className="border-t border-border">
-                  {historyLoading && (
-                    <Text variant="caption" className="text-center py-4 block">Loading...</Text>
-                  )}
-                  {!historyLoading && (!history || history.length === 0) && (
-                    <Text variant="caption" className="text-center py-4 block">No transactions yet</Text>
-                  )}
-                  {history?.slice(0, 5).map(record => (
-                    <BankHistoryEntry key={record.id} record={record} showBanker />
-                  ))}
-                  {history && history.length > 5 && collapsedPanels.has('activity-full') && (
-                    <button
-                      className="w-full py-1.5 px-2 bg-transparent border-none border-t border-border cursor-pointer text-text-dim text-caption hover:text-accent transition-colors duration-fast"
-                      onClick={() => togglePanel('activity-full')}
-                    >
-                      Show all {history.length} entries
-                    </button>
-                  )}
-                  {history && history.length > 5 && !collapsedPanels.has('activity-full') && (
-                    <>
-                      {history.slice(5).map(record => (
-                        <BankHistoryEntry key={record.id} record={record} showBanker />
-                      ))}
-                    </>
-                  )}
-                </div>
-              </CollapsibleCard>
-
-              {/* Inventory — collapsed by default, auto-expands on search/filter */}
-              <CollapsibleCard
-                id="inventory"
-                title={bankerFilter ? bankerFilter.toUpperCase() : 'INVENTORY'}
-                count={filtered.length}
-                collapsedPanels={collapsedPanels}
-                onToggle={togglePanel}
-              >
-                <div className="border-t border-border">
+              {/* Side-by-side: Inventory + Activity */}
+              <div className="flex gap-2 max-md:flex-col">
+                {/* Inventory */}
+                <Card className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
+                    <span className={text({ variant: 'overline' })}>
+                      {bankerFilter ? bankerFilter.toUpperCase() : 'INVENTORY'}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1 py-1 px-2 border-b border-border">
                     <Input
                       variant="transparent"
@@ -317,12 +245,12 @@ export default function BankPage() {
                       type="text"
                       placeholder="Search items..."
                       value={search}
-                      onChange={handleSearchChange}
+                      onChange={(e) => setSearch(e.target.value)}
                       className="w-full"
                     />
                   </div>
                   <div>
-                    {filtered.map(item => (
+                    {filtered.slice(0, 10).map(item => (
                       <BankItemRow key={item.name} item={item} />
                     ))}
                     {filtered.length === 0 && (
@@ -330,9 +258,50 @@ export default function BankPage() {
                         No items match your search
                       </Text>
                     )}
+                    {filtered.length > 10 && (
+                      <Text variant="caption" className="text-center py-1.5 block">
+                        Showing 10 of {filtered.length}
+                      </Text>
+                    )}
                   </div>
-                </div>
-              </CollapsibleCard>
+                </Card>
+
+                {/* Activity */}
+                <Card className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
+                    <span className={text({ variant: 'overline' })}>ACTIVITY</span>
+                  </div>
+                  <div className="flex items-center gap-1 py-1 px-2 border-b border-border">
+                    <Input
+                      variant="transparent"
+                      size="sm"
+                      type="text"
+                      placeholder="Search history..."
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    {historyLoading && (
+                      <Text variant="caption" className="text-center py-4 block">Loading...</Text>
+                    )}
+                    {!historyLoading && filteredHistory.length === 0 && (
+                      <Text variant="caption" className="text-center py-4 block">
+                        {!history || history.length === 0 ? 'No activity yet' : 'No matches'}
+                      </Text>
+                    )}
+                    {filteredHistory.slice(0, 10).map(record => (
+                      <BankHistoryEntry key={record.id} record={record} showBanker />
+                    ))}
+                    {filteredHistory.length > 10 && (
+                      <Text variant="caption" className="text-center py-1.5 block">
+                        Showing 10 of {filteredHistory.length}
+                      </Text>
+                    )}
+                  </div>
+                </Card>
+              </div>
             </>
           )}
         </div>

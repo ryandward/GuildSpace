@@ -27,34 +27,29 @@ export default function BankHistoryEntry({ record, showBanker }: { record: BankI
         <div className="flex-1 min-w-0">
           <div className="text-text font-body text-caption truncate">
             <span className="font-semibold">{record.uploadedByName}</span>
-            {' imported '}
-            <span className="font-semibold">{record.itemCount}</span>
-            {' items'}
-            {showBanker && (
+            {' updated '}
+            {showBanker ? (
+              <Link
+                to={`/bank/${encodeURIComponent(record.banker)}`}
+                className="no-underline font-semibold text-text-secondary hover:text-accent transition-colors duration-fast"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {record.banker}
+              </Link>
+            ) : (
+              <span className="font-semibold">{record.banker}</span>
+            )}
+            {hasChanges && (
               <>
-                {' for '}
-                <Link
-                  to={`/bank/${encodeURIComponent(record.banker)}`}
-                  className="no-underline font-semibold text-text-secondary hover:text-accent transition-colors duration-fast"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {record.banker}
-                </Link>
+                {' '}
+                {added.length > 0 && <span className="text-green font-semibold">[+{added.length}]</span>}
+                {removed.length > 0 && <span className="text-red font-semibold">[-{removed.length}]</span>}
+                {changed.length > 0 && <span className="text-text-dim font-semibold">[{changed.length}]</span>}
               </>
             )}
+            {!hasChanges && <span className={text({ variant: 'caption' })}> (no changes)</span>}
           </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className={text({ variant: 'caption' })}>{timeAgo(record.createdAt)}</span>
-            {hasChanges && (
-              <span className={text({ variant: 'caption' })}>
-                {added.length > 0 && <span className="text-green">+{added.length}</span>}
-                {added.length > 0 && (removed.length > 0 || changed.length > 0) && ' '}
-                {removed.length > 0 && <span className="text-red">-{removed.length}</span>}
-                {removed.length > 0 && changed.length > 0 && ' '}
-                {changed.length > 0 && <span className="text-accent">{changed.length} changed</span>}
-              </span>
-            )}
-          </div>
+          <span className={text({ variant: 'caption' })}>{timeAgo(record.createdAt)}</span>
         </div>
       </button>
       {hasChanges && (

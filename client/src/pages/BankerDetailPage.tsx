@@ -11,6 +11,7 @@ export default function BankerDetailPage() {
   const { data, isLoading, error } = useBankQuery();
   const { data: history, isLoading: historyLoading } = useBankerHistory(banker);
   const [search, setSearch] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
 
   const bankerItems = useMemo(() => {
     if (!data || !banker) return [];
@@ -28,6 +29,18 @@ export default function BankerDetailPage() {
     const q = search.toLowerCase();
     return bankerItems.filter(item => item.name.toLowerCase().includes(q));
   }, [bankerItems, search]);
+
+  const filteredHistory = useMemo(() => {
+    if (!history) return [];
+    if (!historySearch) return history;
+    const q = historySearch.toLowerCase();
+    return history.filter(record => {
+      const { added, removed, changed } = record.diff;
+      return [...added, ...removed, ...changed].some(
+        item => item.name.toLowerCase().includes(q)
+      );
+    });
+  }, [history, historySearch]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -51,8 +64,11 @@ export default function BankerDetailPage() {
               </div>
 
               <div className="flex gap-2 max-md:flex-col">
-                {/* Item list — takes 2/3 on desktop */}
-                <Card className="flex-[2] min-w-0">
+                {/* Inventory */}
+                <Card className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
+                    <span className={text({ variant: 'overline' })}>INVENTORY</span>
+                  </div>
                   <div className="flex items-center gap-1 py-1 px-2 border-b border-border">
                     <Input
                       variant="transparent"
@@ -66,7 +82,7 @@ export default function BankerDetailPage() {
                     />
                   </div>
                   <div>
-                    {filtered.map(item => (
+                    {filtered.slice(0, 10).map(item => (
                       <div key={item.name} className="border-b border-border last:border-b-0 flex items-center gap-2 py-1.5 px-2">
                         <span className="text-text font-body text-caption font-semibold flex-1 min-w-0 truncate">
                           {item.name}
@@ -84,24 +100,47 @@ export default function BankerDetailPage() {
                         {bankerItems.length === 0 ? 'No items found for this banker' : 'No items match your search'}
                       </Text>
                     )}
+                    {filtered.length > 10 && (
+                      <Text variant="caption" className="text-center py-1.5 block">
+                        Showing 10 of {filtered.length}
+                      </Text>
+                    )}
                   </div>
                 </Card>
 
-                {/* Transaction history — takes 1/3 on desktop */}
-                <Card className="flex-1 min-w-0 self-start">
+                {/* Activity */}
+                <Card className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
-                    <span className={text({ variant: 'overline' })}>TRANSACTION HISTORY</span>
+                    <span className={text({ variant: 'overline' })}>ACTIVITY</span>
+                  </div>
+                  <div className="flex items-center gap-1 py-1 px-2 border-b border-border">
+                    <Input
+                      variant="transparent"
+                      size="sm"
+                      type="text"
+                      placeholder="Search history..."
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      className="w-full"
+                    />
                   </div>
                   <div>
                     {historyLoading && (
                       <Text variant="caption" className="text-center py-4 block">Loading...</Text>
                     )}
-                    {!historyLoading && (!history || history.length === 0) && (
-                      <Text variant="caption" className="text-center py-4 block">No imports yet</Text>
+                    {!historyLoading && filteredHistory.length === 0 && (
+                      <Text variant="caption" className="text-center py-4 block">
+                        {!history || history.length === 0 ? 'No activity yet' : 'No matches'}
+                      </Text>
                     )}
-                    {history?.map(record => (
+                    {filteredHistory.slice(0, 10).map(record => (
                       <BankHistoryEntry key={record.id} record={record} />
                     ))}
+                    {filteredHistory.length > 10 && (
+                      <Text variant="caption" className="text-center py-1.5 block">
+                        Showing 10 of {filteredHistory.length}
+                      </Text>
+                    )}
                   </div>
                 </Card>
               </div>
