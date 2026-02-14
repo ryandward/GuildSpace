@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEventDetailQuery } from '../hooks/useEventDetailQuery';
@@ -29,8 +29,20 @@ export default function RaidEventPage() {
   const [lastResult, setLastResult] = useState<AddCallResult | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [overId, setOverId] = useState<number | null>(null);
+
+  // Compute the visually reordered list during drag
+  const displayCalls = useMemo(() => {
+    if (!data || dragId === null || overId === null || dragId === overId) return data?.calls ?? [];
+    const calls = [...data.calls];
+    const fromIdx = calls.findIndex(c => c.id === dragId);
+    const toIdx = calls.findIndex(c => c.id === overId);
+    if (fromIdx === -1 || toIdx === -1) return data.calls;
+    const [moved] = calls.splice(fromIdx, 1);
+    calls.splice(toIdx, 0, moved);
+    return calls;
+  }, [data, dragId, overId]);
 
   const isOfficer = user?.isOfficer;
   const isActive = data?.event.status === 'active';
@@ -159,7 +171,7 @@ export default function RaidEventPage() {
                   </div>
                 )}
 
-                {data.calls.map((call, idx) => (
+                {displayCalls.map((call, idx) => (
                   <CallRow
                     key={call.id}
                     call={call}
@@ -176,34 +188,31 @@ export default function RaidEventPage() {
                     onEditCall={handleEditCall}
                     isEditPending={editCall.isPending}
                     templates={templates}
-                    isDragOver={overIdx === idx}
+                    isDragging={call.id === dragId}
+                    isDragOver={overId !== null && dragId !== null && overId !== dragId && call.id === overId}
                     dragHandleProps={isOfficer && isActive ? {
                       draggable: true,
                       onDragStart: (e) => {
-                        setDragIdx(idx);
+                        setDragId(call.id);
                         e.dataTransfer.effectAllowed = 'move';
                       },
                       onDragEnd: () => {
-                        setDragIdx(null);
-                        setOverIdx(null);
+                        // Commit the reorder
+                        if (dragId !== null && overId !== null && dragId !== overId) {
+                          reorderCalls.mutate(displayCalls.map(c => c.id));
+                        }
+                        setDragId(null);
+                        setOverId(null);
                       },
                       onDragOver: (e) => {
                         e.preventDefault();
                         e.dataTransfer.dropEffect = 'move';
-                        if (dragIdx !== null && dragIdx !== idx) {
-                          setOverIdx(idx);
+                        if (dragId !== null && call.id !== dragId) {
+                          setOverId(call.id);
                         }
                       },
                       onDrop: (e) => {
                         e.preventDefault();
-                        if (dragIdx !== null && dragIdx !== idx) {
-                          const calls = [...data.calls];
-                          const [moved] = calls.splice(dragIdx, 1);
-                          calls.splice(idx, 0, moved);
-                          reorderCalls.mutate(calls.map(c => c.id));
-                        }
-                        setDragIdx(null);
-                        setOverIdx(null);
                       },
                     } : undefined}
                   />

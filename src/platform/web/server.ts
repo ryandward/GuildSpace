@@ -1098,6 +1098,41 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  app.patch('/api/raids/events/:id/calls/reorder', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (!event) return res.status(404).json({ error: 'Event not found' });
+      if (event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
+
+      const { callIds } = req.body as { callIds: number[] };
+      if (!Array.isArray(callIds) || callIds.length === 0) {
+        return res.status(400).json({ error: 'callIds must be a non-empty array' });
+      }
+
+      // Validate all IDs belong to this event
+      const calls = await AppDataSource.manager.find(RaidCall, { where: { eventId } });
+      const callIdSet = new Set(calls.map(c => c.id));
+      for (const id of callIds) {
+        if (!callIdSet.has(id)) {
+          return res.status(400).json({ error: `Call ${id} does not belong to this event` });
+        }
+      }
+
+      // Update sort_order for each call
+      for (let i = 0; i < callIds.length; i++) {
+        await AppDataSource.manager.update(RaidCall, callIds[i], { sortOrder: i + 1 });
+      }
+
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to reorder calls:', err);
+      res.status(500).json({ error: 'Failed to reorder calls' });
+    }
+  });
+
   app.patch('/api/raids/events/:id/calls/:callId', async (req, res) => {
     const officer = await requireOfficer(req, res);
     if (!officer) return;
@@ -1168,41 +1203,6 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err) {
       console.error('Failed to edit raid call:', err);
       res.status(500).json({ error: 'Failed to edit call' });
-    }
-  });
-
-  app.patch('/api/raids/events/:id/calls/reorder', async (req, res) => {
-    const officer = await requireOfficer(req, res);
-    if (!officer) return;
-    try {
-      const eventId = parseInt(req.params.id, 10);
-      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
-      if (!event) return res.status(404).json({ error: 'Event not found' });
-      if (event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
-
-      const { callIds } = req.body as { callIds: number[] };
-      if (!Array.isArray(callIds) || callIds.length === 0) {
-        return res.status(400).json({ error: 'callIds must be a non-empty array' });
-      }
-
-      // Validate all IDs belong to this event
-      const calls = await AppDataSource.manager.find(RaidCall, { where: { eventId } });
-      const callIdSet = new Set(calls.map(c => c.id));
-      for (const id of callIds) {
-        if (!callIdSet.has(id)) {
-          return res.status(400).json({ error: `Call ${id} does not belong to this event` });
-        }
-      }
-
-      // Update sort_order for each call
-      for (let i = 0; i < callIds.length; i++) {
-        await AppDataSource.manager.update(RaidCall, callIds[i], { sortOrder: i + 1 });
-      }
-
-      res.json({ ok: true });
-    } catch (err) {
-      console.error('Failed to reorder calls:', err);
-      res.status(500).json({ error: 'Failed to reorder calls' });
     }
   });
 

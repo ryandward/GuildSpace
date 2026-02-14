@@ -32,6 +32,7 @@ interface Props {
   templates?: RaidTemplate[];
   dragHandleProps?: DragHandleProps;
   isDragOver?: boolean;
+  isDragging?: boolean;
 }
 
 export default function CallRow({
@@ -39,7 +40,7 @@ export default function CallRow({
   confirmDeleteId, onConfirmDelete, onDelete, isDeleting,
   onAddCharacter, onRemoveCharacter,
   onEditCall, isEditPending, templates,
-  dragHandleProps, isDragOver,
+  dragHandleProps, isDragOver, isDragging,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [addName, setAddName] = useState('');
@@ -98,7 +99,8 @@ export default function CallRow({
 
   return (
     <div
-      className={`border-t border-border${isDragOver ? ' bg-surface-2' : ''}`}
+      className={`border-t-2 transition-colors duration-fast${isDragOver ? ' border-accent' : ' border-transparent'}${isDragging ? ' opacity-40' : ''}`}
+      style={{ borderTopWidth: isDragOver ? 2 : undefined }}
       onDragOver={dragHandleProps?.onDragOver}
       onDrop={dragHandleProps?.onDrop}
     >
