@@ -9,7 +9,7 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="grid grid-cols-[auto_1fr_auto] items-center min-h-7 bg-bg border-b border-border px-3">
+      <header className="grid grid-cols-[auto_1fr_auto] items-center min-h-7 bg-bg-deep border-b border-border px-3">
         <h1 className="flex items-center font-display text-subheading font-bold text-accent tracking-wide">GuildSpace</h1>
         <nav className="flex justify-center gap-1 max-md:hidden">
           <NavLink

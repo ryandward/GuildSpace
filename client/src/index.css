@@ -61,6 +61,7 @@
      COLORS — OKLCH with perceptually uniform elevation
      ═══════════════════════════════════════════════════════ */
 
+  --color-bg-deep:   oklch(calc(var(--lum-bg) - 2 * var(--lum-step)) var(--surface-chroma) var(--surface-hue));
   --color-bg:        oklch(var(--lum-bg) var(--surface-chroma) var(--surface-hue));
   --color-surface:   oklch(calc(var(--lum-bg) + var(--lum-step)) var(--surface-chroma) var(--surface-hue));
   --color-surface-2: oklch(calc(var(--lum-bg) + 2 * var(--lum-step)) var(--surface-chroma) var(--surface-hue));
