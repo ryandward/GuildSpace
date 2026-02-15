@@ -51,21 +51,25 @@ export default function AppHeader() {
         </nav>
         <div className="md:hidden" />
         <div className="flex items-center gap-2">
-          {!isDemo && (
-            <div className="flex items-center gap-2 text-caption text-text-dim max-md:hidden">
-              {totalMembers > 0 && (
+          {!isDemo && totalMembers > 0 && (
+            <>
+              {/* Desktop: verbose */}
+              <div className="flex items-center gap-2 text-caption text-text-dim max-md:hidden">
                 <span>{totalMembers} Members</span>
-              )}
-              {totalMembers > 0 && onlineCount > 0 && (
-                <span className="text-border">·</span>
-              )}
-              {onlineCount > 0 && (
-                <span className="flex items-center gap-1">
-                  <span className="w-1 h-1 rounded-full bg-green inline-block" />
-                  {onlineCount} Online
-                </span>
-              )}
-            </div>
+                {onlineCount > 0 && <span className="text-border">&middot;</span>}
+                {onlineCount > 0 && (
+                  <span className="flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-green inline-block" />
+                    {onlineCount} Online
+                  </span>
+                )}
+              </div>
+              {/* Mobile: compact */}
+              <span className="flex items-center gap-1 text-caption text-text-dim md:hidden">
+                <span className="w-1 h-1 rounded-full bg-green inline-block" />
+                {onlineCount}/{totalMembers}
+              </span>
+            </>
           )}
           {!isDemo && (
             <Button intent="ghost" size="sm" onClick={showHelp} title="Show available commands" className="max-md:hidden">

@@ -32,7 +32,7 @@ export default function AppShell() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="max-w-terminal mx-auto w-full flex-1 flex flex-col overflow-hidden chat-bg border-x border-border max-md:border-x-0 max-md:pb-14">
+      <div className="max-w-terminal mx-auto w-full flex-1 flex flex-col overflow-hidden chat-bg border-x border-border max-md:border-x-0 max-md:pb-7">
         <ChannelStripMobile />
         <MessageList classMap={classMap} />
         <div className="px-2 pb-2 pt-1">
