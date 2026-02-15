@@ -557,7 +557,6 @@ export function getDemoResponse(url: string, method: string): unknown | null {
       name: c.name,
       class: c.class,
       totalDkp: Math.round(m.earnedDkp * raidCounts[i] / totalRaids),
-      spentDkp: Math.round(m.spentDkp * raidCounts[i] / totalRaids),
       raidCount: raidCounts[i],
     }));
 
