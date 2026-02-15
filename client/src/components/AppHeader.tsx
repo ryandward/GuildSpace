@@ -52,7 +52,7 @@ export default function AppHeader() {
         <div className="md:hidden" />
         <div className="flex items-center gap-2">
           {!isDemo && (
-            <div className="flex items-center gap-2 text-caption text-text-dim lg:hidden">
+            <div className="flex items-center gap-2 text-caption text-text-dim max-md:hidden">
               {totalMembers > 0 && (
                 <span>{totalMembers} Members</span>
               )}

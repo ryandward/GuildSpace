@@ -60,7 +60,7 @@ export default function UserMenu() {
     <div className="relative" ref={menuRef}>
       <Button intent="ghost" size="sm" className="gap-1" onClick={() => setOpen(o => !o)}>
         <StatusDot status={connStatus} size="sm" />
-        <span className={text({ variant: 'secondary' })}>{user.displayName || user.username}</span>
+        <span className={text({ variant: 'secondary' }) + ' max-md:hidden'}>{user.displayName || user.username}</span>
       </Button>
       {open && (
         <div className={dropdown({ position: 'below-right' })}>
