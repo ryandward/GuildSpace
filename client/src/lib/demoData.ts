@@ -553,17 +553,12 @@ export function getDemoResponse(url: string, method: string): unknown | null {
       c.status === 'Main' ? randInt(20, 50) : randInt(2, 15)
     );
     const totalRaids = raidCounts.reduce((s, r) => s + r, 0);
-    const dkpByCharacter = m.characters.map((c, i) => {
-      const earned = Math.round(m.earnedDkp * raidCounts[i] / totalRaids);
-      const spent = Math.round(m.spentDkp * raidCounts[i] / totalRaids);
-      return {
-        name: c.name,
-        class: c.class,
-        earnedDkp: earned,
-        spentDkp: spent,
-        raidCount: raidCounts[i],
-      };
-    });
+    const dkpByCharacter = m.characters.map((c, i) => ({
+      name: c.name,
+      class: c.class,
+      totalDkp: Math.round(m.earnedDkp * raidCounts[i] / totalRaids),
+      raidCount: raidCounts[i],
+    }));
 
     return {
       discordId: m.discordId,

@@ -5,8 +5,7 @@ import { authFetch } from '../lib/api';
 export interface CharacterDkp {
   name: string;
   class: string;
-  earnedDkp: number;
-  spentDkp: number;
+  totalDkp: number;
   raidCount: number;
 }
 
