@@ -632,7 +632,7 @@ export function createWebServer(opts: WebServerOptions) {
     const { discordId } = req.params;
 
     try {
-      const [toons, dkpRow, gsUser, dkpByCharRows] = await Promise.all([
+      const [toons, dkpRow, gsUser, dkpByCharRows, spentByCharRows] = await Promise.all([
         AppDataSource.manager.find(ActiveToons, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } }),
@@ -646,6 +646,13 @@ export function createWebServer(opts: WebServerOptions) {
           .groupBy('a.Name')
           .orderBy('MAX(a.Date)', 'DESC', 'NULLS LAST')
           .getRawMany<{ name: string; total_dkp: string; raid_count: string; last_raid: string | null }>(),
+        AppDataSource.getRepository(Items)
+          .createQueryBuilder('i')
+          .select('i.Name', 'name')
+          .addSelect('COALESCE(SUM(i.DkpSpent), 0)', 'spent')
+          .where('i.DiscordId = :discordId', { discordId })
+          .groupBy('i.Name')
+          .getRawMany<{ name: string; spent: string }>(),
       ]);
 
       if (toons.length === 0) {
@@ -665,12 +672,14 @@ export function createWebServer(opts: WebServerOptions) {
 
       // Per-character DKP breakdown — only include active characters
       const charClassMap = new Map(toons.map(c => [c.Name, c.CharacterClass]));
+      const spentMap = new Map(spentByCharRows.map(r => [r.name, Number(r.spent)]));
       const dkpByCharacter = dkpByCharRows
         .filter(r => charClassMap.has(r.name) && Number(r.total_dkp) > 0)
         .map(r => ({
           name: r.name,
           class: charClassMap.get(r.name)!,
           totalDkp: Number(r.total_dkp),
+          spentDkp: spentMap.get(r.name) || 0,
           raidCount: Number(r.raid_count),
         }));
 

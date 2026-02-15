@@ -6,6 +6,7 @@ export interface CharacterDkp {
   name: string;
   class: string;
   totalDkp: number;
+  spentDkp: number;
   raidCount: number;
 }
 

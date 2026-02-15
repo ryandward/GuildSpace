@@ -61,7 +61,7 @@ export default function MemberDetailPage() {
   const netDkp = data ? data.earnedDkp - data.spentDkp : 0;
   const maxDkp = useMemo(() => {
     if (!data?.dkpByCharacter.length) return 1;
-    return Math.max(...data.dkpByCharacter.map(c => c.totalDkp), 1);
+    return Math.max(...data.dkpByCharacter.flatMap(c => [c.totalDkp, c.spentDkp]), 1);
   }, [data]);
 
   return (
@@ -263,7 +263,7 @@ export default function MemberDetailPage() {
               {/* DKP by Character — horizontal bar chart */}
               {data.dkpByCharacter.length > 0 && (
                 <>
-                  <Text variant="overline" className="mt-1">DKP Earned by Character</Text>
+                  <Text variant="overline" className="mt-1">DKP by Character</Text>
                   <Card className="p-2 flex flex-col gap-1.5">
                     {data.dkpByCharacter.map(c => (
                       <div key={c.name} className="flex flex-col gap-0.5">
@@ -274,7 +274,10 @@ export default function MemberDetailPage() {
                             <Text variant="label" className="truncate shrink-0">{c.class}</Text>
                           </div>
                           <div className="flex items-baseline gap-1.5 shrink-0">
-                            <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{c.totalDkp}</span>
+                            <span className={cx(text({ variant: 'mono' }), 'font-bold text-green')}>{c.totalDkp}</span>
+                            {c.spentDkp > 0 && (
+                              <span className={cx(text({ variant: 'mono' }), 'font-bold text-red')}>{c.spentDkp}</span>
+                            )}
                             <Text variant="caption">{c.raidCount} calls</Text>
                           </div>
                         </div>
@@ -284,6 +287,14 @@ export default function MemberDetailPage() {
                             style={{ width: `${(c.totalDkp / maxDkp) * 100}%` }}
                           />
                         </div>
+                        {c.spentDkp > 0 && (
+                          <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-red transition-[width] duration-slow"
+                              style={{ width: `${(c.spentDkp / maxDkp) * 100}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </Card>
