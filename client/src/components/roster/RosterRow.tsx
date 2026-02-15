@@ -7,8 +7,8 @@ import { timeAgo } from '../../utils/timeAgo';
 import MemberName from '../MemberName';
 
 // Desktop: name(1fr) | class(120) | lvl(32) | DKP(56) | lastRaid(72) | arrow(48)
-// Mobile:  name(1fr) | class(80)  | lvl(32) | DKP(48) | arrow(48)
-export const ROW_GRID = 'grid grid-cols-[minmax(0,1fr)_120px_32px_56px_72px_48px] max-md:grid-cols-[minmax(0,1fr)_80px_32px_48px_48px] items-center gap-x-1.5';
+// Mobile:  name(1fr) | lvl(32) | DKP(48) | arrow(48)
+export const ROW_GRID = 'grid grid-cols-[minmax(0,1fr)_120px_32px_56px_72px_48px] max-md:grid-cols-[minmax(0,1fr)_32px_48px_48px] items-center gap-x-1.5';
 
 export interface RosterCharacter {
   name: string;
@@ -93,7 +93,7 @@ export default function RosterRow({ member, classFilter, classAbbreviations, onl
           hasGuildSpace={member.hasGuildSpace}
           isOnline={isOnline}
         />
-        <Text variant="label" className="truncate">{featured ? getClassShort(featured.class, classAbbreviations) : ''}</Text>
+        <Text variant="label" className="truncate max-md:hidden">{featured ? getClassShort(featured.class, classAbbreviations) : ''}</Text>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-text-dim text-center')}>{featured?.level}</span>
         <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-right')}>{dkp}</span>
         <span className={cx(text({ variant: 'mono' }), 'text-text-dim text-right max-md:hidden')}>{lastRaid ? timeAgo(lastRaid) : '--'}</span>

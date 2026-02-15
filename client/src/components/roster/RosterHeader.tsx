@@ -24,7 +24,7 @@ export default function RosterHeader({ sortField, sortDirection, onSort }: Props
         Name<SortArrow field="name" current={sortField} direction={sortDirection} />
       </button>
       {/* Class — not sortable */}
-      <span className={text({ variant: 'overline' })}>Class</span>
+      <span className={cx(text({ variant: 'overline' }), 'max-md:hidden')}>Class</span>
       {/* Level */}
       <button className={cx(headerBtn, text({ variant: 'overline' }), 'text-center')} onClick={() => onSort('level')}>
         Lv<SortArrow field="level" current={sortField} direction={sortDirection} />

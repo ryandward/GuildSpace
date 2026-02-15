@@ -54,7 +54,7 @@ export default function BottomTabs() {
   const visibleTabs = isDemo ? tabs.filter(t => t.to !== '/chat') : tabs;
 
   return (
-    <nav ref={navRef} className="fixed bottom-0 inset-x-0 z-dropdown bg-surface border-t border-border flex md:hidden relative">
+    <nav ref={navRef} className="fixed bottom-0 inset-x-0 z-dropdown bg-surface border-t border-border flex md:hidden relative pb-safe">
       {visibleTabs.map(({ to, label, icon }) => (
         <NavLink
           key={to}
