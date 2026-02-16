@@ -269,7 +269,6 @@ export default function MemberDetailPage() {
                       <div key={c.name} className="flex flex-col gap-0.5">
                         <div className="flex items-baseline justify-between gap-2">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className={`w-0.5 h-2 rounded-full shrink-0 ${classToPip(c.class)}`} />
                             <Text variant="body" className="font-semibold truncate">{c.name}</Text>
                             <Text variant="label" className="truncate shrink-0">{c.class}</Text>
                           </div>
