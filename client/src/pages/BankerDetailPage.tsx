@@ -102,7 +102,7 @@ export default function BankerDetailPage() {
                       <div key={item.name} className="border-b border-border last:border-b-0 flex items-center gap-2 py-1.5 px-2">
                         <ItemIcon iconId={item.iconId} />
                         <ItemTooltip name={item.name} iconId={item.iconId} statsblock={item.statsblock}>
-                          <span className="text-text font-body text-caption font-semibold flex-1 min-w-0 truncate">
+                          <span className="text-text font-body text-caption font-semibold">
                             {item.name}
                           </span>
                         </ItemTooltip>

@@ -40,7 +40,7 @@ function BankItemRow({ item }: { item: BankItem }) {
         </span>
         <ItemIcon iconId={item.iconId} />
         <ItemTooltip name={item.name} iconId={item.iconId} statsblock={item.statsblock}>
-          <span className="text-text font-body text-caption font-semibold flex-1 min-w-0 truncate">
+          <span className="text-text font-body text-caption font-semibold">
             {item.name}
           </span>
         </ItemTooltip>

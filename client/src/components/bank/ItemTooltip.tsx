@@ -37,7 +37,7 @@ export default function ItemTooltip({ name, iconId, statsblock, children }: Item
         ref={triggerRef}
         onMouseEnter={show}
         onMouseLeave={hide}
-        className="contents"
+        className="flex-1 min-w-0 truncate"
       >
         {children}
       </span>
