@@ -37,126 +37,27 @@ import { BankImport } from '../../entities/BankImport.js';
 import { Trash } from '../../entities/Trash.js';
 import { Classes } from '../../entities/Classes.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
-import type {
-  PlatformCommand,
-  CommandInteraction,
-  AutocompleteInteraction,
-  ModalSubmitInteraction,
-  ComponentInteraction,
-  ReplyOptions,
-  InteractionOptions,
-  InteractionUser,
-  ResolvedOption,
-  ModalDefinition,
-  Embed,
-  ActionRow,
-} from '../types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ─── Interaction Implementations ─────────────────────────────────────────────
-
-class WebInteractionOptions implements InteractionOptions {
-  private opts: Map<string, ResolvedOption>;
-  private focused?: { name: string; value: string };
-
-  constructor(rawOptions: Record<string, any>, focusedField?: { name: string; value: string }) {
-    this.opts = new Map();
-    for (const [key, val] of Object.entries(rawOptions || {})) {
-      this.opts.set(key, {
-        name: key,
-        value: val,
-        type: typeof val === 'number' ? 'integer' : typeof val === 'boolean' ? 'boolean' : 'string',
-      });
-    }
-    this.focused = focusedField;
-  }
-
-  get(name: string): ResolvedOption | null {
-    return this.opts.get(name) ?? null;
-  }
-
-  getString(name: string, required: true): string;
-  getString(name: string, required?: boolean): string | null;
-  getString(name: string, _required?: boolean): string | null {
-    const opt = this.opts.get(name);
-    return opt ? String(opt.value) : null;
-  }
-
-  getInteger(name: string, required: true): number;
-  getInteger(name: string, required?: boolean): number | null;
-  getInteger(name: string, _required?: boolean): number | null {
-    const opt = this.opts.get(name);
-    return opt ? Number(opt.value) : null;
-  }
-
-  getBoolean(name: string, required: true): boolean;
-  getBoolean(name: string, required?: boolean): boolean | null;
-  getBoolean(name: string, _required?: boolean): boolean | null {
-    const opt = this.opts.get(name);
-    return opt ? Boolean(opt.value) : null;
-  }
-
-  getFocused(full: true): { name: string; value: string };
-  getFocused(full?: false): string;
-  getFocused(full?: boolean): string | { name: string; value: string } {
-    if (!this.focused) return '';
-    return full ? this.focused : this.focused.value;
-  }
-}
-
-/**
- * Creates a reply sender that pushes messages back to the client via Socket.IO.
- */
-function createReplySender(io: SocketServer, socketId: string, interactionId: string) {
-  let replied = false;
-  let deferred = false;
-
-  const send = (event: string, data: object) => {
-    io.to(socketId).emit(event, { interactionId, ...data });
-  };
-
-  return {
-    async reply(options: ReplyOptions | string) {
-      replied = true;
-      const payload = typeof options === 'string' ? { content: options } : options;
-      send('reply', payload);
-    },
-    async editReply(options: ReplyOptions | string) {
-      const payload = typeof options === 'string' ? { content: options } : options;
-      send('editReply', payload);
-    },
-    async deferReply() {
-      deferred = true;
-      send('deferReply', {});
-    },
-    async deleteReply() {
-      send('deleteReply', {});
-    },
-    async followUp(options: ReplyOptions | string) {
-      const payload = typeof options === 'string' ? { content: options } : options;
-      send('followUp', payload);
-    },
-    async showModal(modal: ModalDefinition | { toJSON(): ModalDefinition }) {
-      const resolved = 'toJSON' in modal && typeof modal.toJSON === 'function' ? modal.toJSON() : modal as ModalDefinition;
-      send('showModal', resolved);
-    },
-    get isReplied() { return replied; },
-    get isDeferred() { return deferred; },
-  };
-}
-
 // ─── Server ──────────────────────────────────────────────────────────────────
+
+interface InteractionUser {
+  id: string;
+  username: string;
+  displayName: string;
+  discordUsername?: string;
+  needsSetup?: boolean;
+}
 
 export interface WebServerOptions {
   port?: number;
-  commands: Map<string, PlatformCommand>;
   /** Session store: maps session token → user info. Simple for now. */
   sessions?: Map<string, InteractionUser>;
 }
 
 export function createWebServer(opts: WebServerOptions) {
-  const { port = 3000, commands } = opts;
+  const { port = 3000 } = opts;
   const sessions = opts.sessions ?? new Map<string, InteractionUser>();
 
   const app = express();
@@ -395,43 +296,6 @@ export function createWebServer(opts: WebServerOptions) {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (token) sessions.delete(token);
     res.json({ ok: true });
-  });
-
-  // ─── Command Registry ──────────────────────────────────────────────
-
-  app.get('/api/commands', (_req, res) => {
-    const commandList = Array.from(commands.values()).map(cmd => cmd.data.toJSON());
-    res.json(commandList);
-  });
-
-  // ─── Autocomplete ──────────────────────────────────────────────────
-
-  app.post('/api/commands/:name/autocomplete', async (req, res) => {
-    const user = await getUser(req);
-    if (!user) return res.status(401).json({ error: 'Not authenticated' });
-
-    const command = commands.get(req.params.name);
-    if (!command?.autocomplete) return res.status(404).json({ error: 'No autocomplete handler' });
-
-    const { options, focused } = req.body;
-    let choices: { name: string; value: string; metadata?: Record<string, string | number> }[] = [];
-
-    const interaction: AutocompleteInteraction = {
-      user,
-      commandName: req.params.name,
-      options: new WebInteractionOptions(options, focused),
-      async respond(c) {
-        choices = c;
-      },
-    };
-
-    try {
-      await command.autocomplete(interaction);
-      res.json(choices);
-    } catch (error) {
-      console.error(`Autocomplete error for /${req.params.name}:`, error);
-      res.json([]);
-    }
   });
 
   // ─── Toon Search ──────────────────────────────────────────────────
@@ -2063,14 +1927,7 @@ export function createWebServer(opts: WebServerOptions) {
     });
   }
 
-  // ─── Command Execution (via WebSocket) ─────────────────────────────
-
-  // Pending component collectors: interactionId → { resolve, filter, timeout }
-  const pendingCollectors = new Map<string, {
-    resolve: (interaction: ComponentInteraction | null) => void;
-    filter: (i: ComponentInteraction) => boolean;
-    timer: ReturnType<typeof setTimeout>;
-  }>();
+  // ─── WebSocket ─────────────────────────────────────────────────────
 
   io.on('connection', (socket) => {
     let sessionUser: InteractionUser | null = null;
@@ -2150,113 +2007,6 @@ export function createWebServer(opts: WebServerOptions) {
       }
     });
 
-    socket.on('executeCommand', async (data: {
-      interactionId: string;
-      command: string;
-      options: Record<string, any>;
-    }) => {
-      if (!sessionUser) {
-        socket.emit('error', { error: 'Not authenticated' });
-        return;
-      }
-
-      const command = commands.get(data.command);
-      if (!command?.execute) {
-        socket.emit('error', { interactionId: data.interactionId, error: `Unknown command: ${data.command}` });
-        return;
-      }
-
-      const sender = createReplySender(io, socket.id, data.interactionId);
-
-      const interaction: CommandInteraction = {
-        user: sessionUser,
-        commandName: data.command,
-        options: new WebInteractionOptions(data.options),
-        guildId: 'guild_default', // TODO: from auth/session
-        memberPermissions: new Set(['ManageRoles', 'ManageGuild']), // TODO: real permissions
-
-        reply: sender.reply,
-        editReply: sender.editReply,
-        deferReply: sender.deferReply,
-        deleteReply: sender.deleteReply,
-        followUp: sender.followUp,
-        showModal: sender.showModal,
-      };
-
-      try {
-        await command.execute(interaction);
-      } catch (error) {
-        console.error(`Command error /${data.command}:`, error);
-        if (!sender.isReplied && !sender.isDeferred) {
-          sender.reply({ content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` });
-        }
-      }
-    });
-
-    // Handle modal submissions
-    socket.on('submitModal', async (data: {
-      interactionId: string;
-      modalId: string;
-      fields: Record<string, string>;
-    }) => {
-      if (!sessionUser) return;
-
-      // Find command by modal ID convention: "commandName_modal"
-      const commandName = data.modalId.replace('_modal', '');
-      const command = commands.get(commandName);
-      if (!command?.handleModal) return;
-
-      const sender = createReplySender(io, socket.id, data.interactionId);
-
-      const interaction: ModalSubmitInteraction = {
-        user: sessionUser,
-        customId: data.modalId,
-        fields: {
-          getTextInputValue(customId: string) {
-            return data.fields[customId] ?? '';
-          },
-        },
-        reply: sender.reply,
-        editReply: sender.editReply,
-        deferReply: sender.deferReply,
-      };
-
-      try {
-        await command.handleModal(interaction);
-      } catch (error) {
-        console.error(`Modal error ${data.modalId}:`, error);
-      }
-    });
-
-    // Handle component interactions (button clicks, select menu choices)
-    socket.on('componentInteraction', (data: {
-      interactionId: string;
-      parentInteractionId: string;
-      customId: string;
-      values?: string[];
-    }) => {
-      if (!sessionUser) return;
-
-      const collector = pendingCollectors.get(data.parentInteractionId);
-      if (!collector) return;
-
-      const sender = createReplySender(io, socket.id, data.parentInteractionId);
-
-      const componentInteraction: ComponentInteraction = {
-        user: sessionUser,
-        customId: data.customId,
-        values: data.values,
-        isStringSelectMenu() { return !!data.values && data.values.length > 0; },
-        update: sender.reply, // update replaces the original message
-      };
-
-      if (collector.filter(componentInteraction)) {
-        clearTimeout(collector.timer);
-        pendingCollectors.delete(data.parentInteractionId);
-        collector.resolve(componentInteraction);
-      }
-    });
-
     // ─── Chat Messages ──────────────────────────────────────────────
 
     socket.on('requestChannelHistory', async (data: { channel: string }) => {
@@ -2329,30 +2079,6 @@ export function createWebServer(opts: WebServerOptions) {
     });
   });
 
-  // ─── Collector Registration (used internally by adapted commands) ──
-
-  /**
-   * Commands that use awaitMessageComponent call this.
-   * Returns a promise that resolves when a matching component interaction arrives.
-   */
-  function awaitComponent(
-    interactionId: string,
-    filter: (i: ComponentInteraction) => boolean,
-    timeout: number,
-  ): Promise<ComponentInteraction | null> {
-    return new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        pendingCollectors.delete(interactionId);
-        resolve(null);
-      }, timeout);
-
-      pendingCollectors.set(interactionId, { resolve, filter, timer });
-    });
-  }
-
-  // Expose for use by adapted commands
-  // awaitComponent is exposed via the return value
-
   // ─── SPA Fallback ───────────────────────────────────────────────────
   // Serve index.html for all non-API routes (client-side routing)
   const indexPath = path.join(staticDir, 'index.html');
@@ -2369,11 +2095,9 @@ export function createWebServer(opts: WebServerOptions) {
   function start() {
     server.listen(port, () => {
       console.log(`\n  🏰 GuildSpace running at http://localhost:${port}\n`);
-      console.log(`  Commands loaded: ${commands.size}`);
-      console.log(`  ${Array.from(commands.keys()).map(n => `/${n}`).join(', ')}\n`);
     });
     return server;
   }
 
-  return { app, server, io, start, sessions, awaitComponent };
+  return { app, server, io, start, sessions };
 }

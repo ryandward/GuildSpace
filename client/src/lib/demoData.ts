@@ -649,10 +649,5 @@ export function getDemoResponse(url: string, method: string): unknown | null {
     return [];
   }
 
-  // GET /api/commands — return empty list for demo
-  if (path === '/api/commands') {
-    return [];
-  }
-
   return null;
 }

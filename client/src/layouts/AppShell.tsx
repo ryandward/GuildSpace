@@ -6,11 +6,10 @@ import { getMostRecentClass } from '../lib/classColors';
 import { ChannelStripMobile } from '../components/ChannelTabs';
 import MessageList from '../components/MessageList';
 import CommandInput from '../components/CommandInput';
-import Modal from '../components/Modal';
 
 export default function AppShell() {
   const { channelName } = useParams<{ channelName?: string }>();
-  const { modal, switchChannel, activeChannel } = useSocket();
+  const { switchChannel, activeChannel } = useSocket();
   const { data: rosterData } = useRosterQuery();
 
   // Sync route param to socket context
@@ -39,7 +38,6 @@ export default function AppShell() {
           <CommandInput />
         </div>
       </div>
-      {modal && <Modal />}
     </div>
   );
 }

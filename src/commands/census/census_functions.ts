@@ -8,8 +8,6 @@ import { ActiveToons } from '../../entities/ActiveToons.js';
 import { Census } from '../../entities/Census.js';
 import { ClassDefinitions } from '../../entities/ClassDefinitions.js';
 import { Dkp } from '../../entities/Dkp.js';
-import { SlashCommandBuilder } from '../../platform/shim.js';
-
 export async function levelMustBeValid(Level: number) {
   if (Level < 1 || Level > 60) throw new Error(':x: Level must be between 1 and 60.');
   return Level;
@@ -89,36 +87,6 @@ export async function validCharacterClasses() {
     name: record.CharacterClass,
     value: record.CharacterClass,
   }));
-}
-
-export async function declareData(status: string) {
-  const classNames = await validCharacterClasses();
-
-  return new SlashCommandBuilder()
-    .setName(status)
-    .setDescription(`Declare character as "${status}"`)
-    .addStringOption(option =>
-      option
-        .setName('name')
-        .setDescription('The name of the character')
-        .setRequired(true)
-        .setMaxLength(24),
-    )
-    .addNumberOption(option =>
-      option
-        .setName('level')
-        .setDescription('The level of the character')
-        .setRequired(true)
-        .setMinValue(1)
-        .setMaxValue(60),
-    )
-    .addStringOption(option =>
-      option
-        .setName('class')
-        .setDescription('The class of the character')
-        .setRequired(true)
-        .addChoices(...classNames),
-    );
 }
 
 export async function declare(

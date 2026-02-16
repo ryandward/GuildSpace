@@ -2,13 +2,12 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useSlidingIndicator } from '../hooks/useSlidingIndicator';
-import { Button } from '../ui';
 import { navLink, reconnectBanner } from '../ui/recipes';
 import UserMenu from './UserMenu';
 
 export default function AppHeader() {
   const { isDemo } = useAuth();
-  const { connected, showHelp, onlineCount, totalMembers } = useSocket();
+  const { connected, onlineCount, totalMembers } = useSocket();
   const { ref: navRef, style: indicatorStyle } = useSlidingIndicator<HTMLElement>();
 
   return (
@@ -70,11 +69,6 @@ export default function AppHeader() {
                 {onlineCount}/{totalMembers}
               </span>
             </>
-          )}
-          {!isDemo && (
-            <Button intent="ghost" size="sm" onClick={showHelp} title="Show available commands" className="max-md:hidden">
-              ?
-            </Button>
           )}
           <UserMenu />
         </div>
