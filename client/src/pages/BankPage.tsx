@@ -115,6 +115,14 @@ export default function BankPage() {
       const q = search.toLowerCase();
       result = result.filter(item => item.name.toLowerCase().includes(q));
     }
+    // When class-filtered, sort class-specific items before ALL
+    if (classFilter) {
+      result = [...result].sort((a, b) => {
+        const aSpecific = a.classes.includes(classFilter) ? 0 : 1;
+        const bSpecific = b.classes.includes(classFilter) ? 0 : 1;
+        return aSpecific - bSpecific;
+      });
+    }
     return result;
   }, [items, search, bankerFilter, classFilter, raceFilter]);
 

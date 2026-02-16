@@ -543,7 +543,7 @@ export function getDemoResponse(url: string, method: string): unknown | null {
     const classAbbreviations: Record<string, string> = {
       Cleric: 'CLR', Warrior: 'WAR', Wizard: 'WIZ',
       Magician: 'MAG', Enchanter: 'ENC', Necromancer: 'NEC',
-      'Shadow Knight': 'SK', Rogue: 'ROG', Ranger: 'RNG',
+      'Shadow Knight': 'SHD', Rogue: 'ROG', Ranger: 'RNG',
       Druid: 'DRU', Monk: 'MNK', Bard: 'BRD',
       Paladin: 'PAL', Shaman: 'SHM',
     };

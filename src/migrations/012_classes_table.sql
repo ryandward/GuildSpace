@@ -17,11 +17,14 @@ INSERT INTO classes (character_class, abbreviation) VALUES
   ('Paladin',       'PAL'),
   ('Ranger',        'RNG'),
   ('Rogue',         'ROG'),
-  ('Shadow Knight', 'SK'),
+  ('Shadow Knight', 'SHD'),
   ('Shaman',        'SHM'),
   ('Warrior',       'WAR'),
   ('Wizard',        'WIZ')
 ON CONFLICT DO NOTHING;
+
+-- Fix Shadow Knight abbreviation: SK → SHD
+UPDATE classes SET abbreviation = 'SHD' WHERE character_class = 'Shadow Knight' AND abbreviation = 'SK';
 
 -- FK constraints on existing tables (skip if already present)
 ALTER TABLE class_definitions DROP CONSTRAINT IF EXISTS fk_classdefs_class;

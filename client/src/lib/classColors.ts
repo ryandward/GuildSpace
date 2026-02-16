@@ -32,7 +32,6 @@ export const CLASS_ABBREV_TO_FULL: Record<string, string> = {
   WIZ: 'Wizard',
   MAG: 'Magician',
   ENC: 'Enchanter',
-  BST: 'Beastlord',
 };
 
 /** Get class color by abbreviation (WAR, CLR, etc.). */

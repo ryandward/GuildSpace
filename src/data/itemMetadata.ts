@@ -19,7 +19,7 @@ export interface ItemMetadata {
 const VALID_CLASSES = new Set([
   'WAR', 'CLR', 'PAL', 'RNG', 'SHD', 'DRU',
   'MNK', 'BRD', 'ROG', 'SHM', 'NEC', 'WIZ',
-  'MAG', 'ENC', 'BST', 'ALL', 'NONE',
+  'MAG', 'ENC', 'ALL', 'NONE',
 ]);
 
 const VALID_RACES = new Set([
@@ -31,7 +31,7 @@ const VALID_RACES = new Set([
 const ALL_CLASSES = [
   'WAR', 'CLR', 'PAL', 'RNG', 'SHD', 'DRU',
   'MNK', 'BRD', 'ROG', 'SHM', 'NEC', 'WIZ',
-  'MAG', 'ENC', 'BST',
+  'MAG', 'ENC',
 ];
 
 let itemMap: Map<string, ItemMetadata> | null = null;
