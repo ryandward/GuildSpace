@@ -17,7 +17,7 @@ Chat is here too. But chat is just one thing on the page, not the whole page.
 
 ## Lineage
 
-GuildSpace is being ported from a production Discord bot ([Project-1999-Typescript-Discord](https://github.com/ryandward/Project-1999-Typescript-Discord)) that manages an active EverQuest guild. Both the bot and the web platform share the same Railway Postgres database — real users, real data. We're building down from a working system, converting commands one at a time to run on the web.
+GuildSpace originated as a production Discord bot ([Project-1999-Typescript-Discord](https://github.com/ryandward/Project-1999-Typescript-Discord)) that manages an active EverQuest guild. Both the bot and the web platform share the same Railway Postgres database — real users, real data. The web platform has moved past the command-porting phase; all data access and mutations now use dedicated REST endpoints and native UI.
 
 ## Architecture
 
@@ -25,23 +25,16 @@ GuildSpace is being ported from a production Discord bot ([Project-1999-Typescri
 ┌──────────────────────────────────────────────────────────────┐
 │  Client (React 19 + Vite 6 + Tailwind v4)                    │
 │                                                              │
-│  ┌─────────────┐ ┌─────────────┐ ┌────────────┐ ┌──────────┐ │
-│  │ Roster Page │ │ Terminal    │ │ Login      │ │ Chat     │ │
-│  └─────────────┘ └─────────────┘ └────────────┘ └──────────┘ │
+│  ┌─────────┐ ┌───────┐ ┌──────┐ ┌───────┐ ┌──────┐          │
+│  │ Roster  │ │ Raids │ │ Bank │ │ Chat  │ │Login │          │
+│  └─────────┘ └───────┘ └──────┘ └───────┘ └──────┘          │
 └──────────────────────────────┬───────────────────────────────┘
-                               │ Socket.IO + REST
+                               │ REST + Socket.IO (chat)
 ┌──────────────────────────────┴───────────────────────────────┐
 │  Server (Express + Socket.IO, TypeScript)                    │
 │                                                              │
 │  ┌─────────────────────────────────────────────────────────┐ │
-│  │  Platform Shim (src/platform/shim.ts)                   │ │
-│  │  Re-exports discord.js API surface so commands          │ │
-│  │  run on both Discord and web without rewriting          │ │
-│  └────────────────────────────┬────────────────────────────┘ │
-│  ┌────────────────────────────┴────────────────────────────┐ │
-│  │  Commands (src/commands_web/)                           │ │
-│  │  census/ · dkp/ · utility/                              │ │
-│  │  Auto-discovered at startup, no registration needed     │ │
+│  │  REST API (auth, roster, characters, raids, bank, chat) │ │
 │  └────────────────────────────┬────────────────────────────┘ │
 │  ┌────────────────────────────┴────────────────────────────┐ │
 │  │  TypeORM Entities → PostgreSQL (Railway)                │ │
@@ -49,17 +42,11 @@ GuildSpace is being ported from a production Discord bot ([Project-1999-Typescri
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Platform abstraction
+### Data flow
 
-Commands were originally written for discord.js. Instead of rewriting them, a **platform shim** (`src/platform/shim.ts`) re-exports platform-agnostic versions of discord.js classes — `SlashCommandBuilder`, `EmbedBuilder`, `ButtonBuilder`, etc. Commands import from the shim, not discord.js directly. Swap one import line and a Discord bot command runs on the web.
-
-### Interaction flow
-
-1. Client sends a WebSocket event (`executeCommand`)
-2. Server creates a platform-agnostic `CommandInteraction`
-3. Command handler calls `interaction.reply()` with embeds, buttons, modals
-4. Socket.IO sends the response back to the client
-5. React frontend renders the result
+- **Pages** (roster, raids, bank) fetch data via REST endpoints using TanStack Query hooks
+- **Chat** uses Socket.IO for real-time messaging and presence
+- **Mutations** (character management, raid calls, bank imports) go through REST endpoints with role-based access guards
 
 ## Stack
 
@@ -77,22 +64,17 @@ Commands were originally written for discord.js. Instead of rewriting them, a **
 ```
 ├── client/                     # React frontend
 │   └── src/
-│       ├── components/         # App components (roster, chat, commands)
+│       ├── components/         # App components (roster, raids, bank, chat)
 │       ├── ui/                 # Design system (Button, Card, Input, Text, Badge)
-│       ├── pages/              # LoginPage, SetupPage, RosterPage
-│       ├── layouts/            # AppShell (header + terminal)
+│       ├── pages/              # LoginPage, SetupPage, RosterPage, RaidsPage, BankPage
+│       ├── layouts/            # AppShell (chat layout)
+│       ├── hooks/              # TanStack Query hooks (useRosterQuery, useMemberQuery, etc.)
 │       ├── context/            # AuthContext, SocketContext
-│       ├── utils/              # Animation helpers (stagger, phase)
+│       ├── lib/                # Utilities (classColors, treemap, roles, api, demoData)
 │       └── index.css           # Design tokens (@theme axioms)
 ├── src/                        # Express backend
 │   ├── platform/
-│   │   ├── shim.ts             # discord.js compatibility layer
-│   │   ├── types.ts            # Platform-agnostic interfaces
-│   │   └── web/server.ts       # Express + Socket.IO server
-│   ├── commands_web/           # Ported web commands
-│   │   ├── census/             # main, alt, bot, claim, change, ding, drop, toons, whois
-│   │   ├── dkp/                # dkp, attendance
-│   │   └── utility/            # ping
+│   │   └── web/server.ts       # Express + Socket.IO server (REST API + chat)
 │   ├── commands/               # Shared business logic (used by Discord bot too)
 │   ├── entities/               # TypeORM entities (Census, Dkp, Attendance, Bank, etc.)
 │   └── migrations/             # SQL migrations (001_, 002_, ...)
@@ -100,25 +82,23 @@ Commands were originally written for discord.js. Instead of rewriting them, a **
 └── DESIGN.md                   # Design system principles
 ```
 
-## Commands
+## REST API
 
-The Discord bot has 30 commands. 12 have been ported to GuildSpace.
+All data access and mutations flow through dedicated REST endpoints:
 
-### Ported
+| Area | Endpoints |
+|------|-----------|
+| **Auth** | `GET /api/auth/discord`, `GET /api/auth/discord/callback`, `GET /api/auth/me`, `POST /api/auth/set-name`, `POST /api/auth/logout` |
+| **Roster** | `GET /api/roster`, `GET /api/roster/:id`, `GET /api/roster/class-stats`, `PATCH /api/roster/:id/role` |
+| **Characters** | `PUT /api/roster/:id/characters/:name`, `DELETE /api/roster/:id/characters/:name` |
+| **Raids** | `GET/POST /api/raids/events`, `GET/PATCH /api/raids/events/:id`, `POST /api/raids/events/:id/calls`, `POST /api/raids/push` |
+| **Bank** | `GET /api/bank`, `POST /api/bank/import`, `GET /api/bank/history` |
+| **Profile** | `POST /api/profile/bio`, `POST /api/profile/api-key` |
+| **Chat** | `GET/POST/DELETE /api/chat/channels` |
+| **Toons** | `GET /api/toons/mine`, `GET /api/toons/search` |
+| **Templates** | `GET/POST/PATCH/DELETE /api/raids/templates` |
 
-| Category | Commands |
-|----------|----------|
-| **Census** (9) | `main` `alt` `bot` `claim` `change` `ding` `drop` `toons` `whois` |
-| **DKP** (2) | `dkp` `attendance` |
-| **Utility** (1) | `ping` |
-
-### Not yet ported
-
-| Category | Commands | Notes |
-|----------|----------|-------|
-| **Census** (3) | `assign` `reassign` `promote` | Officer-gated, needs guild role system |
-| **Bank** (4) | `expense` `income` `plat` `find` | Bank management, needs component collectors |
-| **Utility** (11) | `account` `add` `remove` `browse` `create_role` `roles` `delete_shared_toon` `help` `listaccounts` `login` `note` | Mixed — some Discord-specific, some need rethinking for web |
+Officer/admin/owner guards are enforced server-side. Character management supports self-service and rank-based access for managing other members.
 
 ## Data model
 
@@ -135,7 +115,7 @@ The database stores everything an EverQuest guild needs to operate:
 
 ## Roster page
 
-The roster page is the first real page in GuildSpace — browse the full guild census without typing a command.
+The roster page is the centerpiece of GuildSpace — browse the full guild census at a glance.
 
 The centerpiece is a **squarified treemap** showing guild class composition at a glance, Kibana-style. Each cell is sized proportionally to the number of characters of that class. Click a cell to filter the roster table below it. The treemap uses:
 
@@ -209,13 +189,6 @@ For frontend development with hot reload:
 ```bash
 cd client && npm run dev    # Vite dev server on :5173, proxies to :3000
 ```
-
-### Porting a command from the Discord bot
-
-1. Copy the command file from the Discord bot into `src/commands_web/<category>/`
-2. Change the import from `'discord.js'` to `'../../platform/shim.js'`
-3. Fix any Discord-specific APIs not yet in the shim (or extend the shim)
-4. Commands are auto-discovered — no registration step needed
 
 ## License
 
