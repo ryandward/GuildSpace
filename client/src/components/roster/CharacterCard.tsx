@@ -49,8 +49,8 @@ export default function CharacterCard(props: Props) {
   return (
     <div className={cx(card(), 'flex flex-col hover:bg-surface-2 transition-colors duration-fast')}>
       <div className="flex items-center gap-1.5 px-2 pt-1.5">
-        <Text variant="body" className="font-semibold">{props.name}</Text>
-        <span className={cx(badge({ variant: 'status', color: statusColor(props.status) }))}>{props.status}</span>
+        <span className={cx(badge({ variant: 'status', color: statusColor(props.status) }), 'w-7 text-center shrink-0')}>{props.status}</span>
+        <Text variant="body" className="font-semibold truncate">{props.name}</Text>
         {lastRaid && (
           <Text variant="caption" className="ml-auto shrink-0">{lastRaid}</Text>
         )}
