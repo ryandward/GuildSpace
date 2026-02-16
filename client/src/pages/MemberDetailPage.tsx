@@ -84,7 +84,7 @@ export default function MemberDetailPage() {
                   role={data.role}
                   hasGuildSpace={data.hasGuildSpace}
                   isOnline={onlineIds.includes(discordId!)}
-                  badgeVariant="status"
+                  iconSize="md"
                   officerSince={data.officerSince}
                   adminSince={data.adminSince}
                   className="font-display text-display font-semibold truncate inline-flex items-center gap-1"
