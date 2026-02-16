@@ -5,6 +5,8 @@ import { useBankQuery } from '../hooks/useBankQuery';
 import { useBankerHistory } from '../hooks/useBankerHistory';
 import { useBankSquash } from '../hooks/useBankSquash';
 import BankHistoryEntry from '../components/BankHistoryEntry';
+import ItemIcon from '../components/bank/ItemIcon';
+import ItemTooltip from '../components/bank/ItemTooltip';
 import { Card, Input, Text, Badge, Heading } from '../ui';
 import { text } from '../ui/recipes';
 
@@ -17,16 +19,18 @@ export default function BankerDetailPage() {
   const [search, setSearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
 
+  const items = data?.items;
+
   const bankerItems = useMemo(() => {
-    if (!data || !banker) return [];
-    return data
+    if (!items || !banker) return [];
+    return items
       .filter(item => item.bankers.includes(banker))
       .map(item => {
         const slots = item.slots.filter(s => s.banker === banker);
         const qty = slots.reduce((sum, s) => sum + s.quantity, 0);
-        return { name: item.name, quantity: qty, slots };
+        return { name: item.name, quantity: qty, slots, iconId: item.iconId, statsblock: item.statsblock };
       });
-  }, [data, banker]);
+  }, [items, banker]);
 
   const filtered = useMemo(() => {
     if (!search) return bankerItems;
@@ -96,9 +100,12 @@ export default function BankerDetailPage() {
                   <div>
                     {filtered.slice(0, 10).map(item => (
                       <div key={item.name} className="border-b border-border last:border-b-0 flex items-center gap-2 py-1.5 px-2">
-                        <span className="text-text font-body text-caption font-semibold flex-1 min-w-0 truncate">
-                          {item.name}
-                        </span>
+                        <ItemIcon iconId={item.iconId} />
+                        <ItemTooltip name={item.name} iconId={item.iconId} statsblock={item.statsblock}>
+                          <span className="text-text font-body text-caption font-semibold flex-1 min-w-0 truncate">
+                            {item.name}
+                          </span>
+                        </ItemTooltip>
                         <Badge variant="count" color="accent" className="shrink-0">
                           {item.quantity}x
                         </Badge>

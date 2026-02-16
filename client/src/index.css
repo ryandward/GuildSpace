@@ -179,6 +179,7 @@
 
   --z-index-dropdown: 2;  /* Above grain (1) */
   --z-index-modal: 3;     /* Above dropdowns (2) */
+  --z-index-tooltip: 4;   /* Above modals (3) */
 
   /* ═══════════════════════════════════════════════════════
      ANIMATIONS — durations from φ scale, easing from --ease-*.
@@ -260,6 +261,7 @@
 
 @layer components {
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pixelated { image-rendering: pixelated; }
 
   .range-thumb::-webkit-slider-thumb {
     -webkit-appearance: none;

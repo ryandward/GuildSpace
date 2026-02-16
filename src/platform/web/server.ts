@@ -37,6 +37,7 @@ import { BankImport } from '../../entities/BankImport.js';
 import { Trash } from '../../entities/Trash.js';
 import { Classes } from '../../entities/Classes.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
+import { getItemMetadata } from '../../data/itemMetadata.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -1494,14 +1495,32 @@ export function createWebServer(opts: WebServerOptions) {
         entry.slots.push({ banker: row.Banker, location: row.Location, quantity: qty });
       }
 
-      const result = Array.from(grouped.entries()).map(([name, entry]) => ({
-        name,
-        totalQuantity: entry.totalQuantity,
-        bankers: [...entry.bankers],
-        slots: entry.slots,
-      }));
+      const availableClassesSet = new Set<string>();
+      const availableRacesSet = new Set<string>();
 
-      res.json(result);
+      const items = Array.from(grouped.entries()).map(([name, entry]) => {
+        const meta = getItemMetadata(name);
+        if (meta) {
+          for (const c of meta.classes) availableClassesSet.add(c);
+          for (const r of meta.races) availableRacesSet.add(r);
+        }
+        return {
+          name,
+          totalQuantity: entry.totalQuantity,
+          bankers: [...entry.bankers],
+          slots: entry.slots,
+          iconId: meta?.iconId ?? null,
+          classes: meta?.classes ?? [],
+          races: meta?.races ?? [],
+          statsblock: meta?.statsblock ?? null,
+        };
+      });
+
+      res.json({
+        items,
+        availableClasses: [...availableClassesSet].sort(),
+        availableRaces: [...availableRacesSet].sort(),
+      });
     } catch (err) {
       console.error('Failed to fetch bank inventory:', err);
       res.status(500).json({ error: 'Failed to fetch bank inventory' });

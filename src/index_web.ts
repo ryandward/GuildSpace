@@ -14,6 +14,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDataSource, AppDataSource } from './app_data.js';
 import { createWebServer } from './platform/web/server.js';
+import { loadItemMetadata } from './data/itemMetadata.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +32,9 @@ if (fs.existsSync(migrationsDir)) {
     console.log(`  🔧 ${file}`);
   }
 }
+
+// ─── Item Metadata ───────────────────────────────────────────────────────────
+loadItemMetadata();
 
 // ─── Start Server ────────────────────────────────────────────────────────────
 const port = parseInt(process.env.PORT || '3000');

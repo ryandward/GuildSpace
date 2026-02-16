@@ -13,13 +13,23 @@ export interface BankItem {
   totalQuantity: number;
   bankers: string[];
   slots: BankSlot[];
+  iconId: number | null;
+  classes: string[];
+  races: string[];
+  statsblock: string | null;
+}
+
+export interface BankData {
+  items: BankItem[];
+  availableClasses: string[];
+  availableRaces: string[];
 }
 
 export function useBankQuery() {
   const { token } = useAuth();
   return useQuery({
     queryKey: ['bank'],
-    queryFn: () => authFetch<BankItem[]>(token!, '/api/bank'),
+    queryFn: () => authFetch<BankData>(token!, '/api/bank'),
     enabled: !!token,
     staleTime: 2 * 60 * 1000,
   });

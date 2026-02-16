@@ -7,6 +7,9 @@ import { useBankSquash } from '../hooks/useBankSquash';
 import { useBankHistory } from '../hooks/useBankerHistory';
 import BankHistoryEntry from '../components/BankHistoryEntry';
 import BankerTreemap from '../components/bank/BankerTreemap';
+import ItemIcon from '../components/bank/ItemIcon';
+import ItemTooltip from '../components/bank/ItemTooltip';
+import BankFilterPanel from '../components/bank/BankFilterPanel';
 import { Card, Input, Text, Badge, Button } from '../ui';
 import { text } from '../ui/recipes';
 
@@ -35,9 +38,12 @@ function BankItemRow({ item }: { item: BankItem }) {
         >
           ›
         </span>
-        <span className="text-text font-body text-caption font-semibold flex-1 min-w-0 truncate">
-          {item.name}
-        </span>
+        <ItemIcon iconId={item.iconId} />
+        <ItemTooltip name={item.name} iconId={item.iconId} statsblock={item.statsblock}>
+          <span className="text-text font-body text-caption font-semibold flex-1 min-w-0 truncate">
+            {item.name}
+          </span>
+        </ItemTooltip>
         <Badge variant="count" color="accent" className="shrink-0">
           {item.totalQuantity}x
         </Badge>
@@ -80,23 +86,37 @@ export default function BankPage() {
   const [search, setSearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [bankerFilter, setBankerFilter] = useState<string | null>(null);
+  const [classFilter, setClassFilter] = useState<string | null>(null);
+  const [raceFilter, setRaceFilter] = useState<string | null>(null);
 
   const handleBankerFilter = useCallback((banker: string | null) => {
     setBankerFilter(banker);
   }, []);
 
+  const items = data?.items;
+
   const filtered = useMemo(() => {
-    if (!data) return [];
-    let result = data;
+    if (!items) return [];
+    let result = items;
     if (bankerFilter) {
       result = result.filter(item => item.bankers.includes(bankerFilter));
+    }
+    if (classFilter) {
+      result = result.filter(item =>
+        item.classes.includes('ALL') || item.classes.includes(classFilter)
+      );
+    }
+    if (raceFilter) {
+      result = result.filter(item =>
+        item.races.includes('ALL') || item.races.includes(raceFilter)
+      );
     }
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(item => item.name.toLowerCase().includes(q));
     }
     return result;
-  }, [data, search, bankerFilter]);
+  }, [items, search, bankerFilter, classFilter, raceFilter]);
 
   const filteredHistory = useMemo(() => {
     if (!history) return [];
@@ -125,13 +145,13 @@ export default function BankPage() {
   }, [history]);
 
   const uniqueBankers = useMemo(() => {
-    if (!data) return 0;
+    if (!items) return 0;
     const bankers = new Set<string>();
-    for (const item of data) {
+    for (const item of items) {
       for (const b of item.bankers) bankers.add(b);
     }
     return bankers.size;
-  }, [data]);
+  }, [items]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -145,7 +165,7 @@ export default function BankPage() {
   }, [importMutation]);
 
   const isOfficer = user?.isOfficer || user?.isAdmin || user?.isOwner;
-  const hasActiveFilter = bankerFilter !== null || search !== '';
+  const hasActiveFilter = bankerFilter !== null || search !== '' || classFilter !== null || raceFilter !== null;
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -183,9 +203,19 @@ export default function BankPage() {
             <>
               {/* Treemap — banker distribution */}
               <BankerTreemap
-                data={data}
+                data={items!}
                 bankerFilter={bankerFilter}
                 onBankerFilter={handleBankerFilter}
+              />
+
+              {/* Class/Race filters */}
+              <BankFilterPanel
+                availableClasses={data.availableClasses}
+                availableRaces={data.availableRaces}
+                classFilter={classFilter}
+                raceFilter={raceFilter}
+                onClassFilter={setClassFilter}
+                onRaceFilter={setRaceFilter}
               />
 
               {/* Filter strip */}
@@ -205,6 +235,28 @@ export default function BankPage() {
                     </button>
                   </Badge>
                 )}
+                {classFilter && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>{classFilter}</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => setClassFilter(null)}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
+                {raceFilter && (
+                  <Badge variant="filter" className="inline-flex items-center gap-1">
+                    <span>{raceFilter}</span>
+                    <button
+                      className="bg-transparent border-none cursor-pointer text-text-dim hover:text-red ml-0.5 p-0 text-caption"
+                      onClick={() => setRaceFilter(null)}
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                )}
                 {search && (
                   <Badge variant="filter" className="inline-flex items-center gap-1">
                     <span>"{search}"</span>
@@ -218,8 +270,8 @@ export default function BankPage() {
                 )}
                 <span className={text({ variant: 'caption' }) + ' ml-auto max-md:ml-0'}>
                   {hasActiveFilter
-                    ? `${filtered.length} of ${data.length} items`
-                    : `${data.length} unique items across ${uniqueBankers} ${uniqueBankers === 1 ? 'banker' : 'bankers'}`
+                    ? `${filtered.length} of ${items!.length} items`
+                    : `${items!.length} unique items across ${uniqueBankers} ${uniqueBankers === 1 ? 'banker' : 'bankers'}`
                   }
                 </span>
                 {isOfficer && (

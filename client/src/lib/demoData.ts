@@ -404,17 +404,27 @@ function getEvents(): DemoEvent[] {
 
 // --- Bank ---
 
+// Class abbreviations for demo item metadata
+const CLASS_ABBREVS = ['WAR', 'CLR', 'PAL', 'RNG', 'SHD', 'DRU', 'MNK', 'BRD', 'ROG', 'SHM', 'NEC', 'WIZ', 'MAG', 'ENC'];
+const RACE_ABBREVS = ['HUM', 'BAR', 'ERU', 'ELF', 'HIE', 'DEF', 'HEF', 'DWF', 'TRL', 'OGR', 'HFL', 'GNM', 'IKS', 'VAH'];
+
 interface DemoBankItem {
   name: string;
   totalQuantity: number;
   bankers: string[];
   slots: { banker: string; location: string; quantity: number }[];
+  iconId: number | null;
+  classes: string[];
+  races: string[];
+  statsblock: string | null;
 }
 
-function generateBank(): { items: DemoBankItem[]; bankers: string[] } {
+function generateBank(): { items: DemoBankItem[]; bankers: string[]; availableClasses: string[]; availableRaces: string[] } {
   const bankerNames = ['Banksworth', 'Vaultheart', 'Stashkeeper'];
   const items: DemoBankItem[] = [];
   const usedItems = shuffle(ITEM_NAMES).slice(0, 80);
+  const allClasses = new Set<string>();
+  const allRaces = new Set<string>();
 
   for (const itemName of usedItems) {
     const numBankers = rand() < 0.7 ? 1 : 2;
@@ -425,18 +435,39 @@ function generateBank(): { items: DemoBankItem[]; bankers: string[] } {
       quantity: randInt(1, 20),
     }));
 
+    // Generate mock metadata
+    const isAllClass = rand() < 0.4;
+    const classes = isAllClass ? ['ALL'] : shuffle(CLASS_ABBREVS).slice(0, randInt(2, 8));
+    const isAllRace = rand() < 0.6;
+    const races = isAllRace ? ['ALL'] : shuffle(RACE_ABBREVS).slice(0, randInt(3, 10));
+    const iconId = randInt(500, 900);
+
+    for (const c of classes) allClasses.add(c);
+    for (const r of races) allRaces.add(r);
+
+    const statsblock = `MAGIC ITEM  LORE ITEM\nSlot: PRIMARY\nWT: ${(rand() * 10).toFixed(1)}  Size: MEDIUM\nClass: ${classes.join(' ')}\nRace: ${races.join(' ')}`;
+
     items.push({
       name: itemName,
       totalQuantity: slots.reduce((s, sl) => s + sl.quantity, 0),
       bankers: itemBankers,
       slots,
+      iconId,
+      classes,
+      races,
+      statsblock,
     });
   }
 
-  return { items, bankers: bankerNames };
+  return {
+    items,
+    bankers: bankerNames,
+    availableClasses: [...allClasses].sort(),
+    availableRaces: [...allRaces].sort(),
+  };
 }
 
-let _bank: { items: DemoBankItem[]; bankers: string[] } | null = null;
+let _bank: { items: DemoBankItem[]; bankers: string[]; availableClasses: string[]; availableRaces: string[] } | null = null;
 function getBank() {
   if (!_bank) _bank = generateBank();
   return _bank;
@@ -624,7 +655,12 @@ export function getDemoResponse(url: string, method: string): unknown | null {
 
   // GET /api/bank
   if (path === '/api/bank') {
-    return getBank().items;
+    const bank = getBank();
+    return {
+      items: bank.items,
+      availableClasses: bank.availableClasses,
+      availableRaces: bank.availableRaces,
+    };
   }
 
   // GET /api/bank/history

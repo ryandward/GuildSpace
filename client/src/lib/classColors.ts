@@ -16,6 +16,31 @@ export const CLASS_COLORS: Record<string, string> = {
   'Shaman': '#2890f0',
 };
 
+/** Map class abbreviation (WAR, CLR, etc.) → full class name. */
+export const CLASS_ABBREV_TO_FULL: Record<string, string> = {
+  WAR: 'Warrior',
+  CLR: 'Cleric',
+  PAL: 'Paladin',
+  RNG: 'Ranger',
+  SHD: 'Shadow Knight',
+  DRU: 'Druid',
+  MNK: 'Monk',
+  BRD: 'Bard',
+  ROG: 'Rogue',
+  SHM: 'Shaman',
+  NEC: 'Necromancer',
+  WIZ: 'Wizard',
+  MAG: 'Magician',
+  ENC: 'Enchanter',
+  BST: 'Beastlord',
+};
+
+/** Get class color by abbreviation (WAR, CLR, etc.). */
+export function getClassColorByAbbrev(abbrev: string): string {
+  const full = CLASS_ABBREV_TO_FULL[abbrev];
+  return full ? (CLASS_COLORS[full] || '#8888aa') : '#8888aa';
+}
+
 export function getClassColor(cls: string): string {
   return CLASS_COLORS[cls] || '#8888aa';
 }
