@@ -79,7 +79,7 @@ export default function MemberName({ name, classColor, role, hasGuildSpace, isOn
       {isOnline
         ? <span className="inline-block size-1 rounded-full bg-green shrink-0" title="Online" />
         : hasGuildSpace
-          ? <span className="inline-block size-1 rounded-full bg-accent shrink-0" title="GuildSpace member" />
+          ? <span className="inline-block size-1 rounded-full bg-text-dim shrink-0" title="GuildSpace member" />
           : <span className="inline-block size-1 rounded-full shrink-0" />}
       {name}
       {isBadgeRole(role) && (() => {
