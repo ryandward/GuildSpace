@@ -20,15 +20,14 @@ export default function EventCard({ event }: { event: RaidEventSummary }) {
   return (
     <Link to={`/raids/${event.id}`} className="no-underline block">
       <Card className="p-2 hover:bg-surface-2 transition-colors duration-fast cursor-pointer min-h-6">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
-              {isActive && <span className="size-1 rounded-full bg-green animate-pulse-slow shrink-0" />}
-              <Text variant="body" className="font-bold truncate">{event.name}</Text>
-            </div>
-            <Text variant="caption">{relativeTime(event.createdAt)}</Text>
+        <div className="flex items-center gap-2 max-md:flex-col max-md:items-start max-md:gap-1">
+          <div className="flex items-center gap-1 min-w-0 max-md:w-full">
+            {isActive && <span className="size-1 rounded-full bg-green animate-pulse-slow shrink-0" />}
+            <Text variant="body" className="font-bold truncate">{event.name}</Text>
+            <Text variant="caption" className="shrink-0 ml-auto md:hidden">{relativeTime(event.createdAt)}</Text>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <Text variant="caption" className="max-md:hidden">{relativeTime(event.createdAt)}</Text>
             <Badge variant="count">{event.callCount} calls</Badge>
             <Badge variant="count" color="accent">{event.totalDkp} DKP</Badge>
             <Badge variant="count">{event.memberCount} members</Badge>
