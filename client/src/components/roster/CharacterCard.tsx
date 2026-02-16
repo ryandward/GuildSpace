@@ -36,14 +36,18 @@ interface Props {
   status: string;
   lastRaidDate: string | null;
   onEdit?: () => void;
+  /** DKP data — when present, renders a class-colored bar instead of the top stripe */
+  totalDkp?: number;
+  raidCount?: number;
+  maxDkp?: number;
 }
 
 export default function CharacterCard(props: Props) {
   const lastRaid = props.lastRaidDate ? timeAgo(props.lastRaidDate) : null;
+  const hasDkp = props.totalDkp != null && props.maxDkp;
 
   return (
     <div className={cx(card(), 'flex flex-col hover:bg-surface-2 transition-colors duration-fast')}>
-      <span className={`h-0.5 w-full ${classToPip(props.class)}`} />
       <div className="flex items-center gap-1.5 px-2 pt-1.5">
         <Text variant="body" className="font-semibold">{props.name}</Text>
         <span className={cx(badge({ variant: 'status', color: statusColor(props.status) }))}>{props.status}</span>
@@ -63,6 +67,20 @@ export default function CharacterCard(props: Props) {
           </button>
         )}
       </div>
+      {hasDkp && (
+        <div className="flex flex-col gap-0.5 px-2 pb-1.5">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{props.totalDkp}</span>
+            <Text variant="caption">{props.raidCount} calls</Text>
+          </div>
+          <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${classToPip(props.class)} transition-[width] duration-slow`}
+              style={{ width: `${(props.totalDkp! / props.maxDkp!) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,10 +15,6 @@ import { cx } from 'class-variance-authority';
 import { getMostRecentClass } from '../lib/classColors';
 import { outranks } from '../lib/roles';
 
-function classToPip(className: string): string {
-  return 'pip-' + (className || '').toLowerCase().replace(/\s+/g, '-');
-}
-
 function formatDate(iso: string | null | undefined): string | undefined {
   if (!iso) return undefined;
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -62,6 +58,11 @@ export default function MemberDetailPage() {
   const maxDkp = useMemo(() => {
     if (!data?.dkpByCharacter.length) return 1;
     return Math.max(...data.dkpByCharacter.map(c => c.totalDkp), 1);
+  }, [data]);
+  const dkpMap = useMemo(() => {
+    const m = new Map<string, { totalDkp: number; raidCount: number }>();
+    data?.dkpByCharacter.forEach(c => m.set(c.name, { totalDkp: c.totalDkp, raidCount: c.raidCount }));
+    return m;
   }, [data]);
 
   return (
@@ -234,6 +235,9 @@ export default function MemberDetailPage() {
                     status={c.status}
                     lastRaidDate={c.lastRaidDate}
                     onEdit={canManageCharacters ? () => { setCharError(null); setEditingCharacter(c); } : undefined}
+                    totalDkp={dkpMap.get(c.name)?.totalDkp}
+                    raidCount={dkpMap.get(c.name)?.raidCount}
+                    maxDkp={maxDkp}
                   />
                 ))}
               </div>
@@ -260,34 +264,6 @@ export default function MemberDetailPage() {
                 }}
               />
 
-              {/* DKP by Character — horizontal bar chart */}
-              {data.dkpByCharacter.length > 0 && (
-                <>
-                  <Text variant="overline" className="mt-1">DKP Earned by Character</Text>
-                  <Card className="p-2 flex flex-col gap-1.5">
-                    {data.dkpByCharacter.map(c => (
-                      <div key={c.name} className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <Text variant="body" className="font-semibold truncate">{c.name}</Text>
-                            <Text variant="label" className="truncate shrink-0">{c.class}</Text>
-                          </div>
-                          <div className="flex items-baseline gap-1.5 shrink-0">
-                            <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow')}>{c.totalDkp}</span>
-                            <Text variant="caption">{c.raidCount} calls</Text>
-                          </div>
-                        </div>
-                        <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${classToPip(c.class)} transition-[width] duration-slow`}
-                            style={{ width: `${(c.totalDkp / maxDkp) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </Card>
-                </>
-              )}
             </>
           )}
         </div>
