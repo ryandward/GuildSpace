@@ -9,8 +9,11 @@ import { useCharacterMutations } from '../hooks/useCharacterMutations';
 import CharacterCard from '../components/roster/CharacterCard';
 import CharacterEditModal from '../components/roster/CharacterEditModal';
 import EquipmentPanel from '../components/roster/EquipmentPanel';
+import ItemIcon from '../components/bank/ItemIcon';
+import ItemTooltip from '../components/bank/ItemTooltip';
 import MemberName from '../components/MemberName';
-import { Text, Card, Button, Textarea } from '../ui';
+import { useEquipmentSearch } from '../hooks/useEquipmentSearch';
+import { Text, Card, Button, Input, Textarea } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
 import { getMostRecentClass } from '../lib/classColors';
@@ -41,6 +44,8 @@ export default function MemberDetailPage() {
 
   // Equipment
   const [expandedEquipment, setExpandedEquipment] = useState<string | null>(null);
+  const [equipSearch, setEquipSearch] = useState('');
+  const { data: equipResults } = useEquipmentSearch(discordId, equipSearch);
 
   const isOwnProfile = authUser?.id === discordId;
   const canToggleOfficer = (authUser?.isOwner || authUser?.isAdmin) && !isOwnProfile && !data?.isOwner;
@@ -261,6 +266,43 @@ export default function MemberDetailPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Equipment Search */}
+              <Card className="mt-1">
+                <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
+                  <span className={text({ variant: 'overline' })}>EQUIPMENT SEARCH</span>
+                  {equipSearch.length >= 2 && equipResults && (
+                    <Text variant="caption" className="ml-auto">{equipResults.length} result{equipResults.length !== 1 ? 's' : ''}</Text>
+                  )}
+                </div>
+                <div className="py-1 px-2 border-b border-border">
+                  <Input
+                    variant="transparent"
+                    size="sm"
+                    type="text"
+                    placeholder="Search equipped items across all characters..."
+                    value={equipSearch}
+                    onChange={e => setEquipSearch(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                {equipSearch.length >= 2 && equipResults && equipResults.length > 0 && (
+                  <div>
+                    {equipResults.map((r, i) => (
+                      <div key={i} className="flex items-center gap-2 py-1 px-2 border-b border-border-subtle last:border-b-0 hover:bg-surface-2 transition-colors duration-fast">
+                        <ItemIcon iconId={r.iconId} />
+                        <ItemTooltip name={r.itemName} iconId={r.iconId} statsblock={r.statsblock}>
+                          <span className="text-text font-body text-caption font-semibold">{r.itemName}</span>
+                        </ItemTooltip>
+                        <Text variant="caption" className="ml-auto shrink-0">{r.characterName} &middot; {r.slot}</Text>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {equipSearch.length >= 2 && equipResults && equipResults.length === 0 && (
+                  <Text variant="caption" className="text-center py-3 block">No items match</Text>
+                )}
+              </Card>
 
               <CharacterEditModal
                 isOpen={editingCharacter !== null}

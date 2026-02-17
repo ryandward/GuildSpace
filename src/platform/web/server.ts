@@ -736,6 +736,13 @@ export function createWebServer(opts: WebServerOptions) {
     'Finger1', 'Finger2', 'Chest', 'Legs', 'Feet', 'Waist', 'Ammo',
   ]);
 
+  /** Normalize TSV Location to a canonical base name (e.g. "Fingers" → "Finger"). */
+  const SLOT_ALIASES: Record<string, string> = {
+    'Fingers': 'Finger',
+    'Ears': 'Ear',
+    'Wrists': 'Wrist',
+  };
+
   /** Map TSV Location values to canonical slot keys. Duplicate slots get 1/2 suffix. */
   function normalizeSlots(rows: { location: string }[]): Map<number, string> {
     const seen: Record<string, number> = {};
@@ -743,7 +750,9 @@ export function createWebServer(opts: WebServerOptions) {
     const result = new Map<number, string>();
 
     for (let i = 0; i < rows.length; i++) {
-      const loc = rows[i].location.trim();
+      let loc = rows[i].location.trim();
+      // Normalize aliases (Fingers→Finger, Ears→Ear, etc.)
+      if (SLOT_ALIASES[loc]) loc = SLOT_ALIASES[loc];
       if (DUPLICATE_SLOTS.has(loc)) {
         seen[loc] = (seen[loc] || 0) + 1;
         result.set(i, `${loc}${seen[loc]}`);
@@ -872,6 +881,46 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err) {
       console.error('Failed to import equipment:', err);
       res.status(500).json({ error: 'Failed to import equipment' });
+    }
+  });
+
+  // Search equipment across a member's characters
+  app.get('/api/roster/:discordId/equipment/search', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const { discordId } = req.params;
+      const q = String(req.query.q || '').trim();
+      if (!q || q.length < 2) {
+        return res.json([]);
+      }
+
+      const rows = await AppDataSource.getRepository(CharacterEquipment)
+        .createQueryBuilder('e')
+        .where('e.discord_id = :discordId', { discordId })
+        .andWhere('e.item_name ILIKE :q', { q: `%${q}%` })
+        .andWhere('e.item_name != :empty', { empty: 'Empty' })
+        .orderBy('e.character_name', 'ASC')
+        .addOrderBy('e.slot', 'ASC')
+        .getMany();
+
+      const results = rows.map(r => {
+        const meta = getItemMetadata(r.itemName);
+        return {
+          characterName: r.characterName,
+          slot: r.slot,
+          itemName: r.itemName,
+          eqItemId: r.eqItemId,
+          iconId: meta?.iconId ?? null,
+          statsblock: meta?.statsblock ?? null,
+        };
+      });
+
+      res.json(results);
+    } catch (err) {
+      console.error('Failed to search equipment:', err);
+      res.status(500).json({ error: 'Failed to search equipment' });
     }
   });
 

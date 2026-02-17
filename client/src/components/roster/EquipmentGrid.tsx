@@ -30,12 +30,10 @@ export default function EquipmentGrid({ items }: Props) {
             style={{ '--slot-area': slot.gridArea } as React.CSSProperties}
           >
             <span className="equipment-slot-label">{slot.label}</span>
-            {filled ? (
+            {filled && (
               <ItemTooltip name={item.itemName} iconId={item.iconId} statsblock={item.statsblock}>
                 <ItemIcon iconId={item.iconId} size={40} />
               </ItemTooltip>
-            ) : (
-              <ItemIcon iconId={null} size={40} className="opacity-30" />
             )}
           </div>
         );
