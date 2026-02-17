@@ -34,6 +34,12 @@ export function useSlidingIndicator<E extends HTMLElement = HTMLElement>() {
     measure();
   }, [location.pathname, measure]);
 
+  useEffect(() => {
+    const onFocus = () => measure();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [measure]);
+
   const style: IndicatorStyle | null = indicator
     ? {
         left: indicator.left,

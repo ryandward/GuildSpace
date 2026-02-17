@@ -12,8 +12,8 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="grid grid-cols-[auto_1fr_auto] items-center min-h-7 bg-bg-deep border-b border-border px-3">
-        <h1 className="flex items-center font-display text-subheading font-bold text-accent tracking-wide">GuildSpace</h1>
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center min-h-7 bg-bg-deep border-b border-border px-3">
+        <h1 className="flex items-center font-display text-subheading font-bold text-accent tracking-wide justify-self-start">GuildSpace</h1>
         <nav ref={navRef} className="flex justify-center gap-1 max-md:hidden relative">
           <NavLink
             to="/roster"
@@ -48,8 +48,7 @@ export default function AppHeader() {
             />
           )}
         </nav>
-        <div className="md:hidden" />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-self-end">
           {!isDemo && totalMembers > 0 && (
             <>
               {/* Desktop: verbose */}

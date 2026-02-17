@@ -6,10 +6,10 @@ import BottomTabs from '../components/BottomTabs';
 export default function PageLayout() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden grain-overlay">
-      <AppHeader />
       <div className="flex flex-1 overflow-hidden relative z-0">
         <PresenceSidebar />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0 isolate">
+          <AppHeader />
           <Outlet />
         </div>
       </div>
