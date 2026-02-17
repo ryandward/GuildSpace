@@ -536,3 +536,82 @@
   .treemap-count { font-size: var(--font-size-caption); }
   .treemap-label { font-size: var(--font-size-micro); }
 }
+
+/* ── Equipment grid (EQ-style slot layout) ───────────── */
+
+.equipment-grid {
+  display: grid;
+  gap: calc(var(--space-unit) / 2);
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-areas:
+    "ear1      head       face       .          ear2"
+    "neck      shoulders  shoulders  arms       back"
+    "wrist1    chest      chest      chest      wrist2"
+    "range     hands      primary    secondary  ."
+    "finger1   legs       legs       legs       finger2"
+    "feet      waist      waist      waist      ammo";
+}
+
+@media (width < 48rem) {
+  .equipment-grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-areas:
+      "ear1      head      face      ear2"
+      "neck      shoulders shoulders back"
+      "arms      chest     chest     wrist1"
+      "wrist2    chest     chest     range"
+      "hands     primary   secondary ."
+      "finger1   legs      legs      finger2"
+      "feet      waist     waist     ammo";
+  }
+}
+
+.equipment-slot {
+  grid-area: var(--slot-area);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: calc(var(--space-unit) / 2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  min-height: calc(var(--space-unit) * 5);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard);
+}
+
+.equipment-slot.filled {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.equipment-slot.filled:hover {
+  border-color: var(--color-accent-dim);
+  background: var(--color-surface-2);
+}
+
+.equipment-slot-label {
+  font-family: var(--font-body);
+  font-size: var(--font-size-nano);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-overline);
+  color: var(--color-text-dim);
+  line-height: 1;
+}
+
+.equipment-slot-item {
+  font-family: var(--font-body);
+  font-size: var(--font-size-caption);
+  color: var(--color-text);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.equipment-slot.filled .equipment-slot-item {
+  color: var(--color-accent);
+}

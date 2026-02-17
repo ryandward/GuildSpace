@@ -40,6 +40,9 @@ interface Props {
   totalDkp?: number;
   raidCount?: number;
   maxDkp?: number;
+  /** Equipment toggle callback — when present, renders an equipment button */
+  equipmentExpanded?: boolean;
+  onToggleEquipment?: () => void;
 }
 
 export default function CharacterCard(props: Props) {
@@ -80,6 +83,16 @@ export default function CharacterCard(props: Props) {
             />
           </div>
         </div>
+      )}
+      {props.onToggleEquipment && (
+        <button
+          className="bg-transparent border-t border-border-subtle cursor-pointer px-2 py-1 text-left hover:bg-surface-2 transition-colors duration-fast"
+          onClick={props.onToggleEquipment}
+        >
+          <Text variant="caption" className={props.equipmentExpanded ? 'text-accent' : 'hover:text-accent transition-colors duration-fast'}>
+            {props.equipmentExpanded ? '▾ Equipment' : '▸ Equipment'}
+          </Text>
+        </button>
       )}
     </div>
   );

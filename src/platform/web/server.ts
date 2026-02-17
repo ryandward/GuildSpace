@@ -36,6 +36,7 @@ import { Items } from '../../entities/Items.js';
 import { BankImport } from '../../entities/BankImport.js';
 import { Trash } from '../../entities/Trash.js';
 import { Classes } from '../../entities/Classes.js';
+import { CharacterEquipment } from '../../entities/CharacterEquipment.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
 import { getItemMetadata } from '../../data/itemMetadata.js';
 import { isDmChannel, dmParticipants } from '../../lib/dmChannel.js';
@@ -724,6 +725,153 @@ export function createWebServer(opts: WebServerOptions) {
     } catch (err: any) {
       console.error('Failed to drop character:', err);
       res.status(500).json({ error: 'Failed to drop character' });
+    }
+  });
+
+  // ─── Character Equipment ─────────────────────────────────────────
+
+  const EQUIPMENT_SLOTS = new Set([
+    'Ear1', 'Ear2', 'Head', 'Face', 'Neck', 'Shoulders', 'Arms', 'Back',
+    'Wrist1', 'Wrist2', 'Range', 'Hands', 'Primary', 'Secondary',
+    'Finger1', 'Finger2', 'Chest', 'Legs', 'Feet', 'Waist', 'Ammo',
+  ]);
+
+  /** Map TSV Location values to canonical slot keys. Duplicate slots get 1/2 suffix. */
+  function normalizeSlots(rows: { location: string }[]): Map<number, string> {
+    const seen: Record<string, number> = {};
+    const DUPLICATE_SLOTS = new Set(['Ear', 'Wrist', 'Finger']);
+    const result = new Map<number, string>();
+
+    for (let i = 0; i < rows.length; i++) {
+      const loc = rows[i].location.trim();
+      if (DUPLICATE_SLOTS.has(loc)) {
+        seen[loc] = (seen[loc] || 0) + 1;
+        result.set(i, `${loc}${seen[loc]}`);
+      } else {
+        result.set(i, loc);
+      }
+    }
+    return result;
+  }
+
+  // Get equipment for a character
+  app.get('/api/roster/:discordId/characters/:name/equipment', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const { discordId, name } = req.params;
+      const rows = await AppDataSource.manager.find(CharacterEquipment, {
+        where: { characterName: name, discordId },
+      });
+
+      const enriched = rows.map(r => {
+        const meta = r.itemName !== 'Empty' ? getItemMetadata(r.itemName) : undefined;
+        return {
+          slot: r.slot,
+          itemName: r.itemName,
+          eqItemId: r.eqItemId,
+          iconId: meta?.iconId ?? null,
+          statsblock: meta?.statsblock ?? null,
+        };
+      });
+
+      res.json(enriched);
+    } catch (err) {
+      console.error('Failed to fetch equipment:', err);
+      res.status(500).json({ error: 'Failed to fetch equipment' });
+    }
+  });
+
+  // Import equipment from /outputfile inventory TSV
+  app.post('/api/roster/:discordId/characters/:name/equipment', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const { discordId, name } = req.params;
+
+    // Owner only
+    if (user.id !== discordId) {
+      return res.status(403).json({ error: 'Only the character owner can upload equipment' });
+    }
+
+    try {
+      // Validate character exists
+      const toon = await AppDataSource.manager.findOne(ActiveToons, {
+        where: { Name: name, DiscordId: discordId },
+      });
+      if (!toon) {
+        return res.status(404).json({ error: 'Character not found' });
+      }
+
+      const { content } = req.body;
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ error: 'content is required' });
+      }
+
+      // Parse TSV
+      const lines = content.split('\n').filter((l: string) => l.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ error: 'File appears to be empty' });
+      }
+
+      const header = lines[0].split('\t');
+      const colIdx = {
+        location: header.findIndex((h: string) => h.trim().toLowerCase() === 'location'),
+        name: header.findIndex((h: string) => h.trim().toLowerCase() === 'name'),
+        id: header.findIndex((h: string) => h.trim().toLowerCase() === 'id'),
+      };
+
+      if (colIdx.location === -1 || colIdx.name === -1) {
+        return res.status(400).json({ error: 'Could not find required Location and Name columns' });
+      }
+
+      // Parse data rows (equipment slots only)
+      const parsed: { location: string; itemName: string; eqItemId: string }[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split('\t');
+        const loc = (cols[colIdx.location] || '').trim();
+        if (!loc) continue;
+        parsed.push({
+          location: loc,
+          itemName: (cols[colIdx.name] || 'Empty').trim(),
+          eqItemId: colIdx.id >= 0 ? (cols[colIdx.id] || '0').trim() : '0',
+        });
+      }
+
+      // Normalize duplicate slot names and filter to equipment slots
+      const slotMap = normalizeSlots(parsed);
+      const entities: CharacterEquipment[] = [];
+      const now = new Date();
+
+      for (let i = 0; i < parsed.length; i++) {
+        const slot = slotMap.get(i)!;
+        if (!EQUIPMENT_SLOTS.has(slot)) continue;
+
+        const e = new CharacterEquipment();
+        e.characterName = name;
+        e.discordId = discordId;
+        e.slot = slot;
+        e.itemName = parsed[i].itemName;
+        e.eqItemId = parsed[i].eqItemId;
+        e.updatedAt = now;
+        entities.push(e);
+      }
+
+      if (entities.length === 0) {
+        return res.status(400).json({ error: 'No equipment slots found in file' });
+      }
+
+      // Atomic replace: delete old + insert new
+      await AppDataSource.transaction(async manager => {
+        await manager.delete(CharacterEquipment, { characterName: name, discordId });
+        await manager.save(entities);
+      });
+
+      res.json({ ok: true, count: entities.length });
+    } catch (err) {
+      console.error('Failed to import equipment:', err);
+      res.status(500).json({ error: 'Failed to import equipment' });
     }
   });
 

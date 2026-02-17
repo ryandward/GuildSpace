@@ -8,6 +8,7 @@ import { useRoleMutation } from '../hooks/useRoleMutation';
 import { useCharacterMutations } from '../hooks/useCharacterMutations';
 import CharacterCard from '../components/roster/CharacterCard';
 import CharacterEditModal from '../components/roster/CharacterEditModal';
+import EquipmentPanel from '../components/roster/EquipmentPanel';
 import MemberName from '../components/MemberName';
 import { Text, Card, Button, Textarea } from '../ui';
 import { text } from '../ui/recipes';
@@ -37,6 +38,9 @@ export default function MemberDetailPage() {
   // Character editing
   const [editingCharacter, setEditingCharacter] = useState<{ name: string; class: string; level: number; status: string } | 'new' | null>(null);
   const [charError, setCharError] = useState<string | null>(null);
+
+  // Equipment
+  const [expandedEquipment, setExpandedEquipment] = useState<string | null>(null);
 
   const isOwnProfile = authUser?.id === discordId;
   const canToggleOfficer = (authUser?.isOwner || authUser?.isAdmin) && !isOwnProfile && !data?.isOwner;
@@ -233,18 +237,28 @@ export default function MemberDetailPage() {
                   if (aStatus !== bStatus) return aStatus - bStatus;
                   return a.name.localeCompare(b.name);
                 }).map(c => (
-                  <CharacterCard
-                    key={c.name}
-                    name={c.name}
-                    class={c.class}
-                    level={c.level}
-                    status={c.status}
-                    lastRaidDate={c.lastRaidDate}
-                    onEdit={canManageCharacters ? () => { setCharError(null); setEditingCharacter(c); } : undefined}
-                    totalDkp={dkpMap.get(c.name)?.totalDkp}
-                    raidCount={dkpMap.get(c.name)?.raidCount}
-                    maxDkp={maxDkp}
-                  />
+                  <div key={c.name} className="flex flex-col gap-1.5">
+                    <CharacterCard
+                      name={c.name}
+                      class={c.class}
+                      level={c.level}
+                      status={c.status}
+                      lastRaidDate={c.lastRaidDate}
+                      onEdit={canManageCharacters ? () => { setCharError(null); setEditingCharacter(c); } : undefined}
+                      totalDkp={dkpMap.get(c.name)?.totalDkp}
+                      raidCount={dkpMap.get(c.name)?.raidCount}
+                      maxDkp={maxDkp}
+                      equipmentExpanded={expandedEquipment === c.name}
+                      onToggleEquipment={() => setExpandedEquipment(prev => prev === c.name ? null : c.name)}
+                    />
+                    {expandedEquipment === c.name && (
+                      <EquipmentPanel
+                        discordId={discordId!}
+                        characterName={c.name}
+                        isOwner={isOwnProfile}
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
 
