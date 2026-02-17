@@ -14,7 +14,7 @@
   --timing-base: 200ms;        /* Nielsen/Miller perceptual threshold */
   --lum-bg: 0.14;              /* OKLCH base lightness */
   --lum-step: 0.035;           /* OKLCH elevation increment (Weber) */
-  --surface-chroma: 0.02;      /* TUNABLE warm tint */
+  --surface-chroma: 0.008;     /* TUNABLE warm tint */
   --surface-hue: 55;           /* TUNABLE amber direction */
   --accent-hue: 85;            /* TUNABLE warm gold in OKLCH */
   --accent-lightness: 0.72;    /* TUNABLE accent base lightness */
