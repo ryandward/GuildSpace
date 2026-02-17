@@ -3,9 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { useRosterQuery } from '../hooks/useRosterQuery';
+import { useDmThreadsQuery } from '../hooks/useDmThreadsQuery';
 import { getClassColor, getMostRecentClass } from '../lib/classColors';
 import { ChannelListSidebar } from './ChannelTabs';
 import { text } from '../ui/recipes';
+import { timeAgo } from '../utils/timeAgo';
 
 interface OnlineMember {
   discordId: string;
@@ -15,11 +17,13 @@ interface OnlineMember {
 
 export default function PresenceSidebar() {
   const { onlineIds, totalMembers, connected } = useSocket();
-  const { user } = useAuth();
+  const { user, isDemo } = useAuth();
   const { data: rosterData } = useRosterQuery();
+  const { data: dmThreads } = useDmThreadsQuery();
   const navigate = useNavigate();
   const location = useLocation();
   const isChat = location.pathname.startsWith('/chat');
+  const isChatArea = isChat || location.pathname.startsWith('/dm');
 
   const { me, others } = useMemo(() => {
     if (!rosterData?.members) return { me: null, others: [] };
@@ -64,10 +68,40 @@ export default function PresenceSidebar() {
 
   return (
     <aside className="w-[--container-sidebar] shrink-0 border-r border-border bg-surface flex flex-col max-lg:hidden">
-      {/* Channel list — only on chat routes */}
-      {isChat && (
+      {/* Channel list — on chat/DM routes */}
+      {isChatArea && (
         <div className="border-b border-border pb-1">
           <ChannelListSidebar />
+        </div>
+      )}
+
+      {/* DM threads — on chat/DM routes */}
+      {isChatArea && !isDemo && dmThreads && dmThreads.length > 0 && (
+        <div className="border-b border-border pb-1">
+          <div className="px-2 pt-1.5 pb-0.5">
+            <span className={text({ variant: 'overline' })}>DIRECT MESSAGES</span>
+          </div>
+          <div className="flex flex-col">
+            {dmThreads.map(thread => {
+              const isActive = location.pathname === `/dm/${thread.otherUserId}`;
+              return (
+                <button
+                  key={thread.channel}
+                  className={`flex items-center gap-1.5 px-2 py-1 bg-transparent border-none cursor-pointer text-left font-body text-caption transition-colors duration-fast w-full ${
+                    isActive
+                      ? 'text-accent font-bold bg-surface-2'
+                      : 'text-text-secondary hover:text-text hover:bg-surface-2'
+                  }`}
+                  onClick={() => navigate(`/dm/${thread.otherUserId}`)}
+                >
+                  <span className="truncate flex-1">{thread.otherDisplayName}</span>
+                  <span className={text({ variant: 'caption' }) + ' shrink-0 text-text-dim'}>
+                    {timeAgo(thread.lastMessageAt)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -98,7 +132,7 @@ export default function PresenceSidebar() {
           <button
             key={member.discordId}
             className="flex items-center gap-1.5 px-2 py-1 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast w-full"
-            onClick={() => navigate(`/roster/${member.discordId}`)}
+            onClick={() => navigate(isChatArea ? `/dm/${member.discordId}` : `/roster/${member.discordId}`)}
           >
             <span className="size-0.5 rounded-full bg-green shrink-0" />
             <span

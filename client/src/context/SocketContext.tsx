@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext';
+import { isDmChannel } from '../lib/dmChannel';
 
 export interface ChatMsg {
   id?: number;
@@ -43,6 +45,7 @@ function nextId() {
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { token, user } = useAuth();
+  const queryClient = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
   const hasConnectedOnce = useRef(false);
   const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,6 +128,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     sock.on('newMessage', (msg: ChatMsg) => {
       addToChannel(msg.channel, [{ type: 'chat', msg, id: nextId() }]);
+      if (isDmChannel(msg.channel)) {
+        queryClient.invalidateQueries({ queryKey: ['dm-threads'] });
+      }
     });
 
     sock.on('presenceUpdate', (data: { onlineCount: number; onlineIds: string[]; totalMembers: number }) => {

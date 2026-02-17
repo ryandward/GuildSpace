@@ -38,6 +38,7 @@ import { Trash } from '../../entities/Trash.js';
 import { Classes } from '../../entities/Classes.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
 import { getItemMetadata } from '../../data/itemMetadata.js';
+import { isDmChannel, dmParticipants } from '../../lib/dmChannel.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -1921,9 +1922,62 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  // ─── DM Threads ────────────────────────────────────────────────────
+
+  app.get('/api/chat/dm-threads', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      // Find distinct DM channels this user participates in
+      const dmRows = await AppDataSource.manager
+        .createQueryBuilder(ChatMessage, 'cm')
+        .select('cm.channel', 'channel')
+        .addSelect('MAX(cm.created_at)', 'lastAt')
+        .where('cm.channel LIKE :p1 OR cm.channel LIKE :p2', {
+          p1: `dm:${user.id}:%`,
+          p2: `dm:%:${user.id}`,
+        })
+        .groupBy('cm.channel')
+        .orderBy('MAX(cm.created_at)', 'DESC')
+        .getRawMany<{ channel: string; lastAt: string }>();
+
+      if (dmRows.length === 0) return res.json([]);
+
+      // For each thread, get latest message + other user's displayName
+      const threads = await Promise.all(dmRows.map(async (row) => {
+        const parts = dmParticipants(row.channel);
+        if (!parts) return null;
+        const otherId = parts[0] === user.id ? parts[1] : parts[0];
+
+        const [lastMsg, otherUser] = await Promise.all([
+          AppDataSource.manager.findOne(ChatMessage, {
+            where: { channel: row.channel },
+            order: { createdAt: 'DESC' },
+          }),
+          AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: otherId } }),
+        ]);
+
+        return {
+          channel: row.channel,
+          otherUserId: otherId,
+          otherDisplayName: otherUser?.displayName || otherId,
+          lastMessage: lastMsg?.content || '',
+          lastMessageAt: lastMsg?.createdAt?.toISOString() || row.lastAt,
+        };
+      }));
+
+      res.json(threads.filter(Boolean));
+    } catch (err) {
+      console.error('Failed to fetch DM threads:', err);
+      res.status(500).json({ error: 'Failed to fetch conversations' });
+    }
+  });
+
   // ─── Online Presence Tracking ──────────────────────────────────────
 
   const onlineUsers = new Map<string, number>(); // discordId → connection count
+  const userSockets = new Map<string, Set<import('socket.io').Socket>>(); // discordId → sockets
 
   async function fetchTotalMemberCount(): Promise<number> {
     const result = await AppDataSource.getRepository(ActiveToons)
@@ -1988,6 +2042,26 @@ export function createWebServer(opts: WebServerOptions) {
           socket.join('channel:general');
         }
 
+        // Auto-join DM rooms this user participates in
+        try {
+          const dmRows = await AppDataSource.manager
+            .createQueryBuilder(ChatMessage, 'cm')
+            .select('DISTINCT cm.channel', 'channel')
+            .where('cm.channel LIKE :p1 OR cm.channel LIKE :p2', {
+              p1: `dm:${user.id}:%`,
+              p2: `dm:%:${user.id}`,
+            })
+            .getRawMany<{ channel: string }>();
+          for (const row of dmRows) {
+            socket.join(`channel:${row.channel}`);
+          }
+        } catch { /* ignore */ }
+
+        // Track user → socket mapping for DM delivery
+        let sockets = userSockets.get(user.id);
+        if (!sockets) { sockets = new Set(); userSockets.set(user.id, sockets); }
+        sockets.add(socket);
+
         socket.emit('authOk', user);
 
         // Track online presence
@@ -2034,6 +2108,20 @@ export function createWebServer(opts: WebServerOptions) {
       if (!channelName) return;
 
       try {
+        if (isDmChannel(channelName)) {
+          // DM channel: verify sender is a participant
+          const parts = dmParticipants(channelName);
+          if (!parts || !parts.includes(sessionUser.id)) return;
+
+          const history = await AppDataSource.manager.find(ChatMessage, {
+            where: { channel: channelName },
+            order: { createdAt: 'ASC' },
+            take: 100,
+          });
+          socket.emit('chatHistory', { channel: channelName, messages: history });
+          return;
+        }
+
         // Validate channel exists and user has access
         const channel = await AppDataSource.manager.findOne(ChatChannel, { where: { name: channelName } });
         if (!channel) return;
@@ -2058,6 +2146,38 @@ export function createWebServer(opts: WebServerOptions) {
       if (!content) return;
 
       const channelName = data.channel || 'general';
+
+      if (isDmChannel(channelName)) {
+        // DM channel: verify sender is a participant and other user exists
+        const parts = dmParticipants(channelName);
+        if (!parts || !parts.includes(sessionUser.id)) return;
+        const otherId = parts[0] === sessionUser.id ? parts[1] : parts[0];
+
+        try {
+          const other = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: otherId } });
+          if (!other) return;
+
+          const msg = new ChatMessage();
+          msg.channel = channelName;
+          msg.userId = sessionUser.id;
+          msg.displayName = sessionUser.displayName || sessionUser.username;
+          msg.content = content;
+          const saved = await AppDataSource.manager.save(msg);
+
+          // Ensure both participants' sockets are in the room
+          const roomName = `channel:${channelName}`;
+          socket.join(roomName);
+          const otherSockets = userSockets.get(otherId);
+          if (otherSockets) {
+            for (const s of otherSockets) s.join(roomName);
+          }
+
+          io.to(roomName).emit('newMessage', saved);
+        } catch (err) {
+          console.error('Failed to save DM:', err);
+        }
+        return;
+      }
 
       // Validate channel exists and user has access
       try {
@@ -2092,6 +2212,13 @@ export function createWebServer(opts: WebServerOptions) {
           emitPresenceUpdate();
         } else {
           onlineUsers.set(sessionUser.id, count - 1);
+        }
+
+        // Clean up socket tracking
+        const sockets = userSockets.get(sessionUser.id);
+        if (sockets) {
+          sockets.delete(socket);
+          if (sockets.size === 0) userSockets.delete(sessionUser.id);
         }
       }
       sessionUser = null;

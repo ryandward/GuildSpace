@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useSlidingIndicator } from '../hooks/useSlidingIndicator';
@@ -9,6 +9,8 @@ export default function AppHeader() {
   const { isDemo } = useAuth();
   const { connected, onlineCount, totalMembers } = useSocket();
   const { ref: navRef, style: indicatorStyle } = useSlidingIndicator<HTMLElement>();
+  const location = useLocation();
+  const isDmRoute = location.pathname.startsWith('/dm');
 
   return (
     <>
@@ -36,7 +38,7 @@ export default function AppHeader() {
           {!isDemo && (
             <NavLink
               to="/chat"
-              className={({ isActive }) => navLink({ active: isActive })}
+              className={({ isActive }) => navLink({ active: isActive || isDmRoute })}
             >
               Chat
             </NavLink>

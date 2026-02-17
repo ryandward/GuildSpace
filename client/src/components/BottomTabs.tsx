@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSlidingIndicator } from '../hooks/useSlidingIndicator';
 
@@ -51,6 +51,8 @@ const tabs = [
 export default function BottomTabs() {
   const { isDemo } = useAuth();
   const { ref: navRef, style: indicatorStyle } = useSlidingIndicator<HTMLElement>();
+  const location = useLocation();
+  const isDmRoute = location.pathname.startsWith('/dm');
   const visibleTabs = isDemo ? tabs.filter(t => t.to !== '/chat') : tabs;
 
   return (
@@ -59,11 +61,12 @@ export default function BottomTabs() {
         <NavLink
           key={to}
           to={to}
-          className={({ isActive }) =>
-            `flex-1 flex flex-col items-center gap-0.5 py-1.5 no-underline transition-colors duration-fast ${
-              isActive ? 'text-accent' : 'text-text-dim hover:text-text'
-            }`
-          }
+          className={({ isActive }) => {
+            const active = isActive || (to === '/chat' && isDmRoute);
+            return `flex-1 flex flex-col items-center gap-0.5 py-1.5 no-underline transition-colors duration-fast ${
+              active ? 'text-accent' : 'text-text-dim hover:text-text'
+            }`;
+          }}
         >
           {icon}
           <span className="text-micro font-medium tracking-wide">{label}</span>

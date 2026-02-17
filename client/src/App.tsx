@@ -9,6 +9,7 @@ import RaidsPage from './pages/RaidsPage';
 import RaidEventPage from './pages/RaidEventPage';
 import BankPage from './pages/BankPage';
 import BankerDetailPage from './pages/BankerDetailPage';
+import DmShell from './layouts/DmShell';
 import PageLayout from './layouts/PageLayout';
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="/bank/:banker" element={<BankerDetailPage />} />
         <Route path="/chat" element={<AppShell />} />
         <Route path="/chat/:channelName" element={<AppShell />} />
+        <Route path="/dm/:userId" element={<DmShell />} />
         <Route path="/terminal" element={<Navigate to="/chat" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/roster" replace />} />
