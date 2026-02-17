@@ -67,19 +67,17 @@ export default function PresenceSidebar() {
   if (!connected) return null;
 
   return (
-    <aside className="w-[--container-sidebar] shrink-0 border-r border-border bg-surface flex flex-col max-lg:hidden">
-      {/* Channel list — on chat/DM routes */}
-      {isChatArea && (
-        <div className="border-b border-border pb-1">
-          <ChannelListSidebar />
-        </div>
-      )}
+    <aside className="w-[--container-sidebar] min-w-[--container-sidebar] max-w-[--container-sidebar] shrink-0 border-r border-border bg-surface flex flex-col max-lg:hidden overflow-hidden">
+      {/* Channel list — always visible to reserve sidebar space */}
+      <div className="border-b border-border pb-1">
+        <ChannelListSidebar />
+      </div>
 
-      {/* DM threads — on chat/DM routes */}
-      {isChatArea && !isDemo && dmThreads && dmThreads.length > 0 && (
+      {/* DM threads */}
+      {!isDemo && dmThreads && dmThreads.length > 0 && (
         <div className="border-b border-border pb-1">
           <div className="px-2 pt-1.5 pb-0.5">
-            <span className={text({ variant: 'overline' })}>DIRECT MESSAGES</span>
+            <span className={text({ variant: 'overline' })}>DMs</span>
           </div>
           <div className="flex flex-col">
             {dmThreads.map(thread => {

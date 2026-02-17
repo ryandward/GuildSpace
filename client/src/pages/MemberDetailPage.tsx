@@ -91,11 +91,11 @@ export default function MemberDetailPage() {
                   adminSince={data.adminSince}
                   className="font-display text-display font-semibold truncate inline-flex items-center gap-1"
                 />
-                <div className="flex items-baseline gap-3">
+                <div className="flex items-center gap-3">
                   <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-subheading')}>{netDkp} DKP</span>
                   {data.joinedAt && <Text variant="caption">Joined {formatDate(data.joinedAt)}</Text>}
-                  {!isOwnProfile && !isDemo && (
-                    <Button size="sm" intent="ghost" onClick={() => navigate(`/dm/${discordId}`)}>
+                  {authUser && !isOwnProfile && !isDemo && (
+                    <Button size="sm" intent="primary" onClick={() => navigate(`/dm/${discordId}`)}>
                       Message
                     </Button>
                   )}
