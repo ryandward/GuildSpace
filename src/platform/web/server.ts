@@ -860,14 +860,15 @@ export function createWebServer(opts: WebServerOptions) {
         });
       }
 
-      // Normalize duplicate slot names and filter to equipment slots
+      // Normalize duplicate slot names and filter to equipment + bag content slots
       const slotMap = normalizeSlots(parsed);
+      const BAG_CONTENT_RE = /^General\d+-Slot\d+$/;
       const entities: CharacterEquipment[] = [];
       const now = new Date();
 
       for (let i = 0; i < parsed.length; i++) {
         const slot = slotMap.get(i)!;
-        if (!EQUIPMENT_SLOTS.has(slot)) continue;
+        if (!EQUIPMENT_SLOTS.has(slot) && !BAG_CONTENT_RE.test(slot)) continue;
 
         const e = new CharacterEquipment();
         e.characterName = name;
