@@ -39,6 +39,7 @@ import { Classes } from '../../entities/Classes.js';
 import { processWhoLog } from '../../commands/dkp/attendance_processor.js';
 import { getItemMetadata } from '../../data/itemMetadata.js';
 import { isDmChannel, dmParticipants } from '../../lib/dmChannel.js';
+import { initDmEncryption, encryptDmContent, decryptDmContent } from '../../lib/dmEncrypt.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -107,6 +108,7 @@ export function createWebServer(opts: WebServerOptions) {
   // ─── Auth (Discord OAuth2) ───────────────────────────────────────
 
   const TOKEN_SECRET = process.env.DISCORD_CLIENT_SECRET || 'fallback-secret';
+  initDmEncryption(TOKEN_SECRET);
   const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   function createSignedToken(discordId: string): string {
@@ -1962,7 +1964,7 @@ export function createWebServer(opts: WebServerOptions) {
           channel: row.channel,
           otherUserId: otherId,
           otherDisplayName: otherUser?.displayName || otherId,
-          lastMessage: lastMsg?.content || '',
+          lastMessage: lastMsg ? decryptDmContent(lastMsg.content) : '',
           lastMessageAt: lastMsg?.createdAt?.toISOString() || row.lastAt,
         };
       }));
@@ -2118,6 +2120,7 @@ export function createWebServer(opts: WebServerOptions) {
             order: { createdAt: 'ASC' },
             take: 100,
           });
+          history.forEach(m => { m.content = decryptDmContent(m.content); });
           socket.emit('chatHistory', { channel: channelName, messages: history });
           return;
         }
@@ -2161,8 +2164,9 @@ export function createWebServer(opts: WebServerOptions) {
           msg.channel = channelName;
           msg.userId = sessionUser.id;
           msg.displayName = sessionUser.displayName || sessionUser.username;
-          msg.content = content;
+          msg.content = encryptDmContent(content);
           const saved = await AppDataSource.manager.save(msg);
+          saved.content = content; // emit plaintext to sockets
 
           // Ensure both participants' sockets are in the room
           const roomName = `channel:${channelName}`;
