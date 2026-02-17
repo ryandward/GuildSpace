@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useMemberQuery } from '../hooks/useMemberQuery';
@@ -22,7 +22,8 @@ function formatDate(iso: string | null | undefined): string | undefined {
 
 export default function MemberDetailPage() {
   const { discordId } = useParams<{ discordId: string }>();
-  const { user: authUser } = useAuth();
+  const { user: authUser, isDemo } = useAuth();
+  const navigate = useNavigate();
   const { onlineIds } = useSocket();
   const { data, isLoading, error } = useMemberQuery(discordId);
   const bioMutation = useBioMutation(discordId);
@@ -93,6 +94,11 @@ export default function MemberDetailPage() {
                 <div className="flex items-baseline gap-3">
                   <span className={cx(text({ variant: 'mono' }), 'font-bold text-yellow text-subheading')}>{netDkp} DKP</span>
                   {data.joinedAt && <Text variant="caption">Joined {formatDate(data.joinedAt)}</Text>}
+                  {!isOwnProfile && !isDemo && (
+                    <Button size="sm" intent="ghost" onClick={() => navigate(`/dm/${discordId}`)}>
+                      Message
+                    </Button>
+                  )}
                 </div>
               </div>
 
