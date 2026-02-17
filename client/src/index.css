@@ -551,8 +551,8 @@
     "finger1   legs       legs       legs       finger2"
     "feet      waist      waist      waist      ammo"
     ".         .          .          .          ."
-    "bag1      bag2       bag3       bag4       bag5"
-    "bag6      bag7       bag8       .          .";
+    "bag1      bag2       bag3       bag4       ."
+    "bag5      bag6       bag7       bag8       .";
 }
 
 @media (width < 48rem) {
