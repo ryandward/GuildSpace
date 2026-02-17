@@ -18,6 +18,7 @@ export interface MemberDetail {
   isOwner: boolean;
   role: 'owner' | 'admin' | 'officer' | 'member';
   hasGuildSpace: boolean;
+  equipmentPublic: boolean;
   officerSince: string | null;
   adminSince: string | null;
   joinedAt: string | null;

@@ -549,7 +549,10 @@
     "wrist1    chest      chest      chest      wrist2"
     "range     hands      primary    secondary  ."
     "finger1   legs       legs       legs       finger2"
-    "feet      waist      waist      waist      ammo";
+    "feet      waist      waist      waist      ammo"
+    ".         .          .          .          ."
+    "bag1      bag2       bag3       bag4       bag5"
+    "bag6      bag7       bag8       .          .";
 }
 
 @media (width < 48rem) {
@@ -562,7 +565,10 @@
       "wrist2    chest     chest     range"
       "hands     primary   secondary ."
       "finger1   legs      legs      finger2"
-      "feet      waist     waist     ammo";
+      "feet      waist     waist     ammo"
+      ".         .         .         ."
+      "bag1      bag2      bag3      bag4"
+      "bag5      bag6      bag7      bag8";
   }
 }
 

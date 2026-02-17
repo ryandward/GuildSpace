@@ -1,0 +1,1 @@
+ALTER TABLE guildspace_users ADD COLUMN IF NOT EXISTS equipment_public BOOLEAN NOT NULL DEFAULT FALSE;

@@ -13,6 +13,7 @@ import ItemIcon from '../components/bank/ItemIcon';
 import ItemTooltip from '../components/bank/ItemTooltip';
 import MemberName from '../components/MemberName';
 import { useEquipmentSearch } from '../hooks/useEquipmentSearch';
+import { useEquipmentVisibility } from '../hooks/useEquipmentVisibility';
 import { Text, Card, Button, Input, Textarea } from '../ui';
 import { text } from '../ui/recipes';
 import { cx } from 'class-variance-authority';
@@ -46,8 +47,10 @@ export default function MemberDetailPage() {
   const [expandedEquipment, setExpandedEquipment] = useState<string | null>(null);
   const [equipSearch, setEquipSearch] = useState('');
   const { data: equipResults } = useEquipmentSearch(discordId, equipSearch);
+  const visibilityMutation = useEquipmentVisibility(discordId);
 
   const isOwnProfile = authUser?.id === discordId;
+  const equipmentVisible = isOwnProfile || data?.equipmentPublic;
   const canToggleOfficer = (authUser?.isOwner || authUser?.isAdmin) && !isOwnProfile && !data?.isOwner;
   const canToggleAdmin = authUser?.isOwner && !isOwnProfile && !data?.isOwner;
   const canManageCharacters = isOwnProfile ||
@@ -254,7 +257,7 @@ export default function MemberDetailPage() {
                       raidCount={dkpMap.get(c.name)?.raidCount}
                       maxDkp={maxDkp}
                       equipmentExpanded={expandedEquipment === c.name}
-                      onToggleEquipment={() => setExpandedEquipment(prev => prev === c.name ? null : c.name)}
+                      onToggleEquipment={equipmentVisible ? () => setExpandedEquipment(prev => prev === c.name ? null : c.name) : undefined}
                     />
                     {expandedEquipment === c.name && (
                       <EquipmentPanel
@@ -267,42 +270,60 @@ export default function MemberDetailPage() {
                 ))}
               </div>
 
-              {/* Equipment Search */}
-              <Card className="mt-1">
-                <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
-                  <span className={text({ variant: 'overline' })}>EQUIPMENT SEARCH</span>
-                  {equipSearch.length >= 2 && equipResults && (
-                    <Text variant="caption" className="ml-auto">{equipResults.length} result{equipResults.length !== 1 ? 's' : ''}</Text>
-                  )}
-                </div>
-                <div className="py-1 px-2 border-b border-border">
-                  <Input
-                    variant="transparent"
+              {/* Equipment visibility toggle + search */}
+              {isOwnProfile && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Button
                     size="sm"
-                    type="text"
-                    placeholder="Search equipped items across all characters..."
-                    value={equipSearch}
-                    onChange={e => setEquipSearch(e.target.value)}
-                    className="w-full"
-                  />
+                    intent={data.equipmentPublic ? 'success' : 'ghost'}
+                    pending={visibilityMutation.isPending}
+                    onClick={() => visibilityMutation.mutate(!data.equipmentPublic)}
+                  >
+                    {data.equipmentPublic ? 'Equipment: Visible to Guild' : 'Equipment: Hidden'}
+                  </Button>
+                  <Text variant="caption">
+                    {data.equipmentPublic ? 'Others can see your gear' : 'Only you can see your gear'}
+                  </Text>
                 </div>
-                {equipSearch.length >= 2 && equipResults && equipResults.length > 0 && (
-                  <div>
-                    {equipResults.map((r, i) => (
-                      <div key={i} className="flex items-center gap-2 py-1 px-2 border-b border-border-subtle last:border-b-0 hover:bg-surface-2 transition-colors duration-fast">
-                        <ItemIcon iconId={r.iconId} />
-                        <ItemTooltip name={r.itemName} iconId={r.iconId} statsblock={r.statsblock}>
-                          <span className="text-text font-body text-caption font-semibold">{r.itemName}</span>
-                        </ItemTooltip>
-                        <Text variant="caption" className="ml-auto shrink-0">{r.characterName} &middot; {r.slot}</Text>
-                      </div>
-                    ))}
+              )}
+
+              {equipmentVisible && (
+                <Card className="mt-1">
+                  <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
+                    <span className={text({ variant: 'overline' })}>EQUIPMENT SEARCH</span>
+                    {equipSearch.length >= 2 && equipResults && (
+                      <Text variant="caption" className="ml-auto">{equipResults.length} result{equipResults.length !== 1 ? 's' : ''}</Text>
+                    )}
                   </div>
-                )}
-                {equipSearch.length >= 2 && equipResults && equipResults.length === 0 && (
-                  <Text variant="caption" className="text-center py-3 block">No items match</Text>
-                )}
-              </Card>
+                  <div className="py-1 px-2 border-b border-border">
+                    <Input
+                      variant="transparent"
+                      size="sm"
+                      type="text"
+                      placeholder="Search equipped items across all characters..."
+                      value={equipSearch}
+                      onChange={e => setEquipSearch(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  {equipSearch.length >= 2 && equipResults && equipResults.length > 0 && (
+                    <div>
+                      {equipResults.map((r, i) => (
+                        <div key={i} className="flex items-center gap-2 py-1 px-2 border-b border-border-subtle last:border-b-0 hover:bg-surface-2 transition-colors duration-fast">
+                          <ItemIcon iconId={r.iconId} />
+                          <ItemTooltip name={r.itemName} iconId={r.iconId} statsblock={r.statsblock}>
+                            <span className="text-text font-body text-caption font-semibold">{r.itemName}</span>
+                          </ItemTooltip>
+                          <Text variant="caption" className="ml-auto shrink-0">{r.characterName} &middot; {r.slot}</Text>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {equipSearch.length >= 2 && equipResults && equipResults.length === 0 && (
+                    <Text variant="caption" className="text-center py-3 block">No items match</Text>
+                  )}
+                </Card>
+              )}
 
               <CharacterEditModal
                 isOpen={editingCharacter !== null}

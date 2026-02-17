@@ -548,6 +548,7 @@ export function createWebServer(opts: WebServerOptions) {
         displayName,
         bio: gsUser?.bio || null,
         hasGuildSpace: !!gsUser,
+        equipmentPublic: gsUser?.equipmentPublic || false,
         ...GuildSpaceUser.roleFlags(gsUser),
         officerSince: gsUser?.officerSince?.toISOString() || null,
         adminSince: gsUser?.adminSince?.toISOString() || null,
@@ -734,6 +735,8 @@ export function createWebServer(opts: WebServerOptions) {
     'Ear1', 'Ear2', 'Head', 'Face', 'Neck', 'Shoulders', 'Arms', 'Back',
     'Wrist1', 'Wrist2', 'Range', 'Hands', 'Primary', 'Secondary',
     'Finger1', 'Finger2', 'Chest', 'Legs', 'Feet', 'Waist', 'Ammo',
+    'General1', 'General2', 'General3', 'General4',
+    'General5', 'General6', 'General7', 'General8',
   ]);
 
   /** Normalize TSV Location to a canonical base name (e.g. "Fingers" → "Finger"). */
@@ -770,6 +773,15 @@ export function createWebServer(opts: WebServerOptions) {
 
     try {
       const { discordId, name } = req.params;
+
+      // Check visibility: owner always sees own, others need equipmentPublic
+      if (user.id !== discordId) {
+        const targetGsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } });
+        if (!targetGsUser?.equipmentPublic) {
+          return res.json([]);
+        }
+      }
+
       const rows = await AppDataSource.manager.find(CharacterEquipment, {
         where: { characterName: name, discordId },
       });
@@ -896,6 +908,14 @@ export function createWebServer(opts: WebServerOptions) {
         return res.json([]);
       }
 
+      // Check visibility: owner always sees own, others need equipmentPublic
+      if (user.id !== discordId) {
+        const targetGsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } });
+        if (!targetGsUser?.equipmentPublic) {
+          return res.json([]);
+        }
+      }
+
       const rows = await AppDataSource.getRepository(CharacterEquipment)
         .createQueryBuilder('e')
         .where('e.discord_id = :discordId', { discordId })
@@ -925,6 +945,30 @@ export function createWebServer(opts: WebServerOptions) {
   });
 
   // ─── Profile ──────────────────────────────────────────────────────
+
+  // Toggle equipment visibility
+  app.post('/api/profile/equipment-visibility', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const { visible } = req.body;
+      if (typeof visible !== 'boolean') {
+        return res.status(400).json({ error: 'visible must be a boolean' });
+      }
+
+      const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+      if (!gsUser) return res.status(404).json({ error: 'User not found' });
+
+      gsUser.equipmentPublic = visible;
+      await AppDataSource.manager.save(gsUser);
+
+      res.json({ ok: true, equipmentPublic: visible });
+    } catch (err) {
+      console.error('Failed to update equipment visibility:', err);
+      res.status(500).json({ error: 'Failed to update visibility' });
+    }
+  });
 
   app.post('/api/profile/bio', async (req, res) => {
     const user = await getUser(req);

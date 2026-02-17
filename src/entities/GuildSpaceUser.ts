@@ -41,6 +41,10 @@ export class GuildSpaceUser {
   @Column('timestamp', { name: 'admin_since', nullable: true })
   adminSince: Date | null;
 
+  /** Whether this user's equipment is visible to others */
+  @Column('boolean', { name: 'equipment_public', default: false })
+  equipmentPublic: boolean;
+
   /** Personal API key for companion app auth */
   @Column('text', { name: 'api_key', nullable: true })
   apiKey: string | null;
