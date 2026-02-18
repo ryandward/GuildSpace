@@ -104,10 +104,9 @@ export default function EquipmentGrid({ items }: Props) {
             </div>
 
             {/* Bag contents — column is always reserved by the grid */}
-            <div className="min-w-0">
+            <div className="min-w-0 overflow-hidden">
               {expandedBag && (() => {
                 const contents = bagContents.get(expandedBag) ?? [];
-                const bagItem = itemMap.get(expandedBag);
                 const filledCount = contents.filter(c => c.itemName !== 'Empty').length;
                 const slots: (EquipmentItem | null)[] = [];
                 for (let i = 0; i < Math.max(contents.length, MAX_BAG_SLOTS); i++) {
@@ -117,9 +116,7 @@ export default function EquipmentGrid({ items }: Props) {
                 return (
                   <div className="bg-surface border border-border rounded-md overflow-hidden">
                     <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
-                      <Text variant="overline">
-                        {bagItem?.itemName || expandedBag}
-                      </Text>
+                      <Text variant="overline">CONTENTS</Text>
                       <Text variant="caption" className="ml-auto">{filledCount}/{contents.length}</Text>
                     </div>
                     {slots.map((item, i) => {
