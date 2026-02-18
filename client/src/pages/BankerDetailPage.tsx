@@ -4,7 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { useBankQuery } from '../hooks/useBankQuery';
 import { useBankerHistory } from '../hooks/useBankerHistory';
 import { useBankSquash } from '../hooks/useBankSquash';
+import { useBankerEquipment } from '../hooks/useBankerEquipment';
 import BankHistoryEntry from '../components/BankHistoryEntry';
+import EquipmentGrid from '../components/roster/EquipmentGrid';
 import ItemIcon from '../components/bank/ItemIcon';
 import ItemTooltip from '../components/bank/ItemTooltip';
 import { Card, Input, Text, Badge, Heading } from '../ui';
@@ -16,8 +18,10 @@ export default function BankerDetailPage() {
   const { data, isLoading, error } = useBankQuery();
   const { data: history, isLoading: historyLoading } = useBankerHistory(banker);
   const squashMutation = useBankSquash();
+  const { data: equipmentItems } = useBankerEquipment(banker);
   const [search, setSearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
+  const [showEquipment, setShowEquipment] = useState(false);
 
   const items = data?.items;
 
@@ -78,6 +82,33 @@ export default function BankerDetailPage() {
                 <Heading level="heading">{banker}</Heading>
                 <Text variant="caption">{bankerItems.length} unique items</Text>
               </div>
+
+              {equipmentItems && equipmentItems.length > 0 && (
+                <Card>
+                  <button
+                    className="w-full flex items-center gap-2 py-1.5 px-2 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast"
+                    onClick={() => setShowEquipment(prev => !prev)}
+                  >
+                    <span
+                      className="collapse-chevron text-text-dim text-caption shrink-0"
+                      data-expanded={showEquipment}
+                    >
+                      ›
+                    </span>
+                    <span className={text({ variant: 'overline' })}>EQUIPPED GEAR</span>
+                    <Text variant="caption" className="ml-auto">
+                      {equipmentItems.filter(i => !i.slot.includes('-') && i.itemName !== 'Empty').length} slots
+                    </Text>
+                  </button>
+                  <div className="collapse-container" data-expanded={showEquipment}>
+                    <div className="collapse-inner">
+                      <div className="p-2">
+                        <EquipmentGrid items={equipmentItems} />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
 
               <div className="flex gap-2 max-md:flex-col">
                 {/* Inventory */}

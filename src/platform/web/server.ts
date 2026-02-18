@@ -1953,6 +1953,40 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  // Get equipment for a banker character (looked up by name)
+  app.get('/api/bank/:banker/equipment', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const { banker } = req.params;
+
+      // Look up the banker's owner from ActiveToons
+      const toon = await AppDataSource.manager.findOne(ActiveToons, { where: { Name: banker } });
+      if (!toon) return res.json([]);
+
+      const rows = await AppDataSource.manager.find(CharacterEquipment, {
+        where: { characterName: banker, discordId: toon.DiscordId },
+      });
+
+      const enriched = rows.map(r => {
+        const meta = r.itemName !== 'Empty' ? getItemMetadata(r.itemName) : undefined;
+        return {
+          slot: r.slot,
+          itemName: r.itemName,
+          eqItemId: r.eqItemId,
+          iconId: meta?.iconId ?? null,
+          statsblock: meta?.statsblock ?? null,
+        };
+      });
+
+      res.json(enriched);
+    } catch (err) {
+      console.error('Failed to fetch banker equipment:', err);
+      res.status(500).json({ error: 'Failed to fetch equipment' });
+    }
+  });
+
   // ─── Bank Import Squash ────────────────────────────────────────────
 
   app.post('/api/bank/history/:id/squash', async (req, res) => {
