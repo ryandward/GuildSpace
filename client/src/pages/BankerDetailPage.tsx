@@ -21,7 +21,7 @@ export default function BankerDetailPage() {
   const { data: equipmentItems } = useBankerEquipment(banker);
   const [search, setSearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
-  const [showEquipment, setShowEquipment] = useState(false);
+
 
   const items = data?.items;
 
@@ -84,30 +84,9 @@ export default function BankerDetailPage() {
               </div>
 
               {equipmentItems && equipmentItems.length > 0 && (
-                <Card>
-                  <button
-                    className="w-full flex items-center gap-2 py-1.5 px-2 bg-transparent border-none cursor-pointer text-left hover:bg-surface-2 transition-colors duration-fast"
-                    onClick={() => setShowEquipment(prev => !prev)}
-                  >
-                    <span
-                      className="collapse-chevron text-text-dim text-caption shrink-0"
-                      data-expanded={showEquipment}
-                    >
-                      ›
-                    </span>
-                    <span className={text({ variant: 'overline' })}>EQUIPPED GEAR</span>
-                    <Text variant="caption" className="ml-auto">
-                      {equipmentItems.filter(i => !i.slot.includes('-') && i.itemName !== 'Empty').length} slots
-                    </Text>
-                  </button>
-                  <div className="collapse-container" data-expanded={showEquipment}>
-                    <div className="collapse-inner">
-                      <div className="p-2">
-                        <EquipmentGrid items={equipmentItems} />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+                <div className="max-w-md">
+                  <EquipmentGrid items={equipmentItems} />
+                </div>
               )}
 
               <div className="flex gap-2 max-md:flex-col">
