@@ -3,6 +3,7 @@ import { EQUIPMENT_SLOTS } from '../../lib/equipmentSlots';
 import ItemIcon from '../bank/ItemIcon';
 import ItemTooltip from '../bank/ItemTooltip';
 import { Text } from '../../ui';
+import { text } from '../../ui/recipes';
 
 export interface EquipmentItem {
   slot: string;
@@ -66,81 +67,84 @@ export default function EquipmentGrid({ items }: Props) {
         })}
       </div>
 
-      {/* Bags: 2-column grid + expanded contents side-by-side */}
+      {/* Bags: fixed 2:3 grid so bag column never reflows */}
       {hasBags && (
-        <div className="flex gap-1 max-md:flex-col">
-          <div className="bag-grid shrink-0">
-            {BAG_SLOTS.map(slot => {
-              const item = itemMap.get(slot.key);
-              const filled = item && item.itemName !== 'Empty';
-              const isBag = bagContents.has(slot.key);
-              const contents = bagContents.get(slot.key);
-              const filledCount = contents?.filter(c => c.itemName !== 'Empty').length ?? 0;
-              const totalSlots = contents?.length ?? 0;
-              const isExpanded = expandedBag === slot.key;
+        <>
+          <span className={text({ variant: 'overline' })}>INVENTORY</span>
+          <div className="bag-section">
+            <div className="bag-grid">
+              {BAG_SLOTS.map(slot => {
+                const item = itemMap.get(slot.key);
+                const filled = item && item.itemName !== 'Empty';
+                const isBag = bagContents.has(slot.key);
+                const contents = bagContents.get(slot.key);
+                const filledCount = contents?.filter(c => c.itemName !== 'Empty').length ?? 0;
+                const totalSlots = contents?.length ?? 0;
+                const isExpanded = expandedBag === slot.key;
 
-              return (
-                <div
-                  key={slot.key}
-                  className={`equipment-slot ${filled ? 'filled' : ''} ${isExpanded ? 'ring-1 ring-accent' : ''} ${isBag ? 'cursor-pointer' : ''}`}
-                  onClick={isBag ? () => setExpandedBag(prev => prev === slot.key ? null : slot.key) : undefined}
-                  role={isBag ? 'button' : undefined}
-                >
-                  <span className="equipment-slot-label">{slot.label}</span>
-                  {filled && (
-                    <ItemTooltip name={item.itemName} iconId={item.iconId} statsblock={item.statsblock}>
-                      <ItemIcon iconId={item.iconId} size={40} />
-                    </ItemTooltip>
-                  )}
-                  {isBag && (
-                    <Text variant="caption" className="text-accent">{filledCount}/{totalSlots}</Text>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Bag contents panel — fixed width to prevent reflow */}
-          <div className="flex-1 min-w-0" style={{ minWidth: '14rem' }}>
-            {expandedBag && (() => {
-              const contents = bagContents.get(expandedBag) ?? [];
-              const bagItem = itemMap.get(expandedBag);
-              const filledCount = contents.filter(c => c.itemName !== 'Empty').length;
-              const slots: (EquipmentItem | null)[] = [];
-              for (let i = 0; i < Math.max(contents.length, MAX_BAG_SLOTS); i++) {
-                slots.push(contents[i] ?? null);
-              }
-
-              return (
-                <div className="bg-surface border border-border rounded-md overflow-hidden">
-                  <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
-                    <Text variant="overline">
-                      {bagItem?.itemName || expandedBag}
-                    </Text>
-                    <Text variant="caption" className="ml-auto">{filledCount}/{contents.length}</Text>
+                return (
+                  <div
+                    key={slot.key}
+                    className={`equipment-slot ${filled ? 'filled' : ''} ${isExpanded ? 'ring-1 ring-accent' : ''} ${isBag ? 'cursor-pointer' : ''}`}
+                    onClick={isBag ? () => setExpandedBag(prev => prev === slot.key ? null : slot.key) : undefined}
+                    role={isBag ? 'button' : undefined}
+                  >
+                    <span className="equipment-slot-label">{slot.label}</span>
+                    {filled && (
+                      <ItemTooltip name={item.itemName} iconId={item.iconId} statsblock={item.statsblock}>
+                        <ItemIcon iconId={item.iconId} size={40} />
+                      </ItemTooltip>
+                    )}
+                    {isBag && (
+                      <Text variant="caption" className="text-accent">{filledCount}/{totalSlots}</Text>
+                    )}
                   </div>
-                  {slots.map((item, i) => {
-                    const filled = item && item.itemName !== 'Empty';
-                    return (
-                      <div key={i} className={`flex items-center gap-2 py-1 px-2 border-b border-border-subtle last:border-b-0 ${filled ? 'hover:bg-surface-2' : ''} transition-colors duration-fast`}>
-                        {filled ? (
-                          <>
-                            <ItemIcon iconId={item.iconId} />
-                            <ItemTooltip name={item.itemName} iconId={item.iconId} statsblock={item.statsblock}>
-                              <span className="text-text font-body text-caption font-semibold">{item.itemName}</span>
-                            </ItemTooltip>
-                          </>
-                        ) : (
-                          <Text variant="caption" className="text-text-dim">Empty</Text>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+                );
+              })}
+            </div>
+
+            {/* Bag contents — column is always reserved by the grid */}
+            <div className="min-w-0">
+              {expandedBag && (() => {
+                const contents = bagContents.get(expandedBag) ?? [];
+                const bagItem = itemMap.get(expandedBag);
+                const filledCount = contents.filter(c => c.itemName !== 'Empty').length;
+                const slots: (EquipmentItem | null)[] = [];
+                for (let i = 0; i < Math.max(contents.length, MAX_BAG_SLOTS); i++) {
+                  slots.push(contents[i] ?? null);
+                }
+
+                return (
+                  <div className="bg-surface border border-border rounded-md overflow-hidden">
+                    <div className="flex items-center gap-2 py-1 px-2 border-b border-border">
+                      <Text variant="overline">
+                        {bagItem?.itemName || expandedBag}
+                      </Text>
+                      <Text variant="caption" className="ml-auto">{filledCount}/{contents.length}</Text>
+                    </div>
+                    {slots.map((item, i) => {
+                      const filled = item && item.itemName !== 'Empty';
+                      return (
+                        <div key={i} className={`flex items-center gap-2 py-1 px-2 border-b border-border-subtle last:border-b-0 ${filled ? 'hover:bg-surface-2' : ''} transition-colors duration-fast`}>
+                          {filled ? (
+                            <>
+                              <ItemIcon iconId={item.iconId} />
+                              <ItemTooltip name={item.itemName} iconId={item.iconId} statsblock={item.statsblock}>
+                                <span className="text-text font-body text-caption font-semibold">{item.itemName}</span>
+                              </ItemTooltip>
+                            </>
+                          ) : (
+                            <Text variant="caption" className="text-text-dim">Empty</Text>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

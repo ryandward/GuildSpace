@@ -566,6 +566,18 @@
   }
 }
 
+.bag-section {
+  display: grid;
+  gap: calc(var(--space-unit) / 2);
+  grid-template-columns: 2fr 3fr;
+}
+
+@media (width < 48rem) {
+  .bag-section {
+    grid-template-columns: 1fr;
+  }
+}
+
 .bag-grid {
   display: grid;
   gap: calc(var(--space-unit) / 2);
