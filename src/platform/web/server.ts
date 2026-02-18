@@ -1894,6 +1894,45 @@ export function createWebServer(opts: WebServerOptions) {
         }
       }
 
+      // Also extract equipment slots for the banker's character_equipment table.
+      // Bankers are mules — not in active_toons — so use 'banker' as sentinel discord_id.
+      const BANKER_DISCORD_ID = 'banker';
+      {
+        const parsedForEquip: { location: string; itemName: string; eqItemId: string }[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split('\t');
+          const loc = (colIdx.location >= 0 ? cols[colIdx.location] || '' : '').trim();
+          if (!loc) continue;
+          parsedForEquip.push({
+            location: loc,
+            itemName: (cols[colIdx.name] || 'Empty').trim(),
+            eqItemId: colIdx.id >= 0 ? (cols[colIdx.id] || '0').trim() : '0',
+          });
+        }
+        const equipSlotMap = normalizeSlots(parsedForEquip);
+        const BAG_RE = /^General\d+-Slot\d+$/;
+        const equipEntities: CharacterEquipment[] = [];
+        const eqNow = new Date();
+        for (let i = 0; i < parsedForEquip.length; i++) {
+          const slot = equipSlotMap.get(i)!;
+          if (!EQUIPMENT_SLOTS.has(slot) && !BAG_RE.test(slot)) continue;
+          const e = new CharacterEquipment();
+          e.characterName = bankerName;
+          e.discordId = BANKER_DISCORD_ID;
+          e.slot = slot;
+          e.itemName = parsedForEquip[i].itemName;
+          e.eqItemId = parsedForEquip[i].eqItemId;
+          e.updatedAt = eqNow;
+          equipEntities.push(e);
+        }
+        if (equipEntities.length > 0) {
+          await AppDataSource.transaction(async manager => {
+            await manager.delete(CharacterEquipment, { characterName: bankerName, discordId: BANKER_DISCORD_ID });
+            await manager.save(equipEntities);
+          });
+        }
+      }
+
       // Delete old, insert new
       await AppDataSource.manager.delete(Bank, { Banker: bankerName });
       await AppDataSource.manager.save(newEntities);
@@ -1961,12 +2000,13 @@ export function createWebServer(opts: WebServerOptions) {
     try {
       const { banker } = req.params;
 
-      // Look up the banker's owner from ActiveToons
+      // Bankers use sentinel discord_id 'banker'; also check active_toons for player-owned bankers
       const toon = await AppDataSource.manager.findOne(ActiveToons, { where: { Name: banker } });
-      if (!toon) return res.json([]);
+      const discordIds = ['banker'];
+      if (toon) discordIds.push(toon.DiscordId);
 
       const rows = await AppDataSource.manager.find(CharacterEquipment, {
-        where: { characterName: banker, discordId: toon.DiscordId },
+        where: discordIds.map(did => ({ characterName: banker, discordId: did })),
       });
 
       const enriched = rows.map(r => {
