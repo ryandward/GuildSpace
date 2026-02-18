@@ -570,6 +570,7 @@
   display: grid;
   gap: calc(var(--space-unit) / 2);
   grid-template-columns: 124px 1fr;
+  align-items: start;
 }
 
 .bag-section > * {
