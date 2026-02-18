@@ -566,28 +566,16 @@
   }
 }
 
-.bag-section {
+.bag-row {
   display: grid;
   gap: calc(var(--space-unit) / 2);
-  grid-template-columns: 124px 1fr;
-  align-items: start;
-}
-
-.bag-section > * {
-  min-width: 0;
-  overflow: hidden;
+  grid-template-columns: repeat(8, 1fr);
 }
 
 @media (width < 48rem) {
-  .bag-section {
-    grid-template-columns: 1fr;
+  .bag-row {
+    grid-template-columns: repeat(4, 1fr);
   }
-}
-
-.bag-grid {
-  display: grid;
-  gap: calc(var(--space-unit) / 2);
-  grid-template-columns: repeat(2, 1fr);
 }
 
 .equipment-slot {

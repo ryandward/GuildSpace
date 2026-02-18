@@ -38,9 +38,11 @@ slotted AS (
     'Wrist','Range','Hands','Primary','Secondary',
     'Finger','Chest','Legs','Feet','Waist','Ammo',
     'General1','General2','General3','General4',
-    'General5','General6','General7','General8'
+    'General5','General6','General7','General8',
+    'Bank1','Bank2','Bank3','Bank4',
+    'Bank5','Bank6','Bank7','Bank8'
   )
-  OR norm_loc ~ '^General\d+-Slot\d+$'
+  OR norm_loc ~ '^(General|Bank)\d+-Slot\d+$'
 )
 INSERT INTO character_equipment (character_name, discord_id, slot, item_name, eq_item_id, updated_at)
 SELECT banker, 'banker', slot, item_name, eq_item_id, NOW()

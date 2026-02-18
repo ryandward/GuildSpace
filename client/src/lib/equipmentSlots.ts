@@ -4,7 +4,7 @@ export interface SlotDef {
   gridArea: string;
 }
 
-export const EQUIPMENT_SLOTS: SlotDef[] = [
+export const WORN_SLOTS: SlotDef[] = [
   { key: 'Ear1',      label: 'Ear',       gridArea: 'ear1' },
   { key: 'Head',      label: 'Head',      gridArea: 'head' },
   { key: 'Face',      label: 'Face',      gridArea: 'face' },
@@ -26,12 +26,33 @@ export const EQUIPMENT_SLOTS: SlotDef[] = [
   { key: 'Feet',      label: 'Feet',      gridArea: 'feet' },
   { key: 'Waist',     label: 'Waist',     gridArea: 'waist' },
   { key: 'Ammo',      label: 'Ammo',      gridArea: 'ammo' },
-  { key: 'General1',  label: 'Bag 1',     gridArea: 'bag1' },
-  { key: 'General2',  label: 'Bag 2',     gridArea: 'bag2' },
-  { key: 'General3',  label: 'Bag 3',     gridArea: 'bag3' },
-  { key: 'General4',  label: 'Bag 4',     gridArea: 'bag4' },
-  { key: 'General5',  label: 'Bag 5',     gridArea: 'bag5' },
-  { key: 'General6',  label: 'Bag 6',     gridArea: 'bag6' },
-  { key: 'General7',  label: 'Bag 7',     gridArea: 'bag7' },
-  { key: 'General8',  label: 'Bag 8',     gridArea: 'bag8' },
+];
+
+export const INVENTORY_BAG_SLOTS: SlotDef[] = [
+  { key: 'General1',  label: '1', gridArea: '' },
+  { key: 'General2',  label: '2', gridArea: '' },
+  { key: 'General3',  label: '3', gridArea: '' },
+  { key: 'General4',  label: '4', gridArea: '' },
+  { key: 'General5',  label: '5', gridArea: '' },
+  { key: 'General6',  label: '6', gridArea: '' },
+  { key: 'General7',  label: '7', gridArea: '' },
+  { key: 'General8',  label: '8', gridArea: '' },
+];
+
+export const BANK_BAG_SLOTS: SlotDef[] = [
+  { key: 'Bank1',  label: '1', gridArea: '' },
+  { key: 'Bank2',  label: '2', gridArea: '' },
+  { key: 'Bank3',  label: '3', gridArea: '' },
+  { key: 'Bank4',  label: '4', gridArea: '' },
+  { key: 'Bank5',  label: '5', gridArea: '' },
+  { key: 'Bank6',  label: '6', gridArea: '' },
+  { key: 'Bank7',  label: '7', gridArea: '' },
+  { key: 'Bank8',  label: '8', gridArea: '' },
+];
+
+/** All top-level slot definitions (for backward compat) */
+export const EQUIPMENT_SLOTS: SlotDef[] = [
+  ...WORN_SLOTS,
+  ...INVENTORY_BAG_SLOTS,
+  ...BANK_BAG_SLOTS,
 ];

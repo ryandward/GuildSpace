@@ -761,6 +761,8 @@ export function createWebServer(opts: WebServerOptions) {
     'Finger1', 'Finger2', 'Chest', 'Legs', 'Feet', 'Waist', 'Ammo',
     'General1', 'General2', 'General3', 'General4',
     'General5', 'General6', 'General7', 'General8',
+    'Bank1', 'Bank2', 'Bank3', 'Bank4',
+    'Bank5', 'Bank6', 'Bank7', 'Bank8',
   ]);
 
   /** Normalize TSV Location to a canonical base name (e.g. "Fingers" → "Finger"). */
@@ -886,7 +888,7 @@ export function createWebServer(opts: WebServerOptions) {
 
       // Normalize duplicate slot names and filter to equipment + bag content slots
       const slotMap = normalizeSlots(parsed);
-      const BAG_CONTENT_RE = /^General\d+-Slot\d+$/;
+      const BAG_CONTENT_RE = /^(?:General|Bank)\d+-Slot\d+$/;
       const entities: CharacterEquipment[] = [];
       const now = new Date();
 
@@ -1910,7 +1912,7 @@ export function createWebServer(opts: WebServerOptions) {
           });
         }
         const equipSlotMap = normalizeSlots(parsedForEquip);
-        const BAG_RE = /^General\d+-Slot\d+$/;
+        const BAG_RE = /^(?:General|Bank)\d+-Slot\d+$/;
         const equipEntities: CharacterEquipment[] = [];
         const eqNow = new Date();
         for (let i = 0; i < parsedForEquip.length; i++) {
