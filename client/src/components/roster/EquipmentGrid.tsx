@@ -69,9 +69,9 @@ export default function EquipmentGrid({ items }: Props) {
 
       {/* Bags: fixed 2:3 grid so bag column never reflows */}
       {hasBags && (
-        <>
-          <span className={text({ variant: 'overline' })}>INVENTORY</span>
-          <div className="bag-section">
+        <div className="bag-section">
+          <div>
+            <span className={text({ variant: 'overline' })}>INVENTORY</span>
             <div className="bag-grid">
               {BAG_SLOTS.map(slot => {
                 const item = itemMap.get(slot.key);
@@ -102,41 +102,41 @@ export default function EquipmentGrid({ items }: Props) {
                 );
               })}
             </div>
-
-            {/* Bag contents — column is always reserved by the grid */}
-            <div className="min-w-0 overflow-hidden">
-              {expandedBag && (() => {
-                const contents = bagContents.get(expandedBag) ?? [];
-                const slots: (EquipmentItem | null)[] = [];
-                for (let i = 0; i < Math.max(contents.length, MAX_BAG_SLOTS); i++) {
-                  slots.push(contents[i] ?? null);
-                }
-
-                return (
-                  <div className="bg-surface border border-border rounded-md overflow-hidden">
-                    {slots.map((item, i) => {
-                      const filled = item && item.itemName !== 'Empty';
-                      return (
-                        <div key={i} className={`flex items-center gap-2 py-1 px-2 border-b border-border-subtle last:border-b-0 ${filled ? 'hover:bg-surface-2' : ''} transition-colors duration-fast`}>
-                          {filled ? (
-                            <>
-                              <ItemIcon iconId={item.iconId} />
-                              <ItemTooltip name={item.itemName} iconId={item.iconId} statsblock={item.statsblock}>
-                                <span className="text-text font-body text-caption font-semibold">{item.itemName}</span>
-                              </ItemTooltip>
-                            </>
-                          ) : (
-                            <Text variant="caption" className="text-text-dim">Empty</Text>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
           </div>
-        </>
+
+          {/* Bag contents — column is always reserved by the grid */}
+          <div className="min-w-0 overflow-hidden">
+            {expandedBag && (() => {
+              const contents = bagContents.get(expandedBag) ?? [];
+              const slots: (EquipmentItem | null)[] = [];
+              for (let i = 0; i < Math.max(contents.length, MAX_BAG_SLOTS); i++) {
+                slots.push(contents[i] ?? null);
+              }
+
+              return (
+                <div className="bg-surface border border-border rounded-md overflow-hidden">
+                  {slots.map((item, i) => {
+                    const filled = item && item.itemName !== 'Empty';
+                    return (
+                      <div key={i} className={`flex items-center gap-2 py-1 px-2 border-b border-border-subtle last:border-b-0 ${filled ? 'hover:bg-surface-2' : ''} transition-colors duration-fast`}>
+                        {filled ? (
+                          <>
+                            <ItemIcon iconId={item.iconId} />
+                            <ItemTooltip name={item.itemName} iconId={item.iconId} statsblock={item.statsblock}>
+                              <span className="text-text font-body text-caption font-semibold">{item.itemName}</span>
+                            </ItemTooltip>
+                          </>
+                        ) : (
+                          <Text variant="caption" className="text-text-dim">Empty</Text>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
       )}
     </div>
   );
