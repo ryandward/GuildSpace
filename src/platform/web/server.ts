@@ -501,7 +501,7 @@ export function createWebServer(opts: WebServerOptions) {
     const { discordId } = req.params;
 
     try {
-      const [toons, dkpRow, gsUser, dkpByCharRows] = await Promise.all([
+      const [toons, dkpRow, gsUser, dkpByCharRows, equipRows] = await Promise.all([
         AppDataSource.manager.find(ActiveToons, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } }),
         AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId } }),
@@ -515,6 +515,10 @@ export function createWebServer(opts: WebServerOptions) {
           .groupBy('a.Name')
           .orderBy('MAX(a.Date)', 'DESC', 'NULLS LAST')
           .getRawMany<{ name: string; total_dkp: string; raid_count: string; last_raid: string | null }>(),
+        AppDataSource.manager.find(CharacterEquipment, {
+          where: { discordId },
+          select: ['characterName', 'slot', 'itemName', 'eqItemId'],
+        }),
       ]);
 
       if (toons.length === 0) {
@@ -524,13 +528,33 @@ export function createWebServer(opts: WebServerOptions) {
       const lastRaidByName = new Map(dkpByCharRows.map(r => [r.name, r.last_raid]));
       const displayName = gsUser?.displayName || dkpRow?.DiscordName || discordId;
 
-      const characters = toons.map(c => ({
-        name: c.Name,
-        class: c.CharacterClass,
-        level: Number(c.Level),
-        status: c.Status,
-        lastRaidDate: lastRaidByName.get(c.Name) || null,
-      }));
+      // Build equipment preview per character: Primary weapon icon, or first non-empty item
+      const equipPreview = new Map<string, { iconId: number | null; itemName: string }>();
+      const equipByChar = new Map<string, typeof equipRows>();
+      for (const e of equipRows) {
+        if (e.itemName === 'Empty') continue;
+        let arr = equipByChar.get(e.characterName);
+        if (!arr) { arr = []; equipByChar.set(e.characterName, arr); }
+        arr.push(e);
+      }
+      for (const [charName, items] of equipByChar) {
+        const primary = items.find(i => i.slot === 'Primary');
+        const pick = primary || items[0];
+        const meta = getItemMetadata(pick.itemName);
+        equipPreview.set(charName, { iconId: meta?.iconId ?? null, itemName: pick.itemName });
+      }
+
+      const characters = toons.map(c => {
+        const preview = equipPreview.get(c.Name);
+        return {
+          name: c.Name,
+          class: c.CharacterClass,
+          level: Number(c.Level),
+          status: c.Status,
+          lastRaidDate: lastRaidByName.get(c.Name) || null,
+          equipmentPreview: preview || null,
+        };
+      });
 
       // Per-character DKP breakdown — only include active characters
       const charClassMap = new Map(toons.map(c => [c.Name, c.CharacterClass]));

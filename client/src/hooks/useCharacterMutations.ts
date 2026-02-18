@@ -42,7 +42,8 @@ export function useCharacterMutations(discordId: string | undefined) {
       queryClient.setQueryData<MemberDetail>(['roster', discordId], (old) => {
         if (!old) return old;
         const idx = old.characters.findIndex(c => c.name === result.name);
-        const updated = { name: result.name, class: result.class, level: result.level, status: result.status, lastRaidDate: idx >= 0 ? old.characters[idx].lastRaidDate : null };
+        const existing = idx >= 0 ? old.characters[idx] : null;
+        const updated = { name: result.name, class: result.class, level: result.level, status: result.status, lastRaidDate: existing?.lastRaidDate ?? null, equipmentPreview: existing?.equipmentPreview ?? null };
         const characters = idx >= 0
           ? old.characters.map((c, i) => i === idx ? updated : c)
           : [...old.characters, updated];

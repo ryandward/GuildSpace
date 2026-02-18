@@ -1,3 +1,4 @@
+import ItemIcon from '../bank/ItemIcon';
 import { Text } from '../../ui';
 import { text, badge, card } from '../../ui/recipes';
 import { cx } from 'class-variance-authority';
@@ -40,6 +41,8 @@ interface Props {
   totalDkp?: number;
   raidCount?: number;
   maxDkp?: number;
+  /** Equipment preview icon — shown when character has equipment uploaded */
+  equipmentPreview?: { iconId: number | null; itemName: string } | null;
   /** Equipment toggle callback — when present, renders an equipment button */
   equipmentExpanded?: boolean;
   onToggleEquipment?: () => void;
@@ -54,8 +57,17 @@ export default function CharacterCard(props: Props) {
       <div className="flex items-center gap-1.5 px-2 pt-1.5">
         <span className={cx(badge({ variant: 'status', color: statusColor(props.status) }), 'w-7 text-center shrink-0')}>{props.status}</span>
         <Text variant="body" className="font-semibold truncate">{props.name}</Text>
+        {props.equipmentPreview && props.onToggleEquipment && (
+          <button
+            className="bg-transparent border-none cursor-pointer p-0 ml-auto shrink-0 field-tooltip"
+            data-tooltip={`View ${props.name}'s equipment`}
+            onClick={props.onToggleEquipment}
+          >
+            <ItemIcon iconId={props.equipmentPreview.iconId} size={20} />
+          </button>
+        )}
         {lastRaid && (
-          <Text variant="caption" className="ml-auto shrink-0">{lastRaid}</Text>
+          <Text variant="caption" className={`shrink-0 ${props.equipmentPreview && props.onToggleEquipment ? '' : 'ml-auto'}`}>{lastRaid}</Text>
         )}
       </div>
       <div className="flex items-center gap-2 px-2 pb-1.5">

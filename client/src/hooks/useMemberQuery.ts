@@ -28,6 +28,7 @@ export interface MemberDetail {
     level: number;
     status: string;
     lastRaidDate: string | null;
+    equipmentPreview: { iconId: number | null; itemName: string } | null;
   }[];
   earnedDkp: number;
   spentDkp: number;

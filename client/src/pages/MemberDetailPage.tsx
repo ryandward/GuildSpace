@@ -256,6 +256,7 @@ export default function MemberDetailPage() {
                       totalDkp={dkpMap.get(c.name)?.totalDkp}
                       raidCount={dkpMap.get(c.name)?.raidCount}
                       maxDkp={maxDkp}
+                      equipmentPreview={equipmentVisible ? c.equipmentPreview : null}
                       equipmentExpanded={expandedEquipment === c.name}
                       onToggleEquipment={equipmentVisible ? () => setExpandedEquipment(prev => prev === c.name ? null : c.name) : undefined}
                     />
