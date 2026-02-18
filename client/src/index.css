@@ -569,11 +569,12 @@
 .bag-section {
   display: grid;
   gap: calc(var(--space-unit) / 2);
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 124px 1fr;
 }
 
 .bag-section > * {
   min-width: 0;
+  overflow: hidden;
 }
 
 @media (width < 48rem) {
@@ -585,7 +586,7 @@
 .bag-grid {
   display: grid;
   gap: calc(var(--space-unit) / 2);
-  grid-template-columns: repeat(2, 60px);
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .equipment-slot {
