@@ -148,19 +148,33 @@ export default function RaidEventPage() {
                 )}
 
                 {lastResult && (
-                  <div className="border-t border-border px-2 py-1 bg-surface-2 animate-fade-in">
-                    <Text variant="caption">
-                      Recorded {lastResult.recorded}, rejected {lastResult.rejected}
-                      {lastResult.rejectedPlayers.length > 0 && (
-                        <span className="text-text-dim"> — {lastResult.rejectedPlayers.map(r => r.name).join(', ')}</span>
-                      )}
-                    </Text>
-                    <button
-                      className="bg-transparent border-none cursor-pointer ml-1"
-                      onClick={() => setLastResult(null)}
-                    >
-                      <Text variant="caption" className="hover:text-red">dismiss</Text>
-                    </button>
+                  <div className="border-t border-border animate-fade-in">
+                    <div className="px-2 py-1 bg-surface-2 flex items-center justify-between gap-1">
+                      <Text variant="caption">
+                        Recorded {lastResult.recorded} {lastResult.recorded === 1 ? 'character' : 'characters'}
+                      </Text>
+                      <button
+                        className="bg-transparent border-none cursor-pointer"
+                        onClick={() => setLastResult(null)}
+                      >
+                        <Text variant="caption" className="hover:text-red">dismiss</Text>
+                      </button>
+                    </div>
+                    {lastResult.rejectedPlayers.length > 0 && (
+                      <div className="border-t border-yellow/40 px-2 py-1 bg-yellow/10">
+                        <Text variant="caption" className="text-yellow font-bold">
+                          {lastResult.rejectedPlayers.length} not in census:
+                        </Text>{' '}
+                        <span className="text-text font-body text-caption font-mono">
+                          {lastResult.rejectedPlayers.map(r => r.name).join(', ')}
+                        </span>
+                        <div className="mt-0.5">
+                          <Text variant="caption">
+                            These characters did not receive DKP. Register them on the roster and re-submit the call.
+                          </Text>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

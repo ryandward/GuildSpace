@@ -30,11 +30,6 @@ export function parseWhoLogs(logs: string): ParsedPlayer[] {
 
     if (line.length === 0) continue;
 
-    // Skip lines without guild tags (unless ANONYMOUS)
-    if ((!line.includes('<') || !line.includes('>')) && !line.includes('ANONYMOUS')) {
-      continue;
-    }
-
     // Clean up the line
     line = line.replace(/ AFK /g, '');
     line = line.replace(/ LFG/g, '');
@@ -43,6 +38,12 @@ export function parseWhoLogs(logs: string): ParsedPlayer[] {
     // Parse timestamp
     const timestampMatch = line.match(timestampRe);
     if (!timestampMatch) continue;
+
+    // A /who line must have a level/class bracket ([60 Warrior] or [ANONYMOUS]).
+    // This is what distinguishes a roster line from chat/system lines — the
+    // guild tag is optional because unguilded players have no <Guild> suffix.
+    const levelClassMatch = line.match(levelClassRe);
+    if (!levelClassMatch) continue;
 
     let timestamp: Date;
     try {
@@ -56,21 +57,21 @@ export function parseWhoLogs(logs: string): ParsedPlayer[] {
       timestamp = new Date();
     }
 
-    // Parse level/class - looking for [60 High Priest] or [ANONYMOUS]
-    const levelClassMatch = line.match(levelClassRe);
     let level: number | null = null;
     let className: string | null = null;
 
-    if (levelClassMatch) {
-      const parts = levelClassMatch[0].trim().split(' ');
-      if (parts[0] === 'ANONYMOUS') {
-        level = null;
-        className = null;
-      }
-      else if (parts.length >= 2) {
-        level = parseInt(parts[0], 10) || null;
-        className = parts.slice(1).join(' ');
-      }
+    const parts = levelClassMatch[0].trim().split(' ');
+    if (parts[0] === 'ANONYMOUS') {
+      level = null;
+      className = null;
+    }
+    else if (parts.length >= 2 && /^\d+$/.test(parts[0])) {
+      level = parseInt(parts[0], 10);
+      className = parts.slice(1).join(' ');
+    }
+    else {
+      // Second bracket isn't a level/class — not a /who line, skip
+      continue;
     }
 
     // Parse name
