@@ -2,7 +2,7 @@
   <img src="assets/logo.svg" alt="GuildSpace" width="120">
 </p>
 
-<h1 align="center">GuildSpace</h1>
+<h1 align="center">[GuildSpace](https://guildspace.org/)</h1>
 <p align="center"><strong>A place for guilds.</strong></p>
 
 ---
