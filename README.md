@@ -2,194 +2,91 @@
   <img src="assets/logo.svg" alt="GuildSpace" width="120">
 </p>
 
-<h1 align="center">[GuildSpace](https://guildspace.org/)</h1>
-<p align="center"><strong>A place for guilds.</strong></p>
+<h1 align="center">GuildSpace</h1>
+<p align="center"><strong>A highly scalable functorial state engine for Project 1999</strong></p>
 
----
+> **About the author**
+> I am a database architect with about 20 years experience and a PhD in Bacteriological Genetics. By day I am the solo engineer at a genomics startup pushing 4000+ commits a every six mopnnths, building data GUIs to help you DNA. By night GuildSpace is my sandbox. It is a production grade guild management ecosystem built to prove I write fast scalable code. Whether I am running anomaly detection on a genetic alignment or architecting a multi tenant state machine for a 25 year old MMO the math doesnt change.
 
-Your guild gets a home on the web. Not a chat server. A website.
+***
 
-A guild page with your roster, your history, your loot tables. Player pages with character profiles, raid attendance, DKP. A bulletin board, a bank ledger, a raid calendar. Real pages you can browse and link to.
+[GuildSpace](https://guildspace.org/) completely replaces your dusty spreadsheets and fragmented Discord channels with a unified system of record. Real time rosters character state tracking raid attendance ledgers DKP tracking guild bank inventory and integrated WebSocket chat. 
 
-Chat is here too. But chat is just one thing on the page, not the whole page.
+Ex Astra is the first guild on the platform and they hammer it daily so visit the live site at [guildspace.org](https://guildspace.org/).
 
-**Ex Astra** is the first guild on the platform.
+## Roadmap: The Universal State Engine
 
-## Lineage
+GuildSpace is currently migrating from a standard relational model to a strictly normalized multi model projection engine. We are handling topological mapping high dimensional vector search and functorial multi tenancy. 
 
-GuildSpace originated as a production Discord bot ([Project-1999-Typescript-Discord](https://github.com/ryandward/Project-1999-Typescript-Discord)) that manages an active EverQuest guild. Both the bot and the web platform share the same Railway Postgres database — real users, real data. The web platform has moved past the command-porting phase; all data access and mutations now use dedicated REST endpoints and native UI.
+The frontend UI is irrelevant. It is simply a mathematically derived projection layer that syncs with the backend via raw WebSockets while Postgres acts as the universal state engine. It is heavily augmented with Apache AGE for graph topology pgvector for high dimensional embeddings and TimescaleDB for telemetry.
 
-## Architecture
+### Telemetry & state flow
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Client (React 19 + Vite 6 + Tailwind v4)                    │
-│                                                              │
-│  ┌─────────┐ ┌───────┐ ┌──────┐ ┌───────┐ ┌──────┐          │
-│  │ Roster  │ │ Raids │ │ Bank │ │ Chat  │ │Login │          │
-│  └─────────┘ └───────┘ └──────┘ └───────┘ └──────┘          │
-└──────────────────────────────┬───────────────────────────────┘
-                               │ REST + Socket.IO (chat)
-┌──────────────────────────────┴───────────────────────────────┐
-│  Server (Express + Socket.IO, TypeScript)                    │
-│                                                              │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │  REST API (auth, roster, characters, raids, bank, chat) │ │
-│  └────────────────────────────┬────────────────────────────┘ │
-│  ┌────────────────────────────┴────────────────────────────┐ │
-│  │  TypeORM Entities → PostgreSQL (Railway)                │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Data flow
-
-- **Pages** (roster, raids, bank) fetch data via REST endpoints using TanStack Query hooks
-- **Chat** uses Socket.IO for real-time messaging and presence
-- **Mutations** (character management, raid calls, bank imports) go through REST endpoints with role-based access guards
-
-## Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19, Vite 6, Tailwind CSS v4, CVA recipes |
-| Backend | Express, Socket.IO, TypeScript (ESM) |
-| Database | PostgreSQL via TypeORM |
-| Auth | Discord OAuth2 → HMAC tokens |
-| Hosting | Railway |
-| Fonts | Syne (display), Nunito Sans (body), JetBrains Mono (code) |
-
-## Project structure
-
-```
-├── client/                     # React frontend
-│   └── src/
-│       ├── components/         # App components (roster, raids, bank, chat)
-│       ├── ui/                 # Design system (Button, Card, Input, Text, Badge)
-│       ├── pages/              # LoginPage, SetupPage, RosterPage, RaidsPage, BankPage
-│       ├── layouts/            # AppShell (chat layout)
-│       ├── hooks/              # TanStack Query hooks (useRosterQuery, useMemberQuery, etc.)
-│       ├── context/            # AuthContext, SocketContext
-│       ├── lib/                # Utilities (classColors, treemap, roles, api, demoData)
-│       └── index.css           # Design tokens (@theme axioms)
-├── src/                        # Express backend
-│   ├── platform/
-│   │   └── web/server.ts       # Express + Socket.IO server (REST API + chat)
-│   ├── commands/               # Shared business logic (used by Discord bot too)
-│   ├── entities/               # TypeORM entities (Census, Dkp, Attendance, Bank, etc.)
-│   └── migrations/             # SQL migrations (001_, 002_, ...)
-├── CLAUDE.md                   # Development guidelines
-└── DESIGN.md                   # Design system principles
+```text
+  [ Raw Combat Telemetry ] -------+
+  [ Distributed Ledger Dumps ] ---+--> [ Ingestion Pipeline & State Parser ]
+  [ Discord Auth/Presence ] ------+                 |
+                                                    V
+ +---------------------- THE UNIVERSAL STATE ENGINE (PostgreSQL) ----------------------+
+ |                                                                                     |
+ | +------------------------+  +------------------------+  +-------------------------+ |
+ | |    Temporal Engine     |  |   Topological Engine   |  |   Vector Index (ANN)    | |
+ | |     (TimescaleDB)      |  |      (Apache AGE)      |  |       (pgvector)        | |
+ | |                        |  |                        |  |                         | |
+ | |  Hyper-tables storing  |  |   User-defined triple  |  |   High-dim embeddings   | |
+ | |  microsecond combat    |  |   store unbounded      |  |   of optimal builds     | |
+ | |  events raid wipes     |  |   graphs mapping all   |  |                         | |
+ | |  detected as time-     |  |   state morphisms      |  |   Input: target gear    | |
+ | |  series anomalies      |  |                        |  |   Output: DKP bid path  | |
+ | +-----------+------------+  +-----------+------------+  +------------+------------+ |
+ |             |                           |                            |              |
+ | +-----------V---------------------------V----------------------------V------------+ |
+ | |                   Functorial Multi-Tenant Ruleset Mapper                        | |
+ | |                                                                                 | |
+ | |   Game state transitions are morphisms multi-tenancy is modeled as functors     | |
+ | |   mapping categories of rulesets to isolated database schemas natively          | |
+ | +---------------------------------------+-----------------------------------------+ |
+ +-----------------------------------------+-------------------------------------------+
+                                           |
+ +-----------------------------------------V-------------------------------------------+
+ |                                Client Projections                                   |
+ |                [ Mathematically Derived UI ]  <-->  [ Socket.IO ]                   |
+ +-------------------------------------------------------------------------------------+
 ```
 
-## REST API
+### 1. Dynamic topology & functorial multi tenancy
+Standard multi tenancy relies on rigid schemas. The Universal State Engine abandons this for an unbounded user defined triple store backed by graph theory. Cities alliances guilds and equipment are objects and the relationships between them are created entirely by the users as morphisms. State is mapped categorically. 
 
-All data access and mutations flow through dedicated REST endpoints:
+If Domain A networks via `friend` and Domain B networks via `buddy` the mapping is a functorial operation $F(\text{friend}) = \text{buddy}$ resolving them as structural synonyms. It scales infinitely without DDL migrations.
 
-| Area | Endpoints |
-|------|-----------|
-| **Auth** | `GET /api/auth/discord`, `GET /api/auth/discord/callback`, `GET /api/auth/me`, `POST /api/auth/set-name`, `POST /api/auth/logout` |
-| **Roster** | `GET /api/roster`, `GET /api/roster/:id`, `GET /api/roster/class-stats`, `PATCH /api/roster/:id/role` |
-| **Characters** | `PUT /api/roster/:id/characters/:name`, `DELETE /api/roster/:id/characters/:name` |
-| **Raids** | `GET/POST /api/raids/events`, `GET/PATCH /api/raids/events/:id`, `POST /api/raids/events/:id/calls`, `POST /api/raids/push` |
-| **Bank** | `GET /api/bank`, `POST /api/bank/import`, `GET /api/bank/history` |
-| **Profile** | `POST /api/profile/bio`, `POST /api/profile/api-key` |
-| **Chat** | `GET/POST/DELETE /api/chat/channels` |
-| **Toons** | `GET /api/toons/mine`, `GET /api/toons/search` |
-| **Templates** | `GET/POST/PATCH/DELETE /api/raids/templates` |
+### 2. Graph hopping and more_like_this
+Here is where the architecture gets interesting. Standard queries are dead so we define a functor $F: \mathcal{C} \to \mathbf{Met}$ mapping the category of game states to a metric space of vector embeddings. The distance metric is defined by the infimum of path integrals along the graph edges combined with the ANN vector distance:
 
-Officer/admin/owner guards are enforced server-side. Character management supports self-service and rank-based access for managing other members.
+$$d_F(x, y) = \inf_{\gamma} \int_0^1 \left\| \frac{d}{dt} F(\gamma(t)) \right\| dt + \lambda \langle \mathbf{v}_x, \mathbf{v}_y \rangle$$
 
-## Data model
+So what does this actually mean. It means we are graph hopping to show more_like_this using approximate similarities because every player and item is a node. 
 
-The database stores everything an EverQuest guild needs to operate:
+> PING! Oh shit! Sethous the level 60 Rogue just got a [Mrylokars Dagger of Vengeance](https://wiki.project1999.com/Mrylokar%60s_Dagger_of_Vengeance).
 
-- **Census** — character registry (name, class, level, status: Main/Alt/Bot/Dropped)
-- **DKP** — Dragon Kill Points ledger (earned vs. spent per player)
-- **Attendance** — raid attendance records (character + raid event)
-- **Items** — loot award history (who won what, for how much DKP)
-- **Bank** — guild bank inventory (banker, location, item, quantity)
-- **Raids** — raid definitions and DKP modifiers
-- **GuildSpaceUser** — Discord identity → display name mapping
-- **ChatMessage** — real-time chat messages
+You know this because you graph hopped. See, you are a level 60 Rogue too with similar raiding habits so the system traverses the bipartite graph of player item interactions and calculates the cosine similarity of your temporal attendance vectors weighted by the cohomology group of the equipment sub graph:
 
-## Roster page
+$$\text{sim}(R_{you}, R_{Sethous}) = \frac{\sum_{t \in T} w_t \cdot \mathbb{I}(raid_{you, t}) \mathbb{I}(raid_{Sethous, t})}{\sqrt{\sum w_t \mathbb{I}_{you}^2} \sqrt{\sum w_t \mathbb{I}_{Sethous}^2}} \otimes \mathcal{H}^1(E)$$
 
-The roster page is the centerpiece of GuildSpace — browse the full guild census at a glance.
+When Sethous equips the dagger the state engine recalculates the state delta and outputs a push notification telling you exactly how much DKP you need to bid on the next dagger. The nearest neighbor algorithm proves your DPS delta will bridge the gap on the next Nagafen kill so it literally tells you what to shoot for.
 
-The centerpiece is a **squarified treemap** showing guild class composition at a glance, Kibana-style. Each cell is sized proportionally to the number of characters of that class. Click a cell to filter the roster table below it. The treemap uses:
+### 3. Combat telemetry as time series anomalies
+Ingesting raw distributed combat log streams from 72+ concurrent raiders into Postgres time series hyper tables. By running window functions over microsecond level combat events we treat a raid exactly like a distributed system. We detect points of failure missed spell weaves and raid wipes using the exact same mathematical models I use to detect genetic anomalies in DNA sequence alignments.
 
-- **Squarified layout algorithm** — optimizes aspect ratios so cells stay readable at any count
-- **R₂ phase distribution** — ambient glow pulses on active cells are staggered using quasi-random sequences so they never synchronize
-- **φ³ animation timing** — pulse duration derived from the golden ratio, making near-sync between any two cells take the longest possible time
-- **OKLCH class colors** — perceptually uniform so no class visually dominates
+## Mathematically derived UI
+The roster page provides a complete view of the guild census via a squarified treemap showing class composition. It natively filters the data table below on interaction. The frontend design entirely avoids third party component bloat relying instead on a mathematically derived design system mapped strictly to CSS variables. Check DESIGN.md for the math.
 
-Alongside the treemap, status and level breakdowns show Main/Alt/Bot distribution and the percentage of characters at max level.
-
-## Design system
-
-The frontend design system is mathematically derived from a small set of axioms. Every value traces to a named constant, perceptual threshold, or mathematical derivation — nothing is arbitrary.
-
-**Axioms** (defined in `client/src/index.css`):
-
-| Token | Value | Basis |
-|-------|-------|-------|
-| `--base-size` | `1rem` (16px) | Browser default, WCAG SC 1.4.4 |
-| `--type-ratio` | `1.25` | Major third (modular scale) |
-| `--space-unit` | `0.5rem` (8px) | Universal grid constant (Material, Carbon, Ant) |
-| `--phi` | `1.618034` | Golden ratio — timing, stagger, animation |
-| `--lum-bg` | `0.14` | OKLCH base lightness (dark, not crushed) |
-| `--lum-step` | `0.035` | Perceptual elevation increment (Weber fraction) |
-| `--surface-hue` | `55` | Warm amber direction in OKLCH |
-| `--accent-hue` | `85` | Warm gold accent |
-
-**Derived systems**:
-- **Type scale**: `base × ratio^n` — nano through hero, 8 stops
-- **Spacing**: multiples of 8px grid
-- **Color surfaces**: OKLCH with perceptually uniform elevation steps
-- **Timing**: φ-scaled durations (76ms → 524ms), never integer-related
-- **Opacity**: Weber-Fechner geometric scale (equal perceptual steps)
-- **Border radius**: derived from `--space-unit`
-
-Change one axiom, everything downstream recalculates. See [DESIGN.md](DESIGN.md) for the full derivation with citations.
-
-## Development
-
-### Prerequisites
-
-- Node.js
-- PostgreSQL (or Railway database credentials)
-- Discord application (for OAuth)
-
-### Environment
-
-Copy `.env.example` to `.env` and fill in your credentials:
-
-```
-PGHOST=...
-PGPORT=...
-PGUSER=...
-PGPASSWORD=...
-POSTGRES_DB=...
-PORT=3000
-DISCORD_CLIENT_ID=...
-DISCORD_CLIENT_SECRET=...
-DISCORD_REDIRECT_URI=...
-```
-
-### Build and run
+## Execution
+Ensure you have Node.js Postgres and a Discord OAuth application provisioned. 
 
 ```bash
-npm run build    # Compiles client/ (Vite) and src/ (tsc) → dist/
-npm start        # node dist/index_web.js
+cp .env.example .env
+npm run build    
+npm start        
 ```
 
-For frontend development with hot reload:
-
-```bash
-cd client && npm run dev    # Vite dev server on :5173, proxies to :3000
-```
-
-## License
-
-ISC
+For local client projection iterations just `cd client && npm run dev`. If you cant figure that out you probably should not be cloning this repo.
