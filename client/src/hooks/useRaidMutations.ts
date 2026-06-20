@@ -185,3 +185,70 @@ export function useReorderCallsMutation(eventId: number) {
     },
   });
 }
+
+export function useDismissNameMutation(eventId: number) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ callId, name, reason }: { callId: number; name: string; reason?: string }) =>
+      authFetch(token!, `/api/raids/events/${eventId}/calls/${callId}/dismiss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, reason }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
+    },
+  });
+}
+
+export function useUndoDismissMutation(eventId: number) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ callId, name }: { callId: number; name: string }) =>
+      authFetch(token!, `/api/raids/events/${eventId}/calls/${callId}/dismiss/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
+    },
+  });
+}
+
+export interface AssignToonParams {
+  callId: number;
+  name: string;
+  discordId: string;
+  status: string;
+  level: number;
+  characterClass: string;
+  credit: boolean;
+}
+
+export interface AssignToonResult {
+  ok: boolean;
+  name: string;
+  discordId: string;
+  status: string;
+  credited: boolean;
+  note?: string;
+}
+
+export function useAssignToonMutation(eventId: number) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ callId, ...body }: AssignToonParams) =>
+      authFetch<AssignToonResult>(token!, `/api/raids/events/${eventId}/calls/${callId}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
+      queryClient.invalidateQueries({ queryKey: ['raidEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['roster'] });
+    },
+  });
+}

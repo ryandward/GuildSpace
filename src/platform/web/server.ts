@@ -11,7 +11,7 @@
  *
  * @module
  */
-import { ILike, Not, In } from 'typeorm';
+import { ILike, Not, In, EntityManager } from 'typeorm';
 import express from 'express';
 import { existsSync } from 'fs';
 import crypto from 'crypto';
@@ -31,6 +31,9 @@ import { RaidEvent } from '../../entities/RaidEvent.js';
 import { RaidCall } from '../../entities/RaidCall.js';
 import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
 import { Census } from '../../entities/Census.js';
+import { RaidCallDismissal } from '../../entities/RaidCallDismissal.js';
+import { deriveUnrecognized } from '../../commands/dkp/deriveUnrecognized.js';
+import { planAssign } from '../../commands/dkp/planAssign.js';
 import { Bank } from '../../entities/Bank.js';
 import { Items } from '../../entities/Items.js';
 import { BankImport } from '../../entities/BankImport.js';
@@ -1215,15 +1218,17 @@ export function createWebServer(opts: WebServerOptions) {
       });
 
       // Build attendance matrix data
-      const [gsUsers, dkpRows, allToons, lastRaidByName] = await Promise.all([
+      const [gsUsers, dkpRows, allToons, lastRaidByName, census] = await Promise.all([
         AppDataSource.manager.find(GuildSpaceUser),
         AppDataSource.manager.find(Dkp),
         AppDataSource.manager.find(ActiveToons),
         fetchLastRaidByName(),
+        AppDataSource.manager.find(Census),
       ]);
       const gsUserMap = new Map(gsUsers.map(u => [u.discordId, u]));
       const dkpNameMap = new Map(dkpRows.map(d => [d.DiscordId, d.DiscordName]));
       const toonClassMap = new Map(allToons.map(t => [t.Name, t.CharacterClass]));
+      const censusNameSet = new Set(census.filter(c => c.DiscordId).map(c => c.Name));
 
       // For each call, get its attendees
       const callDetails = await Promise.all(calls.map(async (call) => {
@@ -1244,15 +1249,26 @@ export function createWebServer(opts: WebServerOptions) {
           }
         }
 
+        const dismissalRows = await AppDataSource.manager.find(RaidCallDismissal, { where: { callId: call.id } });
+        const dismissedNames = new Set(dismissalRows.map(d => d.name));
+        const unrecognized = deriveUnrecognized(call.whoLog, censusNameSet, dismissedNames);
+
         return {
           id: call.id,
           raidName: call.raidName,
           modifier: call.modifier,
           recordedCount: attendees.length,
-          rejectedCount: 0,
+          rejectedCount: unrecognized.length,
           createdBy: call.createdBy,
           createdAt: call.createdAt,
           attendees,
+          unrecognized,
+          dismissed: dismissalRows.map(d => ({
+            name: d.name,
+            reason: d.reason,
+            dismissedBy: d.dismissedBy,
+            dismissedAt: d.dismissedAt,
+          })),
         };
       }));
 
@@ -1337,6 +1353,33 @@ export function createWebServer(opts: WebServerOptions) {
       res.status(500).json({ error: 'Failed to update event' });
     }
   });
+
+  /**
+   * Creates an attendance row for a character on a call, awards the call's
+   * DKP to the owner, and links the attendance to the call. Shared by the
+   * manual "add character" endpoint and the assign-from-unrecognized endpoint.
+   */
+  async function creditCharacterToCall(call: RaidCall, characterName: string, discordId: string, manager: EntityManager): Promise<void> {
+    const attendance = new Attendance();
+    attendance.Date = new Date();
+    attendance.Raid = call.raidName;
+    attendance.Name = characterName;
+    attendance.DiscordId = discordId;
+    attendance.Modifier = call.modifier.toString();
+    const saved = await manager.save(attendance);
+
+    await manager
+      .createQueryBuilder()
+      .update(Dkp)
+      .set({ EarnedDkp: () => `earned_dkp + ${call.modifier}` })
+      .where('discord_id = :discordId', { discordId })
+      .execute();
+
+    const link = new RaidCallAttendance();
+    link.callId = call.id;
+    link.attendanceId = saved.Id;
+    await manager.save(link);
+  }
 
   // ─── Raid Calls ──────────────────────────────────────────────────────
 
@@ -1599,33 +1642,176 @@ export function createWebServer(opts: WebServerOptions) {
         if (existing) return res.status(409).json({ error: 'Member already in this call' });
       }
 
-      // Create attendance record
-      const attendance = new Attendance();
-      attendance.Date = new Date();
-      attendance.Raid = call.raidName;
-      attendance.Name = characterName;
-      attendance.DiscordId = censusEntry.DiscordId;
-      attendance.Modifier = call.modifier.toString();
-      const saved = await AppDataSource.manager.save(attendance);
-
-      // Update DKP
-      await AppDataSource.manager
-        .createQueryBuilder()
-        .update(Dkp)
-        .set({ EarnedDkp: () => `earned_dkp + ${call.modifier}` })
-        .where('discord_id = :discordId', { discordId: censusEntry.DiscordId })
-        .execute();
-
-      // Link to call
-      const link = new RaidCallAttendance();
-      link.callId = callId;
-      link.attendanceId = saved.Id;
-      await AppDataSource.manager.save(link);
+      await creditCharacterToCall(call, characterName, censusEntry.DiscordId, AppDataSource.manager);
 
       res.json({ ok: true, characterName, discordId: censusEntry.DiscordId });
     } catch (err) {
       console.error('Failed to add character to call:', err);
       res.status(500).json({ error: 'Failed to add character' });
+    }
+  });
+
+  // Ignore an unrecognized /who name on a call (officer-only)
+  app.post('/api/raids/events/:id/calls/:callId/dismiss', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const callId = parseInt(req.params.callId, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
+
+      const { name, reason } = req.body;
+      if (!name) return res.status(400).json({ error: 'name is required' });
+
+      // Only names that are currently unrecognized on this call may be ignored.
+      const census = await AppDataSource.manager.find(Census);
+      const censusNameSet = new Set(census.filter(c => c.DiscordId).map(c => c.Name));
+      const candidates = deriveUnrecognized(call.whoLog, censusNameSet, new Set());
+      if (!candidates.some(c => c.name === name)) {
+        return res.status(400).json({ error: 'That name is not an unrecognized name on this call' });
+      }
+
+      let dismissal = await AppDataSource.manager.findOne(RaidCallDismissal, { where: { callId, name } });
+      if (!dismissal) {
+        dismissal = new RaidCallDismissal();
+        dismissal.callId = callId;
+        dismissal.name = name;
+      }
+      dismissal.reason = (typeof reason === 'string' && reason.trim()) ? reason.trim() : null;
+      dismissal.dismissedBy = officer.user.id;
+      dismissal.dismissedAt = new Date();
+      await AppDataSource.manager.save(dismissal);
+
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to ignore name:', err);
+      res.status(500).json({ error: 'Failed to ignore name' });
+    }
+  });
+
+  // Undo an ignore (officer-only)
+  app.delete('/api/raids/events/:id/calls/:callId/dismiss/:name', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const callId = parseInt(req.params.callId, 10);
+      const name = decodeURIComponent(req.params.name);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
+
+      await AppDataSource.manager.delete(RaidCallDismissal, { callId, name });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to restore name:', err);
+      res.status(500).json({ error: 'Failed to restore name' });
+    }
+  });
+
+  // Assign an unrecognized /who name to an existing member (officer-only).
+  // Creates the census row and, by default, credits the member for this call.
+  app.post('/api/raids/events/:id/calls/:callId/assign', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const callId = parseInt(req.params.callId, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
+
+      const { name, discordId, status, level, characterClass, credit } = req.body;
+      if (!name || !discordId || !status || level == null || !characterClass) {
+        return res.status(400).json({ error: 'name, discordId, status, level, and characterClass are required' });
+      }
+      const lvl = Number(level);
+      if (isNaN(lvl)) return res.status(400).json({ error: 'level must be a number' });
+
+      // Target must be an existing member of the system.
+      const targetDkp = await AppDataSource.manager.findOne(Dkp, { where: { DiscordId: discordId } });
+      if (!targetDkp) return res.status(404).json({ error: 'That member is not in the system' });
+
+      const census = await AppDataSource.manager.find(Census);
+      const censusNames = new Set(census.filter(c => c.DiscordId).map(c => c.Name));
+      const targetHasMain = census.some(c => c.DiscordId === discordId && c.Status === 'Main');
+
+      // Discord IDs already credited on this call (avoid double-credit).
+      const links = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId } });
+      const creditedIds = new Set<string>();
+      if (links.length > 0) {
+        const attIds = links.map(l => l.attendanceId);
+        const rows = await AppDataSource.manager
+          .createQueryBuilder()
+          .select('a.discord_id', 'discordId')
+          .from(Attendance, 'a')
+          .where('a.id IN (:...attIds)', { attIds })
+          .getRawMany() as { discordId: string }[];
+        rows.forEach(r => creditedIds.add(r.discordId));
+      }
+
+      const plan = planAssign({
+        name,
+        whoLog: call.whoLog,
+        censusNames,
+        targetDiscordId: discordId,
+        alreadyCreditedDiscordIds: creditedIds,
+        callModifier: call.modifier,
+        requestedStatus: status,
+        targetHasMain,
+        credit: credit !== false,
+      });
+
+      if (!plan.ok) {
+        const msg = plan.error === 'already registered' ? 'That character is already registered'
+          : plan.error === 'invalid status' ? 'Status must be Main, Alt, or Bot'
+          : 'That name is not on this call';
+        return res.status(400).json({ error: msg });
+      }
+
+      const { declareOrUpdate, insertUser } = await import('../../commands/census/census_functions.js');
+      await insertUser(discordId);
+
+      // Register the toon and (optionally) credit the call atomically. An advisory
+      // lock keyed on (call, owner) serializes concurrent assigns for the same
+      // owner so the double-credit re-check below cannot race.
+      let credited = false;
+      let note = plan.note;
+      await AppDataSource.transaction(async (manager) => {
+        await manager.query('SELECT pg_advisory_xact_lock($1::int, hashtext($2)::int)', [callId, discordId]);
+
+        // declareOrUpdate validates level + class and creates the census row.
+        await declareOrUpdate(discordId, plan.status, name, lvl, characterClass, manager);
+
+        if (plan.awardDkp) {
+          // Re-check inside the lock: a concurrent assign may have just credited this owner.
+          const already = await manager.query(
+            `SELECT 1 FROM raid_call_attendance rca
+               JOIN attendance a ON a.id = rca.attendance_id
+              WHERE rca.call_id = $1 AND a.discord_id = $2 LIMIT 1`,
+            [callId, discordId],
+          );
+          if (already.length === 0) {
+            await creditCharacterToCall(call, name, discordId, manager);
+            credited = true;
+          } else {
+            note = 'Owner already credited on this call — registered without extra DKP.';
+          }
+        }
+      });
+
+      res.json({ ok: true, name, discordId, status: plan.status, credited, note });
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith(':x:')) {
+        return res.status(400).json({ error: err.message.replace(/^:x:\s*/, '') });
+      }
+      console.error('Failed to assign character:', err);
+      res.status(500).json({ error: 'Failed to assign character' });
     }
   });
 
