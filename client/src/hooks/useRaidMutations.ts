@@ -215,3 +215,30 @@ export function useUndoDismissMutation(eventId: number) {
     },
   });
 }
+
+export interface AssignToonParams {
+  callId: number;
+  name: string;
+  discordId: string;
+  status: string;
+  level: number;
+  characterClass: string;
+  credit: boolean;
+}
+
+export function useAssignToonMutation(eventId: number) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ callId, ...body }: AssignToonParams) =>
+      authFetch(token!, `/api/raids/events/${eventId}/calls/${callId}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
+      queryClient.invalidateQueries({ queryKey: ['roster'] });
+    },
+  });
+}
