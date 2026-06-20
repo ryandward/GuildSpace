@@ -1644,6 +1644,64 @@ export function createWebServer(opts: WebServerOptions) {
     }
   });
 
+  // Ignore an unrecognized /who name on a call (officer-only)
+  app.post('/api/raids/events/:id/calls/:callId/dismiss', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const callId = parseInt(req.params.callId, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+
+      const { name, reason } = req.body;
+      if (!name) return res.status(400).json({ error: 'name is required' });
+
+      // Only names that are currently unrecognized on this call may be ignored.
+      const census = await AppDataSource.manager.find(Census);
+      const censusNameSet = new Set(census.filter(c => c.DiscordId).map(c => c.Name));
+      const candidates = deriveUnrecognized(call.whoLog, censusNameSet, new Set());
+      if (!candidates.some(c => c.name === name)) {
+        return res.status(400).json({ error: 'That name is not an unrecognized name on this call' });
+      }
+
+      let dismissal = await AppDataSource.manager.findOne(RaidCallDismissal, { where: { callId, name } });
+      if (!dismissal) {
+        dismissal = new RaidCallDismissal();
+        dismissal.callId = callId;
+        dismissal.name = name;
+      }
+      dismissal.reason = (typeof reason === 'string' && reason.trim()) ? reason.trim() : null;
+      dismissal.dismissedBy = officer.user.id;
+      dismissal.dismissedAt = new Date();
+      await AppDataSource.manager.save(dismissal);
+
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to ignore name:', err);
+      res.status(500).json({ error: 'Failed to ignore name' });
+    }
+  });
+
+  // Undo an ignore (officer-only)
+  app.delete('/api/raids/events/:id/calls/:callId/dismiss/:name', async (req, res) => {
+    const officer = await requireOfficer(req, res);
+    if (!officer) return;
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const callId = parseInt(req.params.callId, 10);
+      const name = decodeURIComponent(req.params.name);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
+      if (!call) return res.status(404).json({ error: 'Call not found' });
+
+      await AppDataSource.manager.delete(RaidCallDismissal, { callId, name });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Failed to restore name:', err);
+      res.status(500).json({ error: 'Failed to restore name' });
+    }
+  });
+
   // Remove a character from a call
   app.delete('/api/raids/events/:id/calls/:callId/remove', async (req, res) => {
     const officer = await requireOfficer(req, res);
