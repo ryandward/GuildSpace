@@ -63,4 +63,10 @@ describe('planAssign', () => {
     expect(plan.awardDkp).toBe(false);
     expect(plan.dkpAmount).toBe(0);
   });
+
+  it('rejects a census status outside Main/Alt/Bot', () => {
+    expect(planAssign(base({ requestedStatus: 'Officer' })).ok).toBe(false);
+    expect(planAssign(base({ requestedStatus: 'Officer' })).error).toBe('invalid status');
+    expect(planAssign(base({ requestedStatus: '' })).error).toBe('invalid status');
+  });
 });

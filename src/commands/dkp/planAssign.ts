@@ -22,12 +22,14 @@ export interface AssignPlanInput {
 
 export interface AssignPlan {
   ok: boolean;
-  error?: 'not in this call' | 'already registered';
+  error?: 'not in this call' | 'already registered' | 'invalid status';
   status: string;
   awardDkp: boolean;
   dkpAmount: number;
   note?: string;
 }
+
+const ALLOWED_STATUS = new Set(['Main', 'Alt', 'Bot']);
 
 export function planAssign(input: AssignPlanInput): AssignPlan {
   const {
@@ -41,6 +43,9 @@ export function planAssign(input: AssignPlanInput): AssignPlan {
   }
   if (censusNames.has(name)) {
     return { ok: false, error: 'already registered', status: requestedStatus, awardDkp: false, dkpAmount: 0 };
+  }
+  if (!ALLOWED_STATUS.has(requestedStatus)) {
+    return { ok: false, error: 'invalid status', status: requestedStatus, awardDkp: false, dkpAmount: 0 };
   }
 
   // A member's first toon must be their Main (mirrors the Discord /assign command).
