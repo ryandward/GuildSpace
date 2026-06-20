@@ -35,6 +35,7 @@ export default function RaidEventPage() {
   const [lastResult, setLastResult] = useState<AddCallResult | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [assignNotice, setAssignNotice] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -180,6 +181,15 @@ export default function RaidEventPage() {
                   </div>
                 )}
 
+                {assignNotice && (
+                  <div className="border-t border-border px-2 py-1 bg-surface-2 flex items-center justify-between gap-1 animate-fade-in">
+                    <Text variant="caption">{assignNotice}</Text>
+                    <button className="bg-transparent border-none cursor-pointer" onClick={() => setAssignNotice(null)}>
+                      <Text variant="caption" className="hover:text-red">dismiss</Text>
+                    </button>
+                  </div>
+                )}
+
                 {addCall.isError && (
                   <div className="border-t border-border px-2 py-1">
                     <Text variant="error">Failed to add call</Text>
@@ -215,6 +225,7 @@ export default function RaidEventPage() {
                           onRemoveCharacter={(callId, name) => removeCharacter.mutate({ callId, characterName: name })}
                           onDismissName={(callId, name, reason) => dismissName.mutate({ callId, name, reason })}
                           onUndoDismiss={(callId, name) => undoDismiss.mutate({ callId, name })}
+                          onNotice={setAssignNotice}
                           onEditCall={handleEditCall}
                           isEditPending={editCall.isPending}
                           templates={templates}

@@ -226,18 +226,28 @@ export interface AssignToonParams {
   credit: boolean;
 }
 
+export interface AssignToonResult {
+  ok: boolean;
+  name: string;
+  discordId: string;
+  status: string;
+  credited: boolean;
+  note?: string;
+}
+
 export function useAssignToonMutation(eventId: number) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ callId, ...body }: AssignToonParams) =>
-      authFetch(token!, `/api/raids/events/${eventId}/calls/${callId}/assign`, {
+      authFetch<AssignToonResult>(token!, `/api/raids/events/${eventId}/calls/${callId}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['raidEvent', String(eventId)] });
+      queryClient.invalidateQueries({ queryKey: ['raidEvents'] });
       queryClient.invalidateQueries({ queryKey: ['roster'] });
     },
   });

@@ -24,6 +24,7 @@ interface Props {
   onRemoveCharacter: (callId: number, name: string) => void;
   onDismissName: (callId: number, name: string, reason?: string) => void;
   onUndoDismiss: (callId: number, name: string) => void;
+  onNotice: (msg: string) => void;
   onEditCall?: (callId: number, raidName: string, modifier: number) => void;
   isEditPending?: boolean;
   templates?: RaidTemplate[];
@@ -35,7 +36,7 @@ export default function CallRow({
   confirmDeleteId, onConfirmDelete, onDelete, isDeleting,
   eventId,
   onAddCharacter, onRemoveCharacter,
-  onDismissName, onUndoDismiss,
+  onDismissName, onUndoDismiss, onNotice,
   onEditCall, isEditPending, templates,
   sortable,
 }: Props) {
@@ -173,6 +174,7 @@ export default function CallRow({
             eventId={eventId}
             onDismissName={onDismissName}
             onUndoDismiss={onUndoDismiss}
+            onNotice={onNotice}
           />
 
           {/* Edit call form */}

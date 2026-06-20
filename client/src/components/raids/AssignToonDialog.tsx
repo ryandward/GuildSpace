@@ -13,10 +13,11 @@ interface Props {
   className: string | null;
   callModifier: number;
   onClose: () => void;
+  onNotice: (msg: string) => void;
 }
 
 export default function AssignToonDialog({
-  eventId, callId, name, level, className, callModifier, onClose,
+  eventId, callId, name, level, className, callModifier, onClose, onNotice,
 }: Props) {
   const { data: roster } = useRosterQuery();
   const assign = useAssignToonMutation(eventId);
@@ -57,7 +58,7 @@ export default function AssignToonDialog({
     assign.mutate(
       { callId, name, discordId, status, level: lvl, characterClass: charClass, credit },
       {
-        onSuccess: () => onClose(),
+        onSuccess: (data) => { if (data?.note) onNotice(data.note); onClose(); },
         onError: (err) => setError(err instanceof ApiError ? err.message : 'Failed to assign'),
       },
     );

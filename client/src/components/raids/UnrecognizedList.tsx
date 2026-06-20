@@ -10,29 +10,33 @@ interface Props {
   eventId: number;
   onDismissName: (callId: number, name: string, reason?: string) => void;
   onUndoDismiss: (callId: number, name: string) => void;
+  onNotice: (msg: string) => void;
 }
 
 export default function UnrecognizedList({
   call, isOfficer, isActive, eventId,
-  onDismissName, onUndoDismiss,
+  onDismissName, onUndoDismiss, onNotice,
 }: Props) {
   const [assignName, setAssignName] = useState<string | null>(null);
   const [ignoreName, setIgnoreName] = useState<string | null>(null);
   const [ignoreReason, setIgnoreReason] = useState('');
 
-  const assignTarget = call.unrecognized.find(u => u.name === assignName) ?? null;
+  // Guard against missing fields (demo-mode responses / stale cache from before deploy).
+  const unrecognized = call.unrecognized ?? [];
+  const dismissed = call.dismissed ?? [];
+  const assignTarget = unrecognized.find(u => u.name === assignName) ?? null;
 
-  if (call.unrecognized.length === 0 && call.dismissed.length === 0) return null;
+  if (unrecognized.length === 0 && dismissed.length === 0) return null;
 
   return (
     <div className="mt-1 flex flex-col gap-1">
-      {call.unrecognized.length > 0 && (
+      {unrecognized.length > 0 && (
         <div className="border border-yellow/40 px-1.5 py-1 bg-yellow/10 rounded-md">
           <Text variant="caption" className="text-yellow font-bold">
-            {call.unrecognized.length} not in census (from /who):
+            {unrecognized.length} not in census (from /who):
           </Text>
           <div className="flex flex-col gap-0.5 mt-0.5">
-            {call.unrecognized.map(u => (
+            {unrecognized.map(u => (
               <div key={u.name} className="flex items-center gap-1 flex-wrap">
                 <Text variant="caption" className="font-mono">
                   {u.name}{u.level != null ? ` — ${u.level} ${u.className ?? ''}`.trimEnd() : ''}
@@ -49,7 +53,7 @@ export default function UnrecognizedList({
                     <Button
                       intent="ghost"
                       size="xs"
-                      onClick={() => { setIgnoreName(u.name); setIgnoreReason(''); }}
+                      onClick={() => { setIgnoreName(u.name); setIgnoreReason(''); setAssignName(null); }}
                     >
                       Ignore
                     </Button>
@@ -87,6 +91,7 @@ export default function UnrecognizedList({
                     className={u.className}
                     callModifier={call.modifier}
                     onClose={() => setAssignName(null)}
+                    onNotice={onNotice}
                   />
                 )}
               </div>
@@ -95,11 +100,11 @@ export default function UnrecognizedList({
         </div>
       )}
 
-      {call.dismissed.length > 0 && (
+      {dismissed.length > 0 && (
         <div className="px-1.5">
           <Text variant="caption" className="text-text-dim">Ignored on this call:</Text>
           <div className="flex flex-col gap-0.5 mt-0.5">
-            {call.dismissed.map(d => (
+            {dismissed.map(d => (
               <div key={d.name} className="flex items-center gap-1 flex-wrap">
                 <Text variant="caption" className="font-mono text-text-dim">
                   {d.name}{d.reason ? ` — "${d.reason}"` : ''}
