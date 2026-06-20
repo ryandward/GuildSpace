@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Text, Input } from '../../ui';
 import type { CallDetail } from '../../hooks/useEventDetailQuery';
+import AssignToonDialog from './AssignToonDialog';
 
 interface Props {
   call: CallDetail;
@@ -12,11 +13,14 @@ interface Props {
 }
 
 export default function UnrecognizedList({
-  call, isOfficer, isActive,
+  call, isOfficer, isActive, eventId,
   onDismissName, onUndoDismiss,
 }: Props) {
+  const [assignName, setAssignName] = useState<string | null>(null);
   const [ignoreName, setIgnoreName] = useState<string | null>(null);
   const [ignoreReason, setIgnoreReason] = useState('');
+
+  const assignTarget = call.unrecognized.find(u => u.name === assignName) ?? null;
 
   if (call.unrecognized.length === 0 && call.dismissed.length === 0) return null;
 
@@ -35,7 +39,13 @@ export default function UnrecognizedList({
                 </Text>
                 {isOfficer && isActive && (
                   <div className="flex items-center gap-0.5">
-                    <Button intent="ghost" size="xs" disabled title="Assign comes in Phase B">Assign</Button>
+                    <Button
+                      intent="primary"
+                      size="xs"
+                      onClick={() => { setAssignName(u.name); setIgnoreName(null); }}
+                    >
+                      Assign
+                    </Button>
                     <Button
                       intent="ghost"
                       size="xs"
@@ -67,6 +77,17 @@ export default function UnrecognizedList({
                     <Button intent="ghost" size="xs" type="submit">Confirm</Button>
                     <Button intent="ghost" size="xs" type="button" onClick={() => setIgnoreName(null)}>Cancel</Button>
                   </form>
+                )}
+                {assignTarget?.name === u.name && (
+                  <AssignToonDialog
+                    eventId={eventId}
+                    callId={call.id}
+                    name={u.name}
+                    level={u.level}
+                    className={u.className}
+                    callModifier={call.modifier}
+                    onClose={() => setAssignName(null)}
+                  />
                 )}
               </div>
             ))}
