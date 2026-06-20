@@ -31,6 +31,8 @@ import { RaidEvent } from '../../entities/RaidEvent.js';
 import { RaidCall } from '../../entities/RaidCall.js';
 import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
 import { Census } from '../../entities/Census.js';
+import { RaidCallDismissal } from '../../entities/RaidCallDismissal.js';
+import { deriveUnrecognized } from '../../commands/dkp/deriveUnrecognized.js';
 import { Bank } from '../../entities/Bank.js';
 import { Items } from '../../entities/Items.js';
 import { BankImport } from '../../entities/BankImport.js';
@@ -1215,15 +1217,17 @@ export function createWebServer(opts: WebServerOptions) {
       });
 
       // Build attendance matrix data
-      const [gsUsers, dkpRows, allToons, lastRaidByName] = await Promise.all([
+      const [gsUsers, dkpRows, allToons, lastRaidByName, census] = await Promise.all([
         AppDataSource.manager.find(GuildSpaceUser),
         AppDataSource.manager.find(Dkp),
         AppDataSource.manager.find(ActiveToons),
         fetchLastRaidByName(),
+        AppDataSource.manager.find(Census),
       ]);
       const gsUserMap = new Map(gsUsers.map(u => [u.discordId, u]));
       const dkpNameMap = new Map(dkpRows.map(d => [d.DiscordId, d.DiscordName]));
       const toonClassMap = new Map(allToons.map(t => [t.Name, t.CharacterClass]));
+      const censusNameSet = new Set(census.filter(c => c.DiscordId).map(c => c.Name));
 
       // For each call, get its attendees
       const callDetails = await Promise.all(calls.map(async (call) => {
@@ -1244,15 +1248,26 @@ export function createWebServer(opts: WebServerOptions) {
           }
         }
 
+        const dismissalRows = await AppDataSource.manager.find(RaidCallDismissal, { where: { callId: call.id } });
+        const dismissedNames = new Set(dismissalRows.map(d => d.name));
+        const unrecognized = deriveUnrecognized(call.whoLog, censusNameSet, dismissedNames);
+
         return {
           id: call.id,
           raidName: call.raidName,
           modifier: call.modifier,
           recordedCount: attendees.length,
-          rejectedCount: 0,
+          rejectedCount: unrecognized.length,
           createdBy: call.createdBy,
           createdAt: call.createdAt,
           attendees,
+          unrecognized,
+          dismissed: dismissalRows.map(d => ({
+            name: d.name,
+            reason: d.reason,
+            dismissedBy: d.dismissedBy,
+            dismissedAt: d.dismissedAt,
+          })),
         };
       }));
 

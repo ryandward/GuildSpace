@@ -8,6 +8,19 @@ export interface CallAttendee {
   characterClass: string | null;
 }
 
+export interface UnrecognizedName {
+  name: string;
+  level: number | null;
+  className: string | null;
+}
+
+export interface DismissedName {
+  name: string;
+  reason: string | null;
+  dismissedBy: string;
+  dismissedAt: string;
+}
+
 export interface CallDetail {
   id: number;
   raidName: string;
@@ -17,6 +30,8 @@ export interface CallDetail {
   createdBy: string;
   createdAt: string;
   attendees: CallAttendee[];
+  unrecognized: UnrecognizedName[];
+  dismissed: DismissedName[];
 }
 
 export interface EventMember {
