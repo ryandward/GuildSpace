@@ -125,31 +125,34 @@ function deriveUnrecognized(
 ```ts
 interface AssignPlan {
   ok: boolean;
-  error?: string;                                  // 'not in this call' | 'already registered'
-  createCensus?: { name: string; level: number; characterClass: string; status: string; discordId: string };
+  error?: 'not in this call' | 'already registered' | 'invalid status';
+  status: string;                                  // the resolved census status to write
   awardDkp: boolean;
   dkpAmount: number;
-  note?: string;                                   // e.g. 'owner already credited on this call — no extra DKP'
+  note?: string;                                   // e.g. 'Owner already credited on this call — registered without extra DKP.'
 }
 
 function planAssign(input: {
   name: string;
-  whoLog: string;
+  whoLog: string | null;
   censusNames: Set<string>;
   targetDiscordId: string;
   alreadyCreditedDiscordIds: Set<string>;          // discord_ids already in this call's attendance
   callModifier: number;
   requestedStatus: string;                         // 'Main' | 'Alt' | 'Bot'
   targetHasMain: boolean;
-  level: number; characterClass: string;           // from the /who line (validated against parsed log)
+  credit: boolean;
 }): AssignPlan
 ```
 
 Rules:
 - `name` must appear in `parseWhoLogs(whoLog)` → else `error: 'not in this call'`.
 - `name` must not be in `censusNames` → else `error: 'already registered'`.
-- Status: if `!targetHasMain` → force `'Main'` (mirrors Discord `/assign`); else use `requestedStatus` (default `'Alt'`).
-- If `targetDiscordId ∈ alreadyCreditedDiscordIds` → `awardDkp: false` + explanatory `note` (the owner already has a toon credited on this call; we still register the new toon). Else `awardDkp: true`, `dkpAmount: callModifier`.
+- `requestedStatus` must be one of `Main`/`Alt`/`Bot` → else `error: 'invalid status'`.
+- Status: if `!targetHasMain` → force `'Main'` (mirrors Discord `/assign`); else use `requestedStatus`.
+- If `credit && targetDiscordId ∈ alreadyCreditedDiscordIds` → `awardDkp: false` + explanatory `note` (the owner already has a toon credited on this call; we still register the new toon). Else `awardDkp: credit`, `dkpAmount: credit ? callModifier : 0`.
+
+> **Note (deviates from the original draft):** `level`/`characterClass` are NOT inputs to `planAssign` and are NOT cross-checked against the parsed `/who` line. They are officer-editable fields in the assign dialog (prefilled from the line as a convenience) and are validated only for sanity by `declareOrUpdate` (level 1–60, class exists). This lets an officer correct a misparse. `planAssign` is purely the validity + status + credit decision.
 
 ### `POST /api/raids/events/:id/calls/:callId/assign` (new, officer-only)
 
@@ -193,6 +196,15 @@ These live alongside the existing mutations in `client/src/hooks/useRaidMutation
 - Lists (`unrecognized`, `dismissed`) are visible to anyone who can view the event.
 - Assign / Ignore / Undo actions: officer-only on the server (`requireOfficer`), and the UI gates them on `isOfficer && isActive` (same as "Add Call", `RaidEventPage.tsx:52`). Closed events render the lists read-only — preserving the historical record.
 
+## Post-review hardening (applied after the multi-agent review)
+
+These tightened the implementation beyond the original draft:
+
+- **Status validation:** `planAssign` rejects any `requestedStatus` outside `Main`/`Alt`/`Bot` (`error: 'invalid status'`); the endpoint maps it to a 400 "Status must be Main, Alt, or Bot" — preventing a garbage `Status` from being written to the shared `census` table.
+- **Atomic, race-free credit:** the assign endpoint wraps `declareOrUpdate` + `creditCharacterToCall` in a single `AppDataSource.transaction`, takes a `pg_advisory_xact_lock(callId, hashtext(discordId))`, and re-checks (inside the lock) whether the owner is already credited on the call before awarding DKP. This closes the two-concurrent-assigns double-credit race and guarantees a census row is never left without its credit. `declareOrUpdate` and `creditCharacterToCall` take an optional/explicit `EntityManager` so they enlist in the transaction.
+- **Closed-event enforcement is server-side too:** assign / dismiss / undo now return 400 "Event is closed" when the event is not active (not just UI-gated).
+- **Client cache:** `useAssignToonMutation` also invalidates `['raidEvents']` (stale member count); `UnrecognizedList` guards `call.unrecognized`/`dismissed` with `?? []` (demo-mode / stale-cache safety); the owner-already-credited `note` is surfaced via a page-level banner (the dialog unmounts when the row leaves the list).
+
 ## Testing strategy (red → green TDD, Vitest)
 
 Set up Vitest at the repo root (one config covering `src/` and `client/`). Write each pure function test-first: a failing test, then the implementation that makes it pass. Tests must be **nontrivial** — real branches and edge cases, not smoke tests.
@@ -215,8 +227,9 @@ Set up Vitest at the repo root (one config covering `src/` and `client/`). Write
 - name already in census → `{ok:false, error:'already registered'}`
 - target has no Main → status forced to `'Main'`
 - target has a Main, requested `'Alt'` → status stays `'Alt'`
-- target already credited on this call → `createCensus` set, `awardDkp:false`, `note` present
-- normal case → `awardDkp:true`, `dkpAmount === callModifier`, level/class taken from the line
+- target already credited on this call → `awardDkp:false`, `note` present
+- normal case → `awardDkp:true`, `dkpAmount === callModifier`
+- requested status outside Main/Alt/Bot → `error: 'invalid status'`
 
 ### Not unit-tested (documented manual verification)
 

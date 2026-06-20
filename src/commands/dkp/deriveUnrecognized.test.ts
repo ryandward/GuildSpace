@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveUnrecognized } from './deriveUnrecognized';
+import { deriveUnrecognized } from './deriveUnrecognized.js';
 
 const TS = '[Thu May 25 22:10:50 2023]';
 

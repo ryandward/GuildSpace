@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { planAssign } from './planAssign';
+import { planAssign } from './planAssign.js';
 
 const TS = '[Thu May 25 22:10:50 2023]';
 const LOG = `${TS} [60 Warrior] Azrosaurus (Iksar) <Ex Astra>`;
