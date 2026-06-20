@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Button, Badge, Text, Input, Select } from '../../ui';
 import { dropdown, dropdownItem } from '../../ui/recipes';
 import { useToonSearchQuery } from '../../hooks/useToonSearchQuery';
+import UnrecognizedList from './UnrecognizedList';
 import type { CallDetail } from '../../hooks/useEventDetailQuery';
 import type { RaidTemplate } from '../../hooks/useRaidTemplatesQuery';
 import { getClassColor } from '../../lib/classColors';
@@ -21,6 +22,8 @@ interface Props {
   eventId: number;
   onAddCharacter: (callId: number, name: string) => void;
   onRemoveCharacter: (callId: number, name: string) => void;
+  onDismissName: (callId: number, name: string, reason?: string) => void;
+  onUndoDismiss: (callId: number, name: string) => void;
   onEditCall?: (callId: number, raidName: string, modifier: number) => void;
   isEditPending?: boolean;
   templates?: RaidTemplate[];
@@ -30,7 +33,9 @@ interface Props {
 export default function CallRow({
   call, isOfficer, isActive,
   confirmDeleteId, onConfirmDelete, onDelete, isDeleting,
+  eventId,
   onAddCharacter, onRemoveCharacter,
+  onDismissName, onUndoDismiss,
   onEditCall, isEditPending, templates,
   sortable,
 }: Props) {
@@ -160,6 +165,15 @@ export default function CallRow({
               ))}
             </div>
           )}
+
+          <UnrecognizedList
+            call={call}
+            isOfficer={isOfficer}
+            isActive={isActive}
+            eventId={eventId}
+            onDismissName={onDismissName}
+            onUndoDismiss={onUndoDismiss}
+          />
 
           {/* Edit call form */}
           {editing && (
