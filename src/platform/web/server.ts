@@ -11,7 +11,7 @@
  *
  * @module
  */
-import { ILike, Not, In } from 'typeorm';
+import { ILike, Not, In, EntityManager } from 'typeorm';
 import express from 'express';
 import { existsSync } from 'fs';
 import crypto from 'crypto';
@@ -1359,16 +1359,16 @@ export function createWebServer(opts: WebServerOptions) {
    * DKP to the owner, and links the attendance to the call. Shared by the
    * manual "add character" endpoint and the assign-from-unrecognized endpoint.
    */
-  async function creditCharacterToCall(call: RaidCall, characterName: string, discordId: string): Promise<void> {
+  async function creditCharacterToCall(call: RaidCall, characterName: string, discordId: string, manager: EntityManager): Promise<void> {
     const attendance = new Attendance();
     attendance.Date = new Date();
     attendance.Raid = call.raidName;
     attendance.Name = characterName;
     attendance.DiscordId = discordId;
     attendance.Modifier = call.modifier.toString();
-    const saved = await AppDataSource.manager.save(attendance);
+    const saved = await manager.save(attendance);
 
-    await AppDataSource.manager
+    await manager
       .createQueryBuilder()
       .update(Dkp)
       .set({ EarnedDkp: () => `earned_dkp + ${call.modifier}` })
@@ -1378,7 +1378,7 @@ export function createWebServer(opts: WebServerOptions) {
     const link = new RaidCallAttendance();
     link.callId = call.id;
     link.attendanceId = saved.Id;
-    await AppDataSource.manager.save(link);
+    await manager.save(link);
   }
 
   // ─── Raid Calls ──────────────────────────────────────────────────────
@@ -1642,7 +1642,7 @@ export function createWebServer(opts: WebServerOptions) {
         if (existing) return res.status(409).json({ error: 'Member already in this call' });
       }
 
-      await creditCharacterToCall(call, characterName, censusEntry.DiscordId);
+      await creditCharacterToCall(call, characterName, censusEntry.DiscordId, AppDataSource.manager);
 
       res.json({ ok: true, characterName, discordId: censusEntry.DiscordId });
     } catch (err) {
@@ -1660,6 +1660,8 @@ export function createWebServer(opts: WebServerOptions) {
       const callId = parseInt(req.params.callId, 10);
       const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       const { name, reason } = req.body;
       if (!name) return res.status(400).json({ error: 'name is required' });
@@ -1700,6 +1702,8 @@ export function createWebServer(opts: WebServerOptions) {
       const name = decodeURIComponent(req.params.name);
       const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       await AppDataSource.manager.delete(RaidCallDismissal, { callId, name });
       res.json({ ok: true });
@@ -1719,6 +1723,8 @@ export function createWebServer(opts: WebServerOptions) {
       const callId = parseInt(req.params.callId, 10);
       const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       const { name, discordId, status, level, characterClass, credit } = req.body;
       if (!name || !discordId || !status || level == null || !characterClass) {
@@ -1762,24 +1768,44 @@ export function createWebServer(opts: WebServerOptions) {
       });
 
       if (!plan.ok) {
-        const msg = plan.error === 'already registered'
-          ? 'That character is already registered'
+        const msg = plan.error === 'already registered' ? 'That character is already registered'
+          : plan.error === 'invalid status' ? 'Status must be Main, Alt, or Bot'
           : 'That name is not on this call';
         return res.status(400).json({ error: msg });
       }
 
       const { declareOrUpdate, insertUser } = await import('../../commands/census/census_functions.js');
       await insertUser(discordId);
-      // declareOrUpdate validates level + class and creates the census row.
-      await declareOrUpdate(discordId, plan.status, name, lvl, characterClass);
 
+      // Register the toon and (optionally) credit the call atomically. An advisory
+      // lock keyed on (call, owner) serializes concurrent assigns for the same
+      // owner so the double-credit re-check below cannot race.
       let credited = false;
-      if (plan.awardDkp) {
-        await creditCharacterToCall(call, name, discordId);
-        credited = true;
-      }
+      let note = plan.note;
+      await AppDataSource.transaction(async (manager) => {
+        await manager.query('SELECT pg_advisory_xact_lock($1::int, hashtext($2)::int)', [callId, discordId]);
 
-      res.json({ ok: true, name, discordId, status: plan.status, credited, note: plan.note });
+        // declareOrUpdate validates level + class and creates the census row.
+        await declareOrUpdate(discordId, plan.status, name, lvl, characterClass, manager);
+
+        if (plan.awardDkp) {
+          // Re-check inside the lock: a concurrent assign may have just credited this owner.
+          const already = await manager.query(
+            `SELECT 1 FROM raid_call_attendance rca
+               JOIN attendance a ON a.id = rca.attendance_id
+              WHERE rca.call_id = $1 AND a.discord_id = $2 LIMIT 1`,
+            [callId, discordId],
+          );
+          if (already.length === 0) {
+            await creditCharacterToCall(call, name, discordId, manager);
+            credited = true;
+          } else {
+            note = 'Owner already credited on this call — registered without extra DKP.';
+          }
+        }
+      });
+
+      res.json({ ok: true, name, discordId, status: plan.status, credited, note });
     } catch (err) {
       if (err instanceof Error && err.message.startsWith(':x:')) {
         return res.status(400).json({ error: err.message.replace(/^:x:\s*/, '') });

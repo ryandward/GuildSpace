@@ -2,7 +2,7 @@
  * Shared census helpers — standalone, no Discord dependency.
  */
 import 'dotenv/config';
-import { FindManyOptions, FindOneOptions, ILike, LessThanOrEqual } from 'typeorm';
+import { EntityManager, FindManyOptions, FindOneOptions, ILike, LessThanOrEqual } from 'typeorm';
 import { AppDataSource } from '../../app_data.js';
 import { ActiveToons } from '../../entities/ActiveToons.js';
 import { Census } from '../../entities/Census.js';
@@ -126,11 +126,12 @@ export async function declareOrUpdate(
   Name: string,
   Level: number,
   CharacterClass: string,
+  manager: EntityManager = AppDataSource.manager,
 ): Promise<{ message: string; isUpdate: boolean; previousStatus?: string }> {
   await levelMustBeValid(Level);
   await classMustExist(CharacterClass);
 
-  const existing = await AppDataSource.manager.findOne(Census, { where: { Name } });
+  const existing = await manager.findOne(Census, { where: { Name } });
 
   if (existing) {
     if (existing.DiscordId !== UserId) {
@@ -141,7 +142,7 @@ export async function declareOrUpdate(
 
     // Can't demote the user's last Main
     if (previousStatus === 'Main' && Status !== 'Main') {
-      const mainCount = await AppDataSource.manager.count(ActiveToons, {
+      const mainCount = await manager.count(ActiveToons, {
         where: { DiscordId: UserId, Status: 'Main' },
       });
       if (mainCount <= 1) {
@@ -149,7 +150,7 @@ export async function declareOrUpdate(
       }
     }
 
-    await AppDataSource.manager.update(
+    await manager.update(
       Census,
       { Name, DiscordId: UserId },
       { Status, Level, CharacterClass, Time: new Date() },
@@ -169,7 +170,7 @@ export async function declareOrUpdate(
   newToon.Level = Level;
   newToon.CharacterClass = CharacterClass;
   newToon.Time = new Date();
-  await AppDataSource.manager.save(newToon);
+  await manager.save(newToon);
 
   return {
     message: `✅ ${Name} is now a level ${Level} ${Status} ${CharacterClass}!`,
