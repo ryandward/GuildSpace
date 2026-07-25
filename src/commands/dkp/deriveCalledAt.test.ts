@@ -77,11 +77,12 @@ describe('deriveCalledAt', () => {
   });
 
   it('returns null rather than inventing a time when the stamp has no clock', () => {
-    // parseWhoLogs substitutes `new Date()` for an unparseable stamp. That is
-    // fine for ordering attendance but would render as a confident, wrong hour
-    // on the call row, so deriveCalledAt declines instead.
+    // The player is still recorded; only the time is unknown. Both readers
+    // agree on that, and neither substitutes the current time.
     const line = '[no time here] [60 Sorcerer] Dinu (Skeleton)';
-    expect(parseWhoLogs(line)).toHaveLength(1);
+    const [player] = parseWhoLogs(line);
+    expect(player.name).toBe('Dinu');
+    expect(player.timestamp).toBeNull();
     expect(deriveCalledAt(line)).toBeNull();
   });
 });

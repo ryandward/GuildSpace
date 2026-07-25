@@ -8,7 +8,11 @@
  */
 
 export interface ParsedPlayer {
-  timestamp: Date;
+  /**
+   * When the `/who` was taken. Null only when no line in the log carried a
+   * readable stamp — a line with a bad stamp inherits the log's.
+   */
+  timestamp: Date | null;
   level: number | null;
   className: string | null;
   name: string;
@@ -45,17 +49,12 @@ export function parseWhoLogs(logs: string): ParsedPlayer[] {
     const levelClassMatch = line.match(levelClassRe);
     if (!levelClassMatch) continue;
 
-    let timestamp: Date;
-    try {
-      // EQ format: "Thu May 25 22:10:50 2023"
-      timestamp = new Date(timestampMatch[1]);
-      if (isNaN(timestamp.getTime())) {
-        timestamp = new Date();
-      }
-    }
-    catch {
-      timestamp = new Date();
-    }
+    // EQ format: "Thu May 25 22:10:50 2023". An unreadable stamp is left
+    // unknown and resolved against the rest of the log below. It must never
+    // become the current time: that silently dates an old raid to today and
+    // corrupts everything read from attendance.date downstream.
+    const parsed = new Date(timestampMatch[1]);
+    const timestamp: Date | null = isNaN(parsed.getTime()) ? null : parsed;
 
     let level: number | null = null;
     let className: string | null = null;
@@ -90,6 +89,16 @@ export function parseWhoLogs(logs: string): ParsedPlayer[] {
       name,
       guild,
     });
+  }
+
+  // A /who is a single snapshot, so every line shares one instant. Lines whose
+  // own stamp was unreadable take the log's. If no line carried one, the time
+  // stays unknown rather than being invented.
+  const logTimestamp = players.find(p => p.timestamp !== null)?.timestamp ?? null;
+  if (logTimestamp) {
+    for (const player of players) {
+      if (player.timestamp === null) player.timestamp = logTimestamp;
+    }
   }
 
   return players;
