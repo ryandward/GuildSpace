@@ -655,6 +655,11 @@ export function getDemoResponse(url: string, method: string): unknown | null {
     };
   }
 
+  // GET /api/raids/events/:id/comments
+  if (/^\/api\/raids\/events\/\d+\/comments$/.test(path)) {
+    return [];
+  }
+
   // GET /api/raids/templates
   if (path === '/api/raids/templates') {
     return getTemplates();

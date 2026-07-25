@@ -12,6 +12,7 @@ import type { AddCallResult } from '../hooks/useRaidMutations';
 import AddCallForm from '../components/raids/AddCallForm';
 import CallRow from '../components/raids/CallRow';
 import AttendanceMatrix from '../components/raids/AttendanceMatrix';
+import EventComments from '../components/raids/EventComments';
 import { Button, Card, Text, Heading, Badge } from '../ui';
 import { text } from '../ui/recipes';
 
@@ -250,6 +251,8 @@ export default function RaidEventPage() {
                   <AttendanceMatrix calls={data.calls} members={data.members} />
                 )}
               </Card>
+
+              <EventComments eventId={eventId} />
             </>
           )}
         </div>
