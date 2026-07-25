@@ -31,7 +31,15 @@ Requires a `.env` file (see `.env.example`) with PostgreSQL credentials (`PGHOST
 
 GuildSpace originated as a Discord bot: `~/Git/Project-1999-Typescript-Discord` (remote: https://github.com/ryandward/Project-1999-Typescript-Discord). The Discord bot is still running in production and **shares the same Railway Postgres database**.
 
-The web platform has moved past the command-porting phase. The Discord slash command system (platform shim, `commands_web/`, command execution over WebSocket) has been removed. All data mutations now flow through dedicated REST endpoints. Shared business logic (database helpers, validators) in `src/commands/` is still imported by the Discord bot and by REST endpoint handlers.
+The web platform has moved past the command-porting phase. The Discord slash command system (platform shim, `commands_web/`, command execution over WebSocket) has been removed. All data mutations now flow through dedicated REST endpoints. Business logic in `src/commands/` (database helpers, validators) is imported by REST endpoint handlers.
+
+**The Discord bot does not import this code — it has its own copies.** There is no
+`file:` dependency, no `tsconfig` path mapping, and no symlink between the repos; the
+bot carries a private duplicate of the `/who` parser in `commands/dkp/attendance.ts`.
+What the two projects share is the **database**, not the source. So a fix to parsing or
+validation here does *not* reach the bot, and both halves keep writing to the same
+`attendance`, `census`, and `dkp` tables. Check the bot separately before assuming a
+data-integrity fix is complete.
 
 ## Architecture
 
