@@ -34,6 +34,7 @@ import { Census } from '../../entities/Census.js';
 import { RaidCallDismissal } from '../../entities/RaidCallDismissal.js';
 import { deriveUnrecognized } from '../../commands/dkp/deriveUnrecognized.js';
 import { deriveCalledAt } from '../../commands/dkp/deriveCalledAt.js';
+import { deriveCallTimestamp } from '../../commands/dkp/deriveCallTimestamp.js';
 import { planAssign } from '../../commands/dkp/planAssign.js';
 import { Bank } from '../../entities/Bank.js';
 import { Items } from '../../entities/Items.js';
@@ -1364,7 +1365,9 @@ export function createWebServer(opts: WebServerOptions) {
    */
   async function creditCharacterToCall(call: RaidCall, characterName: string, discordId: string, manager: EntityManager): Promise<void> {
     const attendance = new Attendance();
-    attendance.Date = new Date();
+    // The raid happened when the /who was taken, not when this correction was
+    // made — see deriveCallTimestamp.
+    attendance.Date = deriveCallTimestamp(call.whoLog, call.createdAt);
     attendance.Raid = call.raidName;
     attendance.Name = characterName;
     attendance.DiscordId = discordId;
