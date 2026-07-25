@@ -32,7 +32,11 @@ import { RaidCall } from '../../entities/RaidCall.js';
 import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
 import { Census } from '../../entities/Census.js';
 import { RaidCallDismissal } from '../../entities/RaidCallDismissal.js';
+import { RaidEventComment } from '../../entities/RaidEventComment.js';
+import { validateComment } from '../../commands/raids/validateComment.js';
 import { deriveUnrecognized } from '../../commands/dkp/deriveUnrecognized.js';
+import { deriveCalledAt } from '../../commands/dkp/deriveCalledAt.js';
+import { deriveCallTimestamp } from '../../commands/dkp/deriveCallTimestamp.js';
 import { planAssign } from '../../commands/dkp/planAssign.js';
 import { Bank } from '../../entities/Bank.js';
 import { Items } from '../../entities/Items.js';
@@ -1257,6 +1261,8 @@ export function createWebServer(opts: WebServerOptions) {
           id: call.id,
           raidName: call.raidName,
           modifier: call.modifier,
+          // Wall-clock "HH:MM" from the /who text, not a Date — see deriveCalledAt.
+          calledAt: deriveCalledAt(call.whoLog),
           recordedCount: attendees.length,
           rejectedCount: unrecognized.length,
           createdBy: call.createdBy,
@@ -1361,7 +1367,9 @@ export function createWebServer(opts: WebServerOptions) {
    */
   async function creditCharacterToCall(call: RaidCall, characterName: string, discordId: string, manager: EntityManager): Promise<void> {
     const attendance = new Attendance();
-    attendance.Date = new Date();
+    // The raid happened when the /who was taken, not when this correction was
+    // made — see deriveCallTimestamp.
+    attendance.Date = deriveCallTimestamp(call.whoLog, call.createdAt);
     attendance.Raid = call.raidName;
     attendance.Name = characterName;
     attendance.DiscordId = discordId;
@@ -1380,6 +1388,99 @@ export function createWebServer(opts: WebServerOptions) {
     link.attendanceId = saved.Id;
     await manager.save(link);
   }
+
+  // ─── Raid Event Comments ─────────────────────────────────────────────
+
+  app.get('/api/raids/events/:id/comments', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const comments = await AppDataSource.manager.find(RaidEventComment, {
+        where: { eventId },
+        order: { createdAt: 'ASC' },
+      });
+      res.json(comments.map(c => ({
+        id: c.id,
+        userId: c.userId,
+        displayName: c.displayName,
+        content: c.content,
+        createdAt: c.createdAt,
+      })));
+    }
+    catch (err) {
+      console.error('Failed to fetch raid event comments:', err);
+      res.status(500).json({ error: 'Failed to load comments' });
+    }
+  });
+
+  app.post('/api/raids/events/:id/comments', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const result = validateComment(req.body?.content);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (!event) return res.status(404).json({ error: 'Raid not found' });
+
+      // A valid token alone is not enough — getUser resolves a user even when
+      // no guildspace_users row exists. Same check POST /api/profile/bio makes.
+      const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+      if (!gsUser) return res.status(404).json({ error: 'User not found' });
+
+      // Deliberately not gated on event status: the reason to comment is
+      // usually to explain something the morning after, once it is closed.
+      const comment = new RaidEventComment();
+      comment.eventId = eventId;
+      comment.userId = user.id;
+      comment.displayName = gsUser.displayName || user.displayName;
+      comment.content = result.content;
+      const saved = await AppDataSource.manager.save(comment);
+
+      res.json({
+        id: saved.id,
+        userId: saved.userId,
+        displayName: saved.displayName,
+        content: saved.content,
+        createdAt: saved.createdAt,
+      });
+    }
+    catch (err) {
+      console.error('Failed to save raid event comment:', err);
+      res.status(500).json({ error: 'Failed to post comment' });
+    }
+  });
+
+  app.delete('/api/raids/events/:id/comments/:commentId', async (req, res) => {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    try {
+      const eventId = parseInt(req.params.id, 10);
+      const commentId = parseInt(req.params.commentId, 10);
+      const comment = await AppDataSource.manager.findOne(RaidEventComment, {
+        where: { id: commentId, eventId },
+      });
+      if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+      const gsUser = await AppDataSource.manager.findOne(GuildSpaceUser, { where: { discordId: user.id } });
+      const isAuthor = comment.userId === user.id;
+      if (!isAuthor && !gsUser?.hasOfficerAccess) {
+        return res.status(403).json({ error: 'You can only delete your own comments' });
+      }
+
+      await AppDataSource.manager.remove(comment);
+      res.json({ ok: true });
+    }
+    catch (err) {
+      console.error('Failed to delete raid event comment:', err);
+      res.status(500).json({ error: 'Failed to delete comment' });
+    }
+  });
 
   // ─── Raid Calls ──────────────────────────────────────────────────────
 
@@ -1496,6 +1597,8 @@ export function createWebServer(opts: WebServerOptions) {
       const eventId = parseInt(req.params.id, 10);
       const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       const { raidName, modifier } = req.body;
       const newModifier = modifier !== undefined ? Number(modifier) : call.modifier;
@@ -1566,8 +1669,11 @@ export function createWebServer(opts: WebServerOptions) {
     if (!officer) return;
     try {
       const callId = parseInt(req.params.callId, 10);
-      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      const eventId = parseInt(req.params.id, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       // Get linked attendance records
       const links = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId } });
@@ -1619,8 +1725,11 @@ export function createWebServer(opts: WebServerOptions) {
     if (!officer) return;
     try {
       const callId = parseInt(req.params.callId, 10);
-      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      const eventId = parseInt(req.params.id, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       const { characterName } = req.body;
       if (!characterName) return res.status(400).json({ error: 'characterName is required' });
@@ -1821,8 +1930,11 @@ export function createWebServer(opts: WebServerOptions) {
     if (!officer) return;
     try {
       const callId = parseInt(req.params.callId, 10);
-      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      const eventId = parseInt(req.params.id, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       const { characterName } = req.body;
       if (!characterName) return res.status(400).json({ error: 'characterName is required' });

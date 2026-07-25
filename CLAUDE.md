@@ -9,7 +9,19 @@ npm run build    # tsc — compiles src/ → dist/
 npm start        # node dist/index_web.js
 ```
 
-No test framework or linter is configured. The project uses ESM (`"type": "module"` in package.json).
+```bash
+npm test         # vitest — watch mode
+npm run test:run # vitest run — single pass
+```
+
+Vitest is configured at the repo root for **server-side pure functions only**:
+`vitest.config.ts` has `include: ['src/**/*.test.ts']`, so client files are not
+picked up and `.tsx` is not matched. Tests live next to the unit under test.
+`tsconfig.json` excludes `src/**/*.test.ts`, so tests are checked by Vitest at
+runtime, not by `tsc`.
+
+There is no client-side test runner and no linter. The project uses ESM
+(`"type": "module"` in package.json).
 
 ## Environment
 
@@ -19,7 +31,15 @@ Requires a `.env` file (see `.env.example`) with PostgreSQL credentials (`PGHOST
 
 GuildSpace originated as a Discord bot: `~/Git/Project-1999-Typescript-Discord` (remote: https://github.com/ryandward/Project-1999-Typescript-Discord). The Discord bot is still running in production and **shares the same Railway Postgres database**.
 
-The web platform has moved past the command-porting phase. The Discord slash command system (platform shim, `commands_web/`, command execution over WebSocket) has been removed. All data mutations now flow through dedicated REST endpoints. Shared business logic (database helpers, validators) in `src/commands/` is still imported by the Discord bot and by REST endpoint handlers.
+The web platform has moved past the command-porting phase. The Discord slash command system (platform shim, `commands_web/`, command execution over WebSocket) has been removed. All data mutations now flow through dedicated REST endpoints. Business logic in `src/commands/` (database helpers, validators) is imported by REST endpoint handlers.
+
+**The Discord bot does not import this code — it has its own copies.** There is no
+`file:` dependency, no `tsconfig` path mapping, and no symlink between the repos; the
+bot carries a private duplicate of the `/who` parser in `commands/dkp/attendance.ts`.
+What the two projects share is the **database**, not the source. So a fix to parsing or
+validation here does *not* reach the bot, and both halves keep writing to the same
+`attendance`, `census`, and `dkp` tables. Check the bot separately before assuming a
+data-integrity fix is complete.
 
 ## Architecture
 

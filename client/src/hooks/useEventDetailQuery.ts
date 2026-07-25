@@ -25,6 +25,8 @@ export interface CallDetail {
   id: number;
   raidName: string;
   modifier: number;
+  /** Wall-clock "HH:MM" the /who was taken. Null when the log has no readable stamp. */
+  calledAt: string | null;
   recordedCount: number;
   rejectedCount: number;
   createdBy: string;
