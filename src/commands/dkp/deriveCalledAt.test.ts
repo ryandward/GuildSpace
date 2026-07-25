@@ -31,8 +31,20 @@ describe('deriveCalledAt', () => {
     expect(deriveCalledAt('[Thu Jun 25 22:05:00 2026] [ANONYMOUS] Korova (Skeleton)')).toBe('22:05');
   });
 
-  it('pads a single-digit hour', () => {
-    expect(deriveCalledAt(WHO('Fri Jun 26 9:05:00 2026'))).toBe('09:05');
+  it('reads a morning roll call', () => {
+    expect(deriveCalledAt(WHO('Sat Jun  6 09:05:00 2026'))).toBe('09:05');
+  });
+
+  it('agrees with the attendance parser about which stamps are readable', () => {
+    // Both read through parseEqTimestamp, so a stamp one accepts the other
+    // cannot reject. An ISO stamp used to split them: the parser took it and
+    // recorded attendance, while this returned null and the row showed no time.
+    for (const stamp of ['Thu Jun 25 21:48:29 2026', '2026-06-25T21:48:29', 'no time here', '21:48:29']) {
+      const log = WHO(stamp);
+      const hasTime = deriveCalledAt(log) !== null;
+      const hasDate = parseWhoLogs(log).some(p => p.timestamp !== null);
+      expect(hasTime).toBe(hasDate);
+    }
   });
 
   it('keeps the log wall clock rather than converting it', () => {

@@ -7,6 +7,8 @@
  * @module
  */
 
+import { parseEqTimestamp } from './eqTimestamp.js';
+
 export interface ParsedPlayer {
   /**
    * When the `/who` was taken. Null only when no line in the log carried a
@@ -49,12 +51,10 @@ export function parseWhoLogs(logs: string): ParsedPlayer[] {
     const levelClassMatch = line.match(levelClassRe);
     if (!levelClassMatch) continue;
 
-    // EQ format: "Thu May 25 22:10:50 2023". An unreadable stamp is left
-    // unknown and resolved against the rest of the log below. It must never
-    // become the current time: that silently dates an old raid to today and
-    // corrupts everything read from attendance.date downstream.
-    const parsed = new Date(timestampMatch[1]);
-    const timestamp: Date | null = isNaN(parsed.getTime()) ? null : parsed;
+    // An unreadable stamp is left unknown and resolved against the rest of the
+    // log below. It must never become the current time: that silently dates an
+    // old raid to today and corrupts everything read from attendance.date.
+    const timestamp = parseEqTimestamp(timestampMatch[1])?.date ?? null;
 
     let level: number | null = null;
     let className: string | null = null;

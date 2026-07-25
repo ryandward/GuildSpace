@@ -10,6 +10,8 @@
  * @module
  */
 
+import { parseEqTimestamp } from './eqTimestamp.js';
+
 /**
  * Returns `"HH:MM"` from the first `/who` line in a pasted log, or `null` when
  * the log is absent or contains no `/who` line.
@@ -30,7 +32,6 @@ export function deriveCalledAt(whoLog: string | null): string | null {
   // which share the timestamp prefix. Same test as parseWhoLogs.
   const timestampRe = /^\[([^\]]+)\]/;
   const levelClassRe = /(?<=(?<!^)\[)[^\]]*(?=\])/;
-  const clockRe = /\b(\d{1,2}):(\d{2}):\d{2}\b/;
 
   for (const rawLine of whoLog.split('\n')) {
     const line = rawLine.trim();
@@ -40,11 +41,13 @@ export function deriveCalledAt(whoLog: string | null): string | null {
     if (!timestampMatch) continue;
     if (!levelClassRe.test(line)) continue;
 
-    const clock = timestampMatch[1].match(clockRe);
-    if (!clock) continue;
+    // Same matcher the attendance parser uses, so the two cannot disagree about
+    // which stamps are readable. When they each decided independently, a call
+    // could end up with attendees recorded but no time shown.
+    const stamp = parseEqTimestamp(timestampMatch[1]);
+    if (!stamp) continue;
 
-    const hour = clock[1].padStart(2, '0');
-    return `${hour}:${clock[2]}`;
+    return stamp.clock;
   }
 
   return null;
