@@ -10,6 +10,11 @@ export async function authFetch<T>(token: string, url: string, init?: RequestIni
     const method = init?.method ?? 'GET';
     const data = getDemoResponse(url, method);
     if (data !== null) return data as T;
+    // demoData returns null both for blocked writes and for reads it has no
+    // canned response for. Only the former is the user's doing — telling
+    // someone to "log in to make changes" when they only loaded a page is a
+    // lie about what they did.
+    if (method === 'GET') throw new ApiError(404, 'Not available in the demo');
     throw new ApiError(403, 'Log in to make changes');
   }
 
