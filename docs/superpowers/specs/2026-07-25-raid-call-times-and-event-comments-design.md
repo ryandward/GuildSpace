@@ -151,13 +151,21 @@ Comments are **not** gated on `event.status === 'active'`. The 7/20 use case
 ("I was on Gigabroms for calls 2-3") happens the morning after, once the event
 is closed.
 
-This is consistent with the existing rule, which is narrower than "writes
-require an open event". Five endpoints enforce the check — add-call (`:1393`),
-reorder (`:1463`), dismiss (`:1664`), un-dismiss (`:1706`), assign (`:1727`) —
-and four do not: edit-call (`:1491`), delete-call (`:1564`), add-character
-(`:1617`), remove-character (`:1819`). The dividing line is that **attendance
-capture requires an open event; corrections do not.** Comments are neither, and
-do not touch the rule.
+No wider rule is claimed, because there isn't one. Five endpoints enforce the
+check — add-call (`:1393`), reorder (`:1463`), dismiss (`:1664`), un-dismiss
+(`:1706`), assign (`:1727`) — and four do not: edit-call (`:1491`), delete-call
+(`:1564`), add-character (`:1617`), remove-character (`:1819`). Tracing them
+shows the split is not a design:
+
+- `4a345cc` built the feature and gave add-call a check.
+- `4583d20` fixed route ordering and gave reorder one.
+- `75ab5f2` ("harden assign endpoint per review") retrofitted dismiss,
+  un-dismiss and assign together — *"Reject dismiss/undo/assign on closed
+  events server-side"*.
+
+That commit's diff covers only the endpoints on the branch then under review.
+The four without a check are older code that was never examined for it. The
+check exists where a reviewer looked.
 
 ### Client
 
@@ -205,7 +213,13 @@ Not design decisions; recorded so they are not lost.
 - Update `CLAUDE.md`: it states "No test framework or linter is configured,"
   which is stale — Vitest is committed and green.
 
-## Known adjacent bug (not fixed here)
+## Known adjacent bugs (not fixed here)
+
+Edit-call (`:1491`) applies DKP deltas and rewrites `attendance.modifier`, and
+delete-call (`:1564`) subtracts DKP and deletes attendance rows — both on closed
+events, without checking status. Same class of gap `75ab5f2` closed for assign.
+Wants the same treatment, as separate work.
+
 
 `demoData.getDemoResponse` returns `null` for two different situations — "this
 write is blocked" and "I do not handle this read" — and `authFetch`
