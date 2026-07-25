@@ -1,0 +1,216 @@
+# Raid call times and event comments
+
+Status: Design — awaiting review
+Date: 2026-07-25
+
+## Problem
+
+Officers run several identical raid calls in one night (six "HoT minis"). The
+collapsed call row renders three fields — raid name, DKP, recorded count
+(`CallRow.tsx:137-139`) — and on a repeated target none of them vary:
+
+```
+⠿ 1. › Halls of Testing Hourly      [5 DKP] [28 recorded]
+⠿ 2. › Halls of Testing Hourly      [5 DKP] [28 recorded]
+⠿ 3. › Halls of Testing Hourly      [5 DKP] [26 recorded]
+```
+
+The rows are indistinguishable to a reader. They are *not* indistinguishable in
+the database — each has its own `id`, `sort_order`, `created_at`, and `who_log`.
+The render discards data it already has.
+
+Renaming is not the fix. `raid_calls.raid_name` is a foreign key by value: it
+upserts into `raids` (the template dropdown) at `server.ts:1407-1413` and is
+copied into `attendance.raid`, which DKP history groups on. Typing "HoT Mini 1"
+/ "HoT Mini 2" would permanently spam the template list and fragment attendance
+history.
+
+Two features, weighted very differently.
+
+## Part 1 — Call times
+
+The primary fix. Show when each roll call happened.
+
+### Timestamp source
+
+Use the timestamp embedded in the pasted `/who` text, not `raid_calls.created_at`.
+
+`created_at` records when an officer clicked Submit. If anyone submits several
+calls in a batch after the night ends, all six cluster inside a minute and
+distinguish nothing. The `/who` timestamp records when the roll call actually
+happened and is immune to when it was submitted.
+
+### `deriveCalledAt`
+
+New pure module `src/commands/dkp/deriveCalledAt.ts`:
+
+```ts
+deriveCalledAt(whoLog: string | null): string | null   // → "21:48"
+```
+
+Extracts `HH:MM` **as text** from the first parseable `/who` line's
+`[Thu Jun 25 21:48:29 2026]` bracket.
+
+**It must never construct a `Date`.** EQ log timestamps carry no timezone.
+`new Date("Thu Jun 25 21:48:29 2026")` parses in the *runtime's* zone — UTC on
+Railway — so the value would serialize as `21:48Z`, and a browser in US Eastern
+would render `17:48`. EQ logs are already 24-hour, so `HH:MM` passes through as
+a substring with no parse, no conversion, and nothing to shift.
+
+This is load-bearing. A `string` return looks like careless stringly-typing, and
+the obvious cleanup — return a `Date` — reintroduces the bug. Note that
+`who_parser.ts:51` already does `new Date(timestampMatch[1])`, so
+`attendance.date` already holds server-local-interpreted `/who` times; a
+`Date`-shaped `deriveCalledAt` would be wrong *consistently with existing data*,
+which is the hardest kind of wrong to notice.
+
+Returns `null` when `who_log` is absent or has no parseable line. The row then
+renders no time. No fallback to `created_at` — that is a UTC server timestamp
+and would print a confidently wrong hour.
+
+### Server
+
+`GET /api/raids/events/:id` already re-parses every call's `who_log` on every
+read via `deriveUnrecognized(call.whoLog, …)` (`server.ts:1254`). Add
+`calledAt: deriveCalledAt(call.whoLog)` to the object returned from that same
+loop (`server.ts:1258-1275`).
+
+No migration. No column. No new endpoint.
+
+### Client
+
+- `useEventDetailQuery.ts` — add `calledAt: string | null` to the call type.
+- `CallRow.tsx` — render it between the raid name and the DKP badge, as
+  `Text variant="caption"` in `text-text-dim`. Omit the element entirely when
+  `null`.
+
+```
+⠿ 1. › Halls of Testing Hourly  21:48  [5 DKP] [28 recorded]
+⠿ 2. › Halls of Testing Hourly  22:31  [5 DKP] [28 recorded]
+⠿ 3. › Halls of Testing Hourly  23:15  [5 DKP] [26 recorded]
+```
+
+24-hour, matching the log format. Absolute, not relative — the design system
+convention is relative (`utils/timeAgo.ts`), but relative fails here: "2h ago /
+2h ago / 1h ago" doesn't separate calls, and it drifts while being read.
+
+## Part 2 — Event comments
+
+Secondary, and expected to see little use. The design constraint is that it
+costs nothing to the majority of page views where nobody has commented.
+
+### Schema
+
+`src/migrations/018_raid_event_comments.sql`:
+
+```sql
+CREATE TABLE IF NOT EXISTS raid_event_comments (
+  id SERIAL PRIMARY KEY,
+  event_id INTEGER NOT NULL REFERENCES raid_events(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_raid_event_comments_event
+  ON raid_event_comments (event_id, created_at ASC);
+```
+
+Column-for-column the `chat_messages` shape, with the cascading-FK-to-parent
+convention `raid_calls`, `raid_call_attendance`, and `raid_call_dismissals`
+already follow. `display_name` is a denormalized snapshot at write time, as in
+`chat_messages` and `bank_import` — display names are mutable and there is no
+author-hydration helper.
+
+Entity: `src/entities/RaidEventComment.ts`.
+
+### Endpoints
+
+| Method | Path | Access |
+|---|---|---|
+| GET | `/api/raids/events/:id/comments` | any authenticated user |
+| POST | `/api/raids/events/:id/comments` | any registered user |
+| DELETE | `/api/raids/events/:id/comments/:commentId` | author or officer |
+
+POST validates in the order `POST /api/profile/bio` uses (`server.ts:1003-1024`):
+`typeof content !== 'string'` → 400; empty after trim → 400; `length > 300` →
+400; no `GuildSpaceUser` row for the token's discord ID → 404. A valid signed
+token alone is not enough — `getUser` returns a user with `needsSetup: true`
+when no row exists.
+
+Extract the content check as a pure `validateComment(content)` so it is testable
+without a database.
+
+DELETE permits `comment.userId === user.id || gsUser.hasOfficerAccess`. Delete
+only; no edit. Nothing in the codebase carries an `edited_at`.
+
+### Closed events
+
+Comments are **not** gated on `event.status === 'active'`. The 7/20 use case
+("I was on Gigabroms for calls 2-3") happens the morning after, once the event
+is closed.
+
+This is consistent with the existing rule, which is narrower than "writes
+require an open event". Five endpoints enforce the check — add-call (`:1393`),
+reorder (`:1463`), dismiss (`:1664`), un-dismiss (`:1706`), assign (`:1727`) —
+and four do not: edit-call (`:1491`), delete-call (`:1564`), add-character
+(`:1617`), remove-character (`:1819`). The dividing line is that **attendance
+capture requires an open event; corrections do not.** Comments are neither, and
+do not touch the rule.
+
+### Client
+
+- `hooks/useEventCommentsQuery.ts` — key `['raidEventComments', eventId]`,
+  staleTime 30s, `enabled: !!token && !!eventId`.
+- `hooks/useEventCommentMutations.ts` — post and delete, both invalidating
+  `['raidEventComments', eventId]`. No `['roster']` invalidation; comments do
+  not move DKP.
+- `components/raids/EventComments.tsx` — mounted in `RaidEventPage.tsx` below
+  the attendance card.
+
+Empty state is a dashed-border button reading "Add a comment...", the pattern
+`MemberDetailPage.tsx:198-204` already uses for an unwritten bio. Renders
+nothing until the query settles, so a commentless event never flashes a list.
+With comments, a `COMMENTS (n)` card listing author, time, and body, with a
+composer beneath.
+
+Author names link to `/roster/:discordId`, as `MessageList.tsx:56-64` does.
+Bodies render as JSX text children with `whitespace-pre-wrap break-words` —
+React escapes them. No markdown, no autolinking, consistent with chat and bio.
+
+## Testing
+
+Two pure seams, tested red→green under the existing root Vitest config
+(`vitest.config.ts`, `include: ['src/**/*.test.ts']`), colocated, `.js` imports,
+matching `deriveUnrecognized.test.ts`:
+
+- `deriveCalledAt.test.ts` — normal log; multi-line log with one timestamp;
+  log containing chat and system lines before the first `/who` line; `null`
+  input; empty string; malformed bracket; a log whose only lines are
+  unparseable. Asserts a `"HH:MM"` string or `null`, never a `Date`.
+- `validateComment.test.ts` — non-string; empty; whitespace-only; exactly 300;
+  301; a 300-character string containing newlines.
+
+The client half is untested. There is no client test runner — root Vitest's
+`include` does not match `client/`, and `client/package.json` has no test
+tooling. Standing that up is out of scope here.
+
+## Task-list items
+
+Not design decisions; recorded so they are not lost.
+
+- Add `/api/raids/events/:id/comments` to the demo interception in
+  `lib/demoData.ts` (returning `[]`).
+- Update `CLAUDE.md`: it states "No test framework or linter is configured,"
+  which is stale — Vitest is committed and green.
+
+## Known adjacent bug (not fixed here)
+
+`demoData.getDemoResponse` returns `null` for two different situations — "this
+write is blocked" and "I do not handle this read" — and `authFetch`
+(`lib/api.ts:12`) cannot tell them apart, so it throws
+`ApiError(403, 'Log in to make changes')` for both. Any unhandled GET therefore
+shows a demo visitor a write-rejection message on a page they only read. This
+predates this work and affects every future GET endpoint. Worth a separate fix
+that distinguishes "unhandled" from "blocked".
