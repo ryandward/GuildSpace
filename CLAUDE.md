@@ -9,7 +9,19 @@ npm run build    # tsc — compiles src/ → dist/
 npm start        # node dist/index_web.js
 ```
 
-No test framework or linter is configured. The project uses ESM (`"type": "module"` in package.json).
+```bash
+npm test         # vitest — watch mode
+npm run test:run # vitest run — single pass
+```
+
+Vitest is configured at the repo root for **server-side pure functions only**:
+`vitest.config.ts` has `include: ['src/**/*.test.ts']`, so client files are not
+picked up and `.tsx` is not matched. Tests live next to the unit under test.
+`tsconfig.json` excludes `src/**/*.test.ts`, so tests are checked by Vitest at
+runtime, not by `tsc`.
+
+There is no client-side test runner and no linter. The project uses ESM
+(`"type": "module"` in package.json).
 
 ## Environment
 

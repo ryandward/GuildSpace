@@ -58,11 +58,15 @@ would render `17:48`. EQ logs are already 24-hour, so `HH:MM` passes through as
 a substring with no parse, no conversion, and nothing to shift.
 
 This is load-bearing. A `string` return looks like careless stringly-typing, and
-the obvious cleanup — return a `Date` — reintroduces the bug. Note that
-`who_parser.ts:51` already does `new Date(timestampMatch[1])`, so
-`attendance.date` already holds server-local-interpreted `/who` times; a
-`Date`-shaped `deriveCalledAt` would be wrong *consistently with existing data*,
-which is the hardest kind of wrong to notice.
+the obvious cleanup — return a `Date` — reintroduces the bug.
+
+`who_parser.ts:51` already does `new Date(timestampMatch[1])`, but that is *not*
+a live bug: `attendance.date` is `timestamp without time zone`, so parsing as
+server-local and storing as naive preserves the wall clock. The hazard appears
+only when such a `Date` is serialized to JSON — it gains a `Z` it never earned —
+and formatted in a browser at a different offset. `deriveCalledAt` exists on
+exactly that path, which is why it must never produce a `Date` in the first
+place.
 
 Returns `null` when `who_log` is absent or has no parseable line. The row then
 renders no time. No fallback to `created_at` — that is a UTC server timestamp
@@ -213,18 +217,23 @@ Not design decisions; recorded so they are not lost.
 - Update `CLAUDE.md`: it states "No test framework or linter is configured,"
   which is stale — Vitest is committed and green.
 
-## Known adjacent bugs (not fixed here)
+## Adjacent bugs, fixed on this branch
 
-Edit-call (`:1491`) applies DKP deltas and rewrites `attendance.modifier`, and
-delete-call (`:1564`) subtracts DKP and deletes attendance rows — both on closed
-events, without checking status. Same class of gap `75ab5f2` closed for assign.
-Wants the same treatment, as separate work.
+Both surfaced while tracing the above. Neither is part of the feature.
 
+**Closed-event DKP mutation.** Edit-call (`:1491`) applied DKP deltas and
+rewrote `attendance.modifier`, delete-call (`:1564`) subtracted DKP and deleted
+attendance rows, and add-character (`:1617`) / remove-character (`:1819`)
+credited and debited — all on closed events, none checking status. Same class of
+gap `75ab5f2` closed for assign. All four now carry the same guard. Officers who
+need to correct a closed event reopen it first; the UI already has the button
+(`RaidEventPage.tsx:119-128`).
 
+**Demo mode reporting a write rejection on a read.**
 `demoData.getDemoResponse` returns `null` for two different situations — "this
-write is blocked" and "I do not handle this read" — and `authFetch`
-(`lib/api.ts:12`) cannot tell them apart, so it throws
-`ApiError(403, 'Log in to make changes')` for both. Any unhandled GET therefore
-shows a demo visitor a write-rejection message on a page they only read. This
-predates this work and affects every future GET endpoint. Worth a separate fix
-that distinguishes "unhandled" from "blocked".
+write is blocked" and "I have no canned response for this read" — and `authFetch`
+could not tell them apart, so both threw
+`ApiError(403, 'Log in to make changes')`. A demo visitor loading a page with an
+unhandled GET was told to log in to make a change they had not attempted.
+`authFetch` now branches on method: GET → `404 'Not available in the demo'`,
+everything else → the existing 403.
