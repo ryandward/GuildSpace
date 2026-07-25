@@ -1496,6 +1496,8 @@ export function createWebServer(opts: WebServerOptions) {
       const eventId = parseInt(req.params.id, 10);
       const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       const { raidName, modifier } = req.body;
       const newModifier = modifier !== undefined ? Number(modifier) : call.modifier;
@@ -1566,8 +1568,11 @@ export function createWebServer(opts: WebServerOptions) {
     if (!officer) return;
     try {
       const callId = parseInt(req.params.callId, 10);
-      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      const eventId = parseInt(req.params.id, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       // Get linked attendance records
       const links = await AppDataSource.manager.find(RaidCallAttendance, { where: { callId } });
@@ -1619,8 +1624,11 @@ export function createWebServer(opts: WebServerOptions) {
     if (!officer) return;
     try {
       const callId = parseInt(req.params.callId, 10);
-      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      const eventId = parseInt(req.params.id, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       const { characterName } = req.body;
       if (!characterName) return res.status(400).json({ error: 'characterName is required' });
@@ -1821,8 +1829,11 @@ export function createWebServer(opts: WebServerOptions) {
     if (!officer) return;
     try {
       const callId = parseInt(req.params.callId, 10);
-      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId: parseInt(req.params.id, 10) } });
+      const eventId = parseInt(req.params.id, 10);
+      const call = await AppDataSource.manager.findOne(RaidCall, { where: { id: callId, eventId } });
       if (!call) return res.status(404).json({ error: 'Call not found' });
+      const event = await AppDataSource.manager.findOne(RaidEvent, { where: { id: eventId } });
+      if (event && event.status !== 'active') return res.status(400).json({ error: 'Event is closed' });
 
       const { characterName } = req.body;
       if (!characterName) return res.status(400).json({ error: 'characterName is required' });
