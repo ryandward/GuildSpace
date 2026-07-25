@@ -283,6 +283,7 @@ interface DemoCall {
   id: number;
   raidName: string;
   modifier: number;
+  calledAt: string;
   recordedCount: number;
   rejectedCount: number;
   createdBy: string;
@@ -350,10 +351,16 @@ function generateEvents(): DemoEvent[] {
           };
         });
 
+      // Raid nights start around 20:00 and calls land roughly 45 min apart,
+      // so repeated targets are told apart by time the way they are in play.
+      const minuteOfDay = 20 * 60 + c * 45 + randInt(0, 12);
+      const calledAt = `${String(Math.floor(minuteOfDay / 60) % 24).padStart(2, '0')}:${String(minuteOfDay % 60).padStart(2, '0')}`;
+
       calls.push({
         id: callId,
         raidName,
         modifier,
+        calledAt,
         recordedCount: callAttendees.length,
         rejectedCount: randInt(0, 3),
         createdBy: 'demo_000',

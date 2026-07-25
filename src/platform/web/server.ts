@@ -33,6 +33,7 @@ import { RaidCallAttendance } from '../../entities/RaidCallAttendance.js';
 import { Census } from '../../entities/Census.js';
 import { RaidCallDismissal } from '../../entities/RaidCallDismissal.js';
 import { deriveUnrecognized } from '../../commands/dkp/deriveUnrecognized.js';
+import { deriveCalledAt } from '../../commands/dkp/deriveCalledAt.js';
 import { planAssign } from '../../commands/dkp/planAssign.js';
 import { Bank } from '../../entities/Bank.js';
 import { Items } from '../../entities/Items.js';
@@ -1257,6 +1258,8 @@ export function createWebServer(opts: WebServerOptions) {
           id: call.id,
           raidName: call.raidName,
           modifier: call.modifier,
+          // Wall-clock "HH:MM" from the /who text, not a Date — see deriveCalledAt.
+          calledAt: deriveCalledAt(call.whoLog),
           recordedCount: attendees.length,
           rejectedCount: unrecognized.length,
           createdBy: call.createdBy,

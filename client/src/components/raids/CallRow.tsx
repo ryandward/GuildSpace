@@ -135,6 +135,9 @@ export default function CallRow({
           ›
         </span>
         <Text variant="body" className="font-bold flex-1 truncate">{call.raidName}</Text>
+        {call.calledAt && (
+          <Text variant="caption" className="text-text-dim tabular-nums shrink-0">{call.calledAt}</Text>
+        )}
         <Badge variant="count" color="accent">{call.modifier} DKP</Badge>
         <Badge variant="count">{call.recordedCount} recorded</Badge>
         </button>
